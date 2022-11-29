@@ -1,0 +1,82 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka
+  labels:
+    name: kafka
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    k8s-app: kafka
+  name: kafka
+  namespace: kafka
+spec:
+  ports:
+    - port: 9092
+      targetPort: 9092
+  selector:
+    k8s-app: kafka
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: fint-kontroll-kafka
+  name: kafka
+  namespace: kafka
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      io.kompose.service: fint-kontroll-kafka
+  template:
+    metadata:
+      labels:
+        io.kompose.service: fint-kontroll-kafka
+    spec:
+      containers:
+        - image: confluentinc/cp-kafka
+          name: kafka
+          ports:
+            - containerPort: 9092
+              protocol: TCP
+
+  #        livenessProbe:
+  #          httpGet:
+  #            scheme: HTTPS
+  #            path: /
+  #            port: 8443
+ #           initialDelaySeconds: 30
+ #           timeoutSeconds: 30
+#          securityContext:
+#            allowPrivilegeEscalation: false
+#            readOnlyRootFilesystem: true
+#            runAsUser: 1001
+#            runAsGroup: 2001
+#      volumes:
+#       - name: kubernetes-dashboard-certs
+#          secret:
+#            secretName: kubernetes-dashboard-certs
+#        - name: tmp-volume
+#          emptyDir: {}
+      # Comment the following tolerations if Dashboard must not be deployed on maste
+#      tolerations:
+#        - key: node-role.kubernetes.io/master
+#          effect: NoSchedule
+              #  serviceAccountName: kubernetes-dashboard
+              # Uncomment the following line to manually specify Kubernetes API server Host
+              # If not specified, Dashboard will attempt to auto discover the API server and connect
+              # to it. Uncomment only if the default does not work.
+              # - --apiserver-host=http://my-address:port
+
+### DESSCRIPTION
+# kgp -
