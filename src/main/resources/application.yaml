@@ -9,3 +9,5 @@ fint:
 logging:
   level:
     root: INFO
+azurecredentials:
+  SCOPES: test123
