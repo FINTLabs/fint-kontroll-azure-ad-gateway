@@ -5,36 +5,40 @@ import com.azure.identity.ClientSecretCredentialBuilder;
 import com.microsoft.graph.authentication.TokenCredentialAuthProvider;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.client.reactive.ClientHttpConnector;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.ExchangeStrategies;
-import org.springframework.web.reactive.function.client.WebClient;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.requests.UserCollectionPage;
 import com.microsoft.graph.requests.GraphServiceClient;
 
-import java.util.Optional;
+import java.util.List;
 
 @Component
 @Log4j2
+@ConfigurationProperties(prefix = "azurecredentials")
 public class AzureClient {
     //private final WebClient webClient;
 
-
-    protected final ClientSecretCredential clientSecretCredential;
-    protected final TokenCredentialAuthProvider tokenCredentialAuthProvider;
+    protected String CLIENT_ID;
+    protected String CLIENT_SECRET;
+    protected String TENANT_GUID;
+    protected List<String> SCOPES;
+    /*protected final ClientSecretCredential clientSecretCredential;*/
+    /*protected final TokenCredentialAuthProvider tokenCredentialAuthProvider;*/
     protected final GraphServiceClient graphService;
 
+    public AzureClient() {
+        log.info("AzureClient initialized!");
+        this.graphService = null;
+    }
     //public AzureClient(WebClient webClient){
-    public AzureClient(TokenCredentialAuthProvider tokenCredentialAuthProvider, GraphServiceClient graphService){
+    /*public AzureClient(TokenCredentialAuthProvider tokenCredentialAuthProvider, GraphServiceClient graphService){
         this.graphService = graphService;
     //    this.webClient = webClient;
         log.info("test123");
-    }
+    }*/
 
     // Fetch full user catalogue
     @Scheduled(fixedRate=5000)
@@ -59,26 +63,33 @@ public class AzureClient {
         }
     }
 
-    @Bean
+    /*@Bean
     public ClientSecretCredential clientSecretCredential() {
         return new ClientSecretCredentialBuilder()
                 .clientId(CLIENT_ID)
                 .clientSecret(CLIENT_SECRET)
                 .tenantId(TENANT_GUID)
                 .build();
-    }
+    }*/
 
-    @Bean
+    /*@Bean
     public TokenCredentialAuthProvider tokenCredentialAuthProvider() {
-        return new TokenCredentialAuthProvider(SCOPES, this.clientSecretCredential);
-    }
+        return new
+    }*/
 
     @Bean
-    //public GraphServiceClient graphService(WebClient.Builder builder, Optional<OAuth2AuthorizedClientManager> authorizedClientManager, ClientHttpConnector clientHttpConnector) {
     public GraphServiceClient graphService() {
+        ClientSecretCredential clientSecretCredential = new ClientSecretCredentialBuilder()
+                .clientId(CLIENT_ID)
+                .clientSecret(CLIENT_SECRET)
+                .tenantId(TENANT_GUID)
+                .build();
+
+        TokenCredentialAuthProvider tokenCredentialAuthProvider = new TokenCredentialAuthProvider(SCOPES, clientSecretCredential);
 
         return GraphServiceClient
                 .builder()
+                .authenticationProvider(tokenCredentialAuthProvider)
                 .buildClient();
     }
 
