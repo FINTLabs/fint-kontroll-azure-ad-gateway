@@ -9,5 +9,6 @@ fint:
 logging:
   level:
     root: INFO
-azurecredentials:
+azurecredentials
+  clientid: 123123
   SCOPES: test123
