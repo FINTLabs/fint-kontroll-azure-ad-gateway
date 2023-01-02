@@ -4,11 +4,13 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: https://idp.felleskomponent.no/nidp/oauth/nam
-fint:
-  application-id: fint-kontroll-azure-ad-gateway
+  fint:
+    application-id: fint-kontroll-azure-ad-gateway
 logging:
   level:
     root: INFO
-azurecredentials
-  clientid: 123123
-  SCOPES: test123
+azurecredentials:
+    scopes: https://graph.microsoft.com/.default
+    cliend-id: clientid
+    client-secret: clientsecret
+    tenant-guid: tenantGUID

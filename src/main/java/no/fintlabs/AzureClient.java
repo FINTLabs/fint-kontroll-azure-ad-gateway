@@ -4,12 +4,11 @@ import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import com.microsoft.graph.authentication.TokenCredentialAuthProvider;
 import lombok.Data;
-import lombok.Value;
 import lombok.extern.log4j.Log4j2;
 import okhttp3.Request;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.ConstructorBinding;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import com.microsoft.graph.models.User;
@@ -22,8 +21,9 @@ import java.util.List;
 
     @Component
 @Log4j2
-/*@Configuration
-@ConfigurationProperties(prefix = "azurecredentials")*/
+/*@Configuration*/
+@ConfigurationProperties(prefix = "azurecredentials")
+    @ConstructorBinding
 public class AzureClient {
     //private final WebClient webClient;
 
@@ -31,15 +31,19 @@ public class AzureClient {
     protected String CLIENT_SECRET;
     protected String TENANT_GUID;
     protected List<String> SCOPES;
-
     protected GraphServiceClient<Request> graphService;
 
     public AzureClient() {
         log.info("AzureClient initialized!");
-        this.CLIENT_ID = "abc";
-        this.CLIENT_SECRET = "def";
-        this.TENANT_GUID = "ghi";
-        this.SCOPES = List<String>{};
+        this.CLIENT_ID = "fafcb83a-8d01-4d80-951e-a579aace4154";
+        this.CLIENT_SECRET = "kci8Q~7jENGTJXDdktW~N12mQN2LpIQrlbPYddkE";
+        this.TENANT_GUID = "3d50ddd4-00a1-4ab7-9788-decf14a8728f";
+        /*this.SCOPES = Arrays.asList("user.read");*/
+        /*this.SCOPES = Arrays.asList("/.default", "openid", "profile", "offline_access");*/
+        //this.SCOPES = Arrays.asList("testscope");
+        // TODO: Handle dependency injection
+        this.graphService = graphService();
+        // TODO: Handle insufficient credentials
     }
     @PostConstruct
     public void print() {
