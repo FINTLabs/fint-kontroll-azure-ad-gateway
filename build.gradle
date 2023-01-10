@@ -34,10 +34,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-    implementation 'io.netty:netty-resolver-dns-native-macos:4.1.82.Final:osx-aarch_64'
+    implementation 'io.netty:netty-resolver-dns-native-macos:4.1.86.Final:osx-aarch_64'
 
-    implementation 'com.azure:azure-identity:1.7.1'
-    implementation 'com.microsoft.graph:microsoft-graph:5.41.0'
+    implementation 'com.azure:azure-identity:1.7.2'
+    implementation 'com.microsoft.graph:microsoft-graph:5.42.0'
+
+    implementation 'no.fintlabs:fint-kafka:2.3.0'
+    //implementation 'no.fintlabs:fint-flyt-cache:1.0.0'
 
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
