@@ -9,8 +9,21 @@ spring:
 logging:
   level:
     root: INFO
+
+fint:
+  application-id: fint-kontroll-azure-ad-gateway
+  kafka:
+    application-id: ${fint.application-id}
+  flyt:
+    azure-ad-gateway:
+      resources:
+        pull:
+          initial-delay-ms: 5000
+          fixed-delay-ms: 900000
+        refresh:
+          interval-ms: 518400000
+
 azurecredentials:
-    scopes: https://graph.microsoft.com/.default
-    cliend-id: clientid
-    client-secret: clientsecret
-    tenant-guid: tenantGUID
+  clientid: XXXX
+  clientsecret: XXXX
+  tenantguid: XXXX
