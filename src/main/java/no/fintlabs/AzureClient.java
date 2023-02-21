@@ -1,8 +1,7 @@
 package no.fintlabs;
 
 import com.microsoft.graph.models.User;
-import com.microsoft.graph.requests.GraphServiceClient;
-import com.microsoft.graph.requests.UserCollectionPage;
+import com.microsoft.graph.requests.*;
 import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import okhttp3.Request;
@@ -26,9 +25,11 @@ public class AzureClient {
     private void procUserPage(UserCollectionPage page) {
         for (User user: page.getCurrentPage()) {
             log.info("***");
-            log.info("  User: " + user.displayName);
+            log.info("  UPN: " + user.userPrincipalName);
             log.info("  Id: " + user.id);
             log.info("  Mail: " + user.mail);
+            /*log.info("  Ansattnr: " + user.);
+            log.info("  Elevnr: " + user.mail);*/
         }
     }
         
@@ -48,12 +49,15 @@ public class AzureClient {
         // TODO: Change to while loop (while change != null;
         //while (page != null) {
         // TODO: Do I need some sleep time between requests?
-        if (page != null) {
+        do {
             this.procUserPage(page);
-            page = page.getNextPage()
-                    .buildRequest()
-                    .get();
-        }
+            UserCollectionRequestBuilder nextPage = page.getNextPage();
+            if (nextPage == null) {
+                break;
+            } else {
+                page = nextPage.buildRequest().get();
+            }
+        } while (page != null);
         log.info("--- finished pulling resources from Azure. ---");
 
         // Initialize Kafka pipelines
