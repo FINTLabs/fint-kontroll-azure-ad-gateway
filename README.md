@@ -1,5 +1,13 @@
 # FINT Kontroll - Azure AD Gateway
 
+## Start docker-containers
+
+docker-compose -f docker-compose.yaml up
+
+## Look at data
+
+localhost:
+
 ## Run on localhost
 
 cd k8s/manifests/local

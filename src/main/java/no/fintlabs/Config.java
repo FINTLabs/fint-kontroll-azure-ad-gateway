@@ -7,6 +7,8 @@ import com.microsoft.graph.requests.GraphServiceClient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import no.fintlabs.kafka.entity.EntityProducer;
+import no.fintlabs.kafka.entity.EntityProducerFactory;
 import okhttp3.Request;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -49,5 +51,4 @@ public class Config {
                 .authenticationProvider(tokenCredentialAuthProvider)
                 .buildClient();
     }
-
 }
