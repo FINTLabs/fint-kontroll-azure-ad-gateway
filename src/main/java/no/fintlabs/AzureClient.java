@@ -2,7 +2,6 @@ package no.fintlabs;
 
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.requests.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -29,17 +28,11 @@ public class AzureClient {
 
     private void procUserPage(UserCollectionPage page) {
         for (User user : page.getCurrentPage()) {
-            azureUserProducerService.publish(new AzureUser(user));
             log.info("***");
-            log.info("  UPN: " + user.userPrincipalName);
             log.info("  Id: " + user.id);
+            log.info("  UPN: " + user.userPrincipalName);
             log.info("  Mail: " + user.mail);
-            /*log.info("  Ansattnr: " + user.);
-            log.info("  Elevnr: " + user.mail);*/
-            //TODO: Push user to local kafka
-            /*no.fintlabs.kafka.entity.EntityProducerFactory entityProducerFactory;
-            ntityProducerFactory.createProducer(User)*/
-
+            azureUserProducerService.publish(new AzureUser(user));
         }
     }
 
@@ -48,7 +41,7 @@ public class AzureClient {
             initialDelayString = "${fint.flyt.azure-ad-gateway.resources.pull.initial-delay-ms}",
             fixedDelayString = "${fint.flyt.azure-ad-gateway.resources.pull.fixed-delay-ms}"
     )
-    private void pullAllUpdatedEntities() {
+    private void pullAllEntities() {
         log.info("--- Starting to pull resources from Azure --- ");
         UserCollectionPage page = this.graphServiceClient.users()
                 .buildRequest()
