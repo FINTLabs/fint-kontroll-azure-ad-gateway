@@ -21,16 +21,15 @@ public class AzureClient {
         this.graphServiceClient = graphServiceClient;
         // TODO: Handle insufficient credentials
     }*/
-    private final AzureUserProducer<AzureUser> azureUserProducer;
+    /*private final AzureUserProducer<AzureUser> azureUserProducer;*/
 
     @Scheduled(fixedRateString = "${fint.flyt.azure-ad-gateway.resources.refresh.interval-ms}")
     private void pulldeAllUpdatedEntities() {
     }
 
     private void procUserPage(UserCollectionPage page) {
-        for (User user: page.getCurrentPage()) {
-            AzureUser a = new AzureUser(user.userPrincipalName, user.id, user.mail);
-            azureUserProducer.
+        for (User user : page.getCurrentPage()) {
+            azureUserProducerService.publish(new AzureUser(user));
             log.info("***");
             log.info("  UPN: " + user.userPrincipalName);
             log.info("  Id: " + user.id);
@@ -43,7 +42,7 @@ public class AzureClient {
 
         }
     }
-        
+
     // Fetch full user catalogue
     @Scheduled(
             initialDelayString = "${fint.flyt.azure-ad-gateway.resources.pull.initial-delay-ms}",

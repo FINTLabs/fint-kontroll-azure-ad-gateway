@@ -4,16 +4,24 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: https://idp.felleskomponent.no/nidp/oauth/nam
-  fint:
-    application-id: fint-kontroll-azure-ad-gateway
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: ${fint.application-id}
+
 logging:
   level:
     root: INFO
 
 fint:
+  org-id: fintlabs.no
   application-id: fint-kontroll-azure-ad-gateway
   kafka:
+    default-replicas: 1
     application-id: ${fint.application-id}
+    topic:
+      org-id: ${fint.org-id}
+      domain-context: ressurs
   flyt:
     azure-ad-gateway:
       resources:
