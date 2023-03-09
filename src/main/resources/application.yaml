@@ -24,10 +24,14 @@ fint:
       domain-context: ressurs
   flyt:
     azure-ad-gateway:
-      resources:
+      groups:
         pull:
-          initial-delay-ms: 5000
-          fixed-delay-ms: 900000
+          initial-delay-ms: 1000
+          delta-delay-ms: 600000
+      users:
+        pull:
+          initial-delay-ms: 2000
+          fixed-delay-ms:   5000
         refresh:
           interval-ms: 518400000
 

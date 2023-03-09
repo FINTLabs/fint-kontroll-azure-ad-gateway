@@ -11,29 +11,28 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 //@AllArgsConstructor
-//@Setter
-//@Getter
-public class AzureUserProducerService {
-    private final EntityProducer<AzureUser> entityProducer;
+public class AzureGroupProducerService {
+
+    private final EntityProducer<AzureGroup> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
-    public AzureUserProducerService(
+    public AzureGroupProducerService (
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {
 
-        entityProducer = entityProducerFactory.createProducer(AzureUser.class);
+        entityProducer = entityProducerFactory.createProducer(AzureGroup.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource("azureuser")
+                .resource("azuregroup")
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
-    public void publish(AzureUser azureUser) {
+    public void publish(AzureGroup azureGroup) {
         entityProducer.send(
-                EntityProducerRecord.<AzureUser>builder()
+                EntityProducerRecord.<AzureGroup>builder()
                         .topicNameParameters(entityTopicNameParameters)
-                        .key(azureUser.getId())
-                        .value(azureUser)
+                        .key(azureGroup.getId())
+                        .value(azureGroup)
                         .build()
         );
     }
