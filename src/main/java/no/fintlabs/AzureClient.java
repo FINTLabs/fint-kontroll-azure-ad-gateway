@@ -2,7 +2,9 @@ package no.fintlabs;
 
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.requests.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,12 +13,15 @@ import org.springframework.stereotype.Component;
 @Component
 @Log4j2
 //@ConfigurationProperties(prefix = "azurecredentials")
+@RequiredArgsConstructor
 public class AzureClient {
     protected final GraphServiceClient<Request> graphServiceClient;
-    public AzureClient(GraphServiceClient<Request> graphServiceClient) {
+    private final AzureUserProducerService azureUserProducerService;
+    /*public AzureClient(GraphServiceClient<Request> graphServiceClient) {
         this.graphServiceClient = graphServiceClient;
         // TODO: Handle insufficient credentials
-    }
+    }*/
+    private final AzureUserProducer<AzureUser> azureUserProducer;
 
     @Scheduled(fixedRateString = "${fint.flyt.azure-ad-gateway.resources.refresh.interval-ms}")
     private void pulldeAllUpdatedEntities() {
@@ -24,12 +29,18 @@ public class AzureClient {
 
     private void procUserPage(UserCollectionPage page) {
         for (User user: page.getCurrentPage()) {
+            AzureUser a = new AzureUser(user.userPrincipalName, user.id, user.mail);
+            azureUserProducer.
             log.info("***");
             log.info("  UPN: " + user.userPrincipalName);
             log.info("  Id: " + user.id);
             log.info("  Mail: " + user.mail);
             /*log.info("  Ansattnr: " + user.);
             log.info("  Elevnr: " + user.mail);*/
+            //TODO: Push user to local kafka
+            /*no.fintlabs.kafka.entity.EntityProducerFactory entityProducerFactory;
+            ntityProducerFactory.createProducer(User)*/
+
         }
     }
         
