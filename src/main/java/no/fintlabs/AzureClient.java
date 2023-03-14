@@ -43,7 +43,7 @@ public class AzureClient {
             log.info("ERROR unknown object detected!");
         }
     }*/
-
+/*
      private <T> void procObject(T object) {
         if (object instanceof User) {
             log.info("USER object detected!");
@@ -51,25 +51,26 @@ public class AzureClient {
         } else {
             log.info("ERROR unknown object detected!");
         }
-    }
+    }*/
 
-    private <T1, T2 extends BaseRequestBuilder<T1>> void procPage(BaseCollectionPage<T1, T2> page) {
+    /*private <T1, T2 extends BaseRequestBuilder<T1>> void procPage(BaseCollectionPage<T1, T2> page) {
         for (T1 object : page.getCurrentPage()) {
             this.procObject(object);
         }
-    }
+    }*/
 
     private void pageThrough(GroupCollectionPage inPage) {
         GroupCollectionPage page = inPage;
         do {
             for (Group group: page.getCurrentPage()) {
+                log.info("GROUP object detected!");
                 azureGroupProducerService.publish(new AzureGroup(group));
-
-                pageThrough(
+                // TODO: Loop through all groups, and get group membership
+                /*pageThrough(
                         graphServiceClient.groups(group.id).memberOf()
                         .buildRequest()
                         .get()
-                        );
+                        );*/
             }
             if (page.getNextPage() == null) {
                 break;
@@ -80,7 +81,7 @@ public class AzureClient {
         } while (page != null);
     }
 
-    private void pageThrough( inPage) {
+    /*private void pageThrough( inPage) {
         BaseCollectionPage<T1, T2> page = inPage;
         do {
             this.procPage(page);
@@ -93,12 +94,13 @@ public class AzureClient {
                 //page.buildRequest().get()
             }
         } while (page != null);
-    }
+    }*/
 
     private void pageThrough(UserCollectionPage inPage) {
         UserCollectionPage page = inPage;
         do {
             for (User user: page.getCurrentPage()) {
+                log.info("USER object detected!");
                 azureUserProducerService.publish(new AzureUser(user));
             }
             if (page.getNextPage() == null) {

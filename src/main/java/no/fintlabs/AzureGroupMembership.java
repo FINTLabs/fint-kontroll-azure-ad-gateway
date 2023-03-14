@@ -12,8 +12,8 @@ public class AzureGroupMembership extends BaseObject {
     private String user_id;
     private String group_id;
 
-    public <T> AzureGroupMembership(T membership) {
+    /*public AzureGroupMembership(T membership) {
         this.id = membership.groupId;
         //this.user_id = group.
-    }
+    }*/
 }
