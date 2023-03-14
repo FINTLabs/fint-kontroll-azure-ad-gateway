@@ -1,5 +1,6 @@
 package no.fintlabs;
 
+import com.fasterxml.jackson.databind.ser.Serializers;
 import com.microsoft.graph.models.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,9 +10,8 @@ import lombok.Value;
 @Setter
 @Getter
 @AllArgsConstructor
-public class AzureUser {
+public class AzureUser extends BaseObject {
         private String userPrincipalName;
-        private String id;
         private String mail;
         private String employeeId;
         private String studentId;

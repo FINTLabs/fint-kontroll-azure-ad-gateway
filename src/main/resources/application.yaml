@@ -31,7 +31,7 @@ fint:
       users:
         pull:
           initial-delay-ms: 2000
-          fixed-delay-ms:   5000
+          fixed-delay-ms: 500000
         refresh:
           interval-ms: 518400000
 
