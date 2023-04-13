@@ -151,7 +151,7 @@ public class AzureClient {
         // TODO: Do I need some sleep time between requests?
         this.pageThrough(
                 this.graphServiceClient.users()
-                        .buildRequest()
+                        .buildRequest().select("displayName,givenName, surname, mail, userprincipalname, id, onPremisesExtensionAttributes")
                         .get()
         );
         log.info("--- finished pulling resources from Azure. ---");
@@ -184,7 +184,7 @@ public class AzureClient {
         log.info("*** Fetching all groups from AD >>> ***");
         this.pageThrough(
                this.graphServiceClient.groups()
-                       .buildRequest()
+                       .buildRequest().expand("members")
                        .get()
         );
         log.info("*** <<< Done fetching all groups from AD ***");
