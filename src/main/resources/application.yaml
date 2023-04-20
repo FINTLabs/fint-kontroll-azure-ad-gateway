@@ -24,6 +24,8 @@ fint:
       domain-context: ressurs
   flyt:
     azure-ad-gateway:
+      optionaluserattributes:
+        "displayname, givenname, surname"
       groups:
         pull:
           initial-delay-ms: 1000
@@ -39,3 +41,4 @@ azurecredentials:
   clientid: XXXX
   clientsecret: XXXX
   tenantguid: XXXX
+
