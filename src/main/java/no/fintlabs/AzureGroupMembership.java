@@ -8,7 +8,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class AzureGroupMembership extends BaseObject {
-    private String id;
     private String user_id;
     private String group_id;
 

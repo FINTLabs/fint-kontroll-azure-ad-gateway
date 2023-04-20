@@ -7,9 +7,8 @@ import com.microsoft.graph.requests.GraphServiceClient;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import no.fintlabs.kafka.entity.EntityProducer;
-import no.fintlabs.kafka.entity.EntityProducerFactory;
 import okhttp3.Request;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +21,7 @@ import java.util.List;
 @Log4j2
 @Setter
 @Getter
+@EnableAutoConfiguration
 @Configuration
 @ConfigurationProperties(prefix = "azurecredentials")
 public class Config {
@@ -36,6 +36,13 @@ public class Config {
     }
 
     @Bean
+    @ConfigurationProperties(prefix = "fint.flyt.azure-ad-gateway.users")
+    public ConfigUser configUser() {
+        return new ConfigUser();
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "azurecredentials")
     public GraphServiceClient<Request> graphService() {
         List<String> scopes = Arrays.asList("https://graph.microsoft.com/.default");
         ClientSecretCredential clientSecretCredential = new ClientSecretCredentialBuilder()

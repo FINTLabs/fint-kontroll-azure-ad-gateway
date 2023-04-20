@@ -24,15 +24,15 @@ fint:
       domain-context: ressurs
   flyt:
     azure-ad-gateway:
-      optionaluserattributes:
-        - displayname
-        - givenname
-        - surname
-      groups:
+      users:
+        optionaluserattributes:
+          - displayname
+          - givenname
+      group-scheduler:
         pull:
           initial-delay-ms: 1000
           delta-delay-ms: 600000
-      users:
+      user-scheduler:
         pull:
           initial-delay-ms: 2000
           fixed-delay-ms: 500000

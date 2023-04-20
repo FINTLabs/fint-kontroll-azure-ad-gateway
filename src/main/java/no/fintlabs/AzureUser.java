@@ -3,16 +3,25 @@ package no.fintlabs;
 import com.microsoft.graph.models.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Setter
 @Getter
-@AllArgsConstructor
+@RequiredArgsConstructor
 
-
+//@Configuration
+//@ConfigurationProperties(prefix = "fint.flyt.azure-ad-gateway")
 public class AzureUser extends BaseObject {
 
         private String userPrincipalName;
@@ -24,22 +33,19 @@ public class AzureUser extends BaseObject {
                 "userPrincipalName",
                 "mail",
                 "onPremisesExtensionAttributes",
-
         };
-        @Autowired
-        private OptionalUserAttributes optionaluserattributes;
 
-        public void GetOptionalUserAttributes() {
+/*        @Value("${optionaluserattributes}")
+        private final List<String> optionaluserattributes;*/
+
+        /*public void GetOptionalUserAttributes() {
                 List<String> allUserAttributes = optionaluserattributes.getAllUserAttributes();
 
-        }
+        }*/
         public AzureUser(User user) {
-                GetOptionalUserAttributes();
                 this.id = user.id;
                 this.mail = user.mail;
                 this.userPrincipalName = user.userPrincipalName;
-
-
 
                 //TODO: Parametrize attributes so they are configuratble
                 //TODO: Make sure parameters are defined

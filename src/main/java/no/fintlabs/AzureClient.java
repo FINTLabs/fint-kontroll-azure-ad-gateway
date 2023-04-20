@@ -1,11 +1,8 @@
 package no.fintlabs;
 
 import com.microsoft.graph.http.BaseCollectionPage;
-import com.microsoft.graph.http.BaseRequestBuilder;
 import com.microsoft.graph.models.Group;
-import com.microsoft.graph.models.GroupMembers;
 import com.microsoft.graph.models.User;
-import com.microsoft.graph.requests.DirectoryObjectCollectionWithReferencesPage;
 import com.microsoft.graph.requests.GraphServiceClient;
 import com.microsoft.graph.requests.GroupCollectionPage;
 import com.microsoft.graph.requests.UserCollectionPage;
@@ -15,15 +12,14 @@ import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-import java.util.stream.Collectors;
-
 @Component
 @Log4j2
 //@ConfigurationProperties(prefix = "azurecredentials")
 @RequiredArgsConstructor
 public class AzureClient {
     protected final GraphServiceClient<Request> graphServiceClient;
+
+    protected final ConfigUser configUser;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
 
@@ -145,8 +141,8 @@ public class AzureClient {
 
     // Fetch full user catalogue
     @Scheduled(
-            initialDelayString = "${fint.flyt.azure-ad-gateway.users.pull.initial-delay-ms}",
-            fixedDelayString = "${fint.flyt.azure-ad-gateway.users.pull.fixed-delay-ms}"
+            initialDelayString = "${fint.flyt.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
+            fixedDelayString = "${fint.flyt.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
     )
     private void pullAllUsers() {
         log.info("--- Starting to pull users from Azure --- ");
@@ -180,8 +176,8 @@ public class AzureClient {
     }*/
 
     @Scheduled(
-        initialDelayString = "${fint.flyt.azure-ad-gateway.groups.pull.initial-delay-ms}",
-        fixedDelayString = "${fint.flyt.azure-ad-gateway.groups.pull.delta-delay-ms}"
+        initialDelayString = "${fint.flyt.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
+        fixedDelayString = "${fint.flyt.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
     private void pullAllGroups() {
         log.info("*** Fetching all groups from AD >>> ***");
