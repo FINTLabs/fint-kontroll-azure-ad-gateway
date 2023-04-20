@@ -15,6 +15,9 @@ import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 @Component
 @Log4j2
 //@ConfigurationProperties(prefix = "azurecredentials")
@@ -146,12 +149,12 @@ public class AzureClient {
             fixedDelayString = "${fint.flyt.azure-ad-gateway.users.pull.fixed-delay-ms}"
     )
     private void pullAllUsers() {
-        log.info("--- Starting to pull resources from Azure --- ");
+        log.info("--- Starting to pull users from Azure --- ");
         // TODO: Change to while loop (while change != null;
         // TODO: Do I need some sleep time between requests?
         this.pageThrough(
                 this.graphServiceClient.users()
-                        .buildRequest().select("displayName,givenName, surname, mail, userprincipalname, id, onPremisesExtensionAttributes")
+                        .buildRequest().select(String.join(",", AzureUser.requiredAttributes))
                         .get()
         );
         log.info("--- finished pulling resources from Azure. ---");
