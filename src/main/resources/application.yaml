@@ -25,7 +25,9 @@ fint:
   flyt:
     azure-ad-gateway:
       optionaluserattributes:
-        "displayname, givenname, surname"
+        - displayname
+        - givenname
+        - surname
       groups:
         pull:
           initial-delay-ms: 1000
