@@ -41,6 +41,7 @@ public class Config {
         return new ConfigUser();
     }
 
+
     @Bean
     @ConfigurationProperties(prefix = "azurecredentials")
     public GraphServiceClient<Request> graphService() {

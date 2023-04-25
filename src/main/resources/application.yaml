@@ -28,6 +28,11 @@ fint:
         optionaluserattributes:
           - displayname
           - givenname
+          - surname
+        employeeidattribute: extensionattribute10
+        studentidattribute: extensionattribute9
+
+
       group-scheduler:
         pull:
           initial-delay-ms: 1000

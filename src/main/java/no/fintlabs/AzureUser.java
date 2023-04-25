@@ -1,19 +1,9 @@
 package no.fintlabs;
 
 import com.microsoft.graph.models.User;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
+import lombok.*;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @Setter
@@ -28,24 +18,26 @@ public class AzureUser extends BaseObject {
         private String mail;
         private String employeeId;
         private String studentId;
-        public static final String[] requiredAttributes = {
+        private static final List<String> requiredAttributes = List.of (
                 "id",
-                "userPrincipalName",
                 "mail",
                 "onPremisesExtensionAttributes",
+                "userPrincipalName"
+        );
+        public static List<String> GetAttributes(ConfigUser configUser){
+                // TODO: 25.04.2023 Concatinate optional attribs with required attribs
+//                List<List<String>> Attribs = new ArrayList<>();
+//                Attribs.add(requiredAttributes);
+//                Attribs.add(configUser.getOptionaluserattributes());
+                return requiredAttributes;
         };
 
-/*        @Value("${optionaluserattributes}")
-        private final List<String> optionaluserattributes;*/
-
-        /*public void GetOptionalUserAttributes() {
-                List<String> allUserAttributes = optionaluserattributes.getAllUserAttributes();
-
-        }*/
-        public AzureUser(User user) {
+        public AzureUser(User user, ConfigUser configUser) {
                 this.id = user.id;
                 this.mail = user.mail;
                 this.userPrincipalName = user.userPrincipalName;
+                this.employeeId = user.getClass().getName(configUser.getEmployeeidattribute());
+                this.studentId = configUser.getStudentidattribute();
 
                 //TODO: Parametrize attributes so they are configuratble
                 //TODO: Make sure parameters are defined
