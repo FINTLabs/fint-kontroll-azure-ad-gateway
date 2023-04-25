@@ -100,7 +100,7 @@ public class AzureClient {
         do {
             for (User user: page.getCurrentPage()) {
                 log.info("USER object detected!");
-                azureUserProducerService.publish(new AzureUser(user));
+                azureUserProducerService.publish(new AzureUser(user, configUser));
             }
             if (page.getNextPage() == null) {
                 break;
