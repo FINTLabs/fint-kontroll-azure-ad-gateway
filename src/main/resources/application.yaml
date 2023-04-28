@@ -29,8 +29,8 @@ fint:
           - displayname
           - givenname
           - surname
-        employeeidattribute: extensionattribute10
-        studentidattribute: extensionattribute9
+        employeeidattribute: onPremisesExtensionAttributes.extensionattribute10
+        studentidattribute: onPremisesExtensionAttributes.extensionattribute9
 
 
       group-scheduler:
