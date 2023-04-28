@@ -18,7 +18,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AzureClient {
     protected final GraphServiceClient<Request> graphServiceClient;
-
     protected final ConfigUser configUser;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
@@ -100,7 +99,7 @@ public class AzureClient {
         do {
             for (User user: page.getCurrentPage()) {
                 log.info("USER object detected!");
-                azureUserProducerService.publish(new AzureUser(user, configUser));
+                azureUserProducerService.publish(new AzureUser(user));
             }
             if (page.getNextPage() == null) {
                 break;
@@ -150,7 +149,7 @@ public class AzureClient {
         // TODO: Do I need some sleep time between requests?
         this.pageThrough(
                 this.graphServiceClient.users()
-                        .buildRequest().select(String.join(",", AzureUser.requiredAttributes))
+                        .buildRequest().select(String.join(",", configUser.AllAttributes()))
                         .get()
         );
         log.info("--- finished pulling resources from Azure. ---");
