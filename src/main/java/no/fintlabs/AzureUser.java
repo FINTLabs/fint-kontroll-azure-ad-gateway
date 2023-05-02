@@ -11,25 +11,27 @@ import java.util.Map;
 @Getter
 @RequiredArgsConstructor
 public class AzureUser extends BaseObject {
-        private User userObject;
-
+        //private User userObject;
+        protected String id;
+        protected String mail;
+        protected String onPremisesExtensionAttributes;
+        protected String userPrincipalName;
         public AzureUser(User user) {
-                this.id = user.id;
-                this.userObject =  user;
-                Map<String, Object> results = new HashMap<>();
-                //Class<?> User = com.microsoft.graph.models.User.class;
-                Field[] fields = com.microsoft.graph.models.User.class.getDeclaredFields();
-                for (Field field : fields) {
+                //this.id = user.id;
+                //this.userObject =  user;
+                //Map<String, Object> results = new HashMap<>();
+                //Field[] fields = com.microsoft.graph.models.User.class.getDeclaredFields();
+                Field[] azfields =  AzureUser.class.getDeclaredFields();
+                for (Field field : azfields) {
                         // make the field accessible to be able to read its value
                         field.setAccessible(true);
-
                         try {
-                                // get the value of the field from the group object
+                                // get the value of the field from the user object
                                 Object value = field.get(user);
-
                                 // add the value to the results map if it's not null
                                 if (value != null) {
-                                        results.put(field.getName(), value);
+                                        field.set(this, value);
+                                        //results.put(field.getName(), value);
                                 }
                         } catch (IllegalAccessException e) {
                                 // handle the exception if the field is not accessible
