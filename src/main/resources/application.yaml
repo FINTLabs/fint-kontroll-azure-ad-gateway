@@ -25,10 +25,12 @@ fint:
   flyt:
     azure-ad-gateway:
       users:
+        #Additional attributes can be choosen.
         optionaluserattributes:
-          - displayname
-          - givenname
-          - surname
+          # displayname
+          # givenname
+          # surname
+          #- onPremisesUserPrincipalName
         employeeidattribute: onPremisesExtensionAttributes.extensionattribute10
         studentidattribute: onPremisesExtensionAttributes.extensionattribute9
 

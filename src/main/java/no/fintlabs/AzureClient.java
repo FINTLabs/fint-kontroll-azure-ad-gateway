@@ -149,7 +149,8 @@ public class AzureClient {
         // TODO: Do I need some sleep time between requests?
         this.pageThrough(
                 this.graphServiceClient.users()
-                        .buildRequest().select(String.join(",", configUser.AllAttributes()))
+                        .buildRequest()
+                        .select(String.join(",", configUser.AllAttributes()))
                         .get()
         );
         log.info("--- finished pulling resources from Azure. ---");
