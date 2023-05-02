@@ -38,4 +38,13 @@ public class ConfigUser {
         return AllAttribs;
     };
 
+    public List<String> Filterlist(){
+        List<String> AllAttribsFilter = new ArrayList<>();
+        for (String str: this.AllAttributes())
+        {
+            AllAttribsFilter.add(str + " ne null");
+        }
+        return AllAttribsFilter;
+    };
+
 }
