@@ -25,8 +25,8 @@ fint:
   flyt:
     azure-ad-gateway:
       users:
-        employeeidattribute: onPremisesExtensionAttributes.extensionattribute10
-        studentidattribute: onPremisesExtensionAttributes.extensionattribute9
+        employeeidattribute: onPremisesExtensionAttributes.extensionAttribute10
+        studentidattribute: onPremisesExtensionAttributes.extensionAttribute9
       group-scheduler:
         pull:
           initial-delay-ms: 1000

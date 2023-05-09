@@ -1,26 +1,15 @@
 package no.fintlabs;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.microsoft.graph.models.*;
-import com.microsoft.graph.serializer.AdditionalDataManager;
 import lombok.*;
-import reactor.core.publisher.Mono;
+import lombok.extern.log4j.Log4j2;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.springframework.util.StringUtils.capitalize;
 
 @Setter
 @Getter
 @RequiredArgsConstructor
+@Log4j2
 public class AzureUser {
 
 
@@ -30,10 +19,9 @@ public class AzureUser {
         private String displayname;
         private String givenname;
         private String surname;
-        private Object onPremisesExtensionAttributes;
         private String onPremisesUserPrincipalName;
-        private String employeeIdAttribute;
-        private String studentIdAttribute;
+        private String employeeId;
+        private String studentId;
 
         public AzureUser(User user, ConfigUser configUser) {
 
@@ -44,17 +32,17 @@ public class AzureUser {
                 this.givenname = user.givenName;
                 this.userPrincipalName = user.userPrincipalName;
                 this.onPremisesUserPrincipalName = user.onPremisesUserPrincipalName;
-                this.onPremisesExtensionAttributes = user.onPremisesExtensionAttributes;
                 try {
-                        this.employeeIdAttribute = (String) getAttributeValue(user, configUser.getEmployeeidattribute());
+                        this.employeeId = (String) getAttributeValue(user, configUser.getEmployeeidattribute());
                 } catch (Exception e) {
+                        log.info(e);
 
                 }
                 try {
 
-                        this.studentIdAttribute = (String) getAttributeValue(user, configUser.getStudentidattribute());
+                        this.studentId = (String) getAttributeValue(user, configUser.getStudentidattribute());
                 } catch (Exception e) {
-
+                        log.info(e);
                 }
 
         }
@@ -75,13 +63,14 @@ public class AzureUser {
                                         Object value = field.get(attributeValues);
 
                                         // add the value to the results map if it's not null
-                                        if (value != null && field.getName().startsWith("extensionAttributes")) {
-                                                return value;
-                                        }
+                                        if(field.getName().endsWith(attributeParts[1]))
+                                                if (value != null)
+                                                        return value.toString();
+
                                 } catch (IllegalAccessException e) {
                                         // handle the exception if the field is not accessible
                                         e.printStackTrace();
-                                }
+                        }
                         }
                 }
                 else
@@ -95,8 +84,9 @@ public class AzureUser {
                                         Object value = field.get(user);
 
                                         // add the value to the results map if it's not null
-                                        if (value != null && !field.getName().startsWith("additionalDataManager") && !field.getName().startsWith("onPremisesExtensionAttributes")) {
-                                                return value;
+                                        if(field.getName().endsWith(attributeName))
+                                        if (value != null) {
+                                                return value.toString();
                                         }
                                 } catch (IllegalAccessException e) {
                                         // handle the exception if the field is not accessible
