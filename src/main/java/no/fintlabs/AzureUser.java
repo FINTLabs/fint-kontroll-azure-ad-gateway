@@ -3,9 +3,11 @@ package no.fintlabs;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.gson.JsonElement;
 import com.microsoft.graph.models.*;
 import com.microsoft.graph.serializer.AdditionalDataManager;
 import lombok.*;
+import lombok.extern.log4j.Log4j2;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Field;
@@ -20,54 +22,68 @@ import static org.springframework.util.StringUtils.capitalize;
 
 @Setter
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor
+//@RequiredArgsConstructor
+@Log4j2
 public class AzureUser {
 
 
         private String id;
         private String mail;
         private String userPrincipalName;
-        private String displayname;
+        /*private String displayname;
         private String givenname;
         private String surname;
         private Object onPremisesExtensionAttributes;
-        private String onPremisesUserPrincipalName;
-        private String employeeIdAttribute;
-        private String studentIdAttribute;
+        private String onPremisesUserPrincipalName;*/
+        private String employeeId;
+        private String studentId;
 
         public AzureUser(User user, ConfigUser configUser) {
 
                 this.id = user.id;
                 this.mail = user.mail;
-                this.displayname = user.displayName;
+                /*this.displayname = user.displayName;
                 this.surname = user.surname;
-                this.givenname = user.givenName;
+                this.givenname = user.givenName;*/
                 this.userPrincipalName = user.userPrincipalName;
-                this.onPremisesUserPrincipalName = user.onPremisesUserPrincipalName;
-                this.onPremisesExtensionAttributes = user.onPremisesExtensionAttributes;
+                //this.onPremisesUserPrincipalName = user.onPremisesUserPrincipalName;
+                //this.onPremisesExtensionAttributes = user.onPremisesExtensionAttributes;
                 try {
-                        this.employeeIdAttribute = (String) getAttributeValue(user, configUser.getEmployeeidattribute());
-                } catch (Exception e) {
-
+                        this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
+                        this.studentId = getAttributeValue(user, configUser.getStudentidattribute());
+                } catch (NoSuchFieldException e) {
+                        e.printStackTrace();
+                        throw new RuntimeException(e);
                 }
-                try {
-
-                        this.studentIdAttribute = (String) getAttributeValue(user, configUser.getStudentidattribute());
-                } catch (Exception e) {
-
-                }
-
         }
 
-
-        public static Object getAttributeValue(User user, String attributeName) throws NoSuchFieldException, IllegalAccessException {
+        public String getAttributeValue(User user, String attributeName) throws NoSuchFieldException {
                 // Split the attribute name by dot to get the nested field names
                 String[] attributeParts = attributeName.split("\\.");
-
                 if (attributeParts[0].equals("onPremisesExtensionAttributes")) {
-                        OnPremisesExtensionAttributes attributeValues = user.onPremisesExtensionAttributes;
-                        Field[] fields = OnPremisesExtensionAttributes.class.getDeclaredFields();
-                        for (Field field : fields) {
+                        JsonElement oa = user.additionalDataManager().get("onPremisesExtensionAttributes");
+                        if (user.onPremisesExtensionAttributes == null){
+                                log.info("OnPremisesExtensionAttribute property is null");
+                                return null;
+                        }
+                        Field extField = user.onPremisesExtensionAttributes.getClass().getField(attributeParts[1]);
+                        /*Object o = extField.get(onPremisesExtensionAttributes);
+                        return o;*/
+                        String ran = "true";
+                        //OnPremisesExtensionAttributes attributeValues = user.onPremisesExtensionAttributes;
+                        //Field[] fields = OnPremisesExtensionAttributes.class.getDeclaredFields();
+                        //Field extField = OnPremisesExtensionAttributes.class.getDeclaredField(attributeParts[1]);
+                        //Field extField = attributeValues.getClass().getDeclaredField(attributeParts[1]);
+                        //Field extField = user.onPremisesExtensionAttributes.getClass().getDeclaredField(attributeParts[1]);
+
+                        //extField.setAccessible(true);
+                        //return extField.get(attributeValues);
+                        return "Yess";
+                }
+                return null;
+        }
+                        /*for (Field field : fields) {
                                 // make the field accessible to be able to read its value
                                 field.setAccessible(true);
                                 try {
@@ -75,16 +91,16 @@ public class AzureUser {
                                         Object value = field.get(attributeValues);
 
                                         // add the value to the results map if it's not null
-                                        if (value != null && field.getName().startsWith("extensionAttributes")) {
+                                        if (value != null && field.getName().startsWith("extensionattribute")) {
                                                 return value;
                                         }
                                 } catch (IllegalAccessException e) {
                                         // handle the exception if the field is not accessible
                                         e.printStackTrace();
                                 }
-                        }
-                }
-                else
+                        }*/
+                //}
+                /*else
                 {
                         Field[] fields = User.class.getDeclaredFields();
                         for (Field field : fields) {
@@ -107,9 +123,7 @@ public class AzureUser {
 
                 // Return the attribute value
                 return null;
-        }
-
-
+        }*/
 }
 
 
