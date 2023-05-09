@@ -64,28 +64,49 @@ public class AzureUser {
                 // Split the attribute name by dot to get the nested field names
                 String[] attributeParts = attributeName.split("\\.");
 
-                // Get the user's onPremisesExtensionAttributes object
-                OnPremisesExtensionAttributes extensionAttributes = user.onPremisesExtensionAttributes;
-
-                // If the attribute name contains "onPremisesExtensionAttributes", traverse the nested fields to get the attribute value
-                Object attributeValue = extensionAttributes;
                 if (attributeParts[0].equals("onPremisesExtensionAttributes")) {
-                        for (int i = 1; i < attributeParts.length; i++) {
-                                Field field = attributeValue.getClass().getDeclaredField(attributeParts[1]);
+                        OnPremisesExtensionAttributes attributeValues = user.onPremisesExtensionAttributes;
+                        Field[] fields = OnPremisesExtensionAttributes.class.getDeclaredFields();
+                        for (Field field : fields) {
+                                // make the field accessible to be able to read its value
                                 field.setAccessible(true);
-                                attributeValue = field.get(attributeParts[1]);
-                                if (attributeValue == null) {
-                                        break;
+                                try {
+                                        // get the value of the field from the group object
+                                        Object value = field.get(attributeValues);
+
+                                        // add the value to the results map if it's not null
+                                        if (value != null && field.getName().startsWith("extensionAttributes")) {
+                                                return value;
+                                        }
+                                } catch (IllegalAccessException e) {
+                                        // handle the exception if the field is not accessible
+                                        e.printStackTrace();
                                 }
                         }
-                } else { // Otherwise, get the attribute value from the User object
-                        Field field = user.getClass().getDeclaredField(attributeName);
-                        field.setAccessible(true);
-                        attributeValue = field.get(user);
+                }
+                else
+                {
+                        Field[] fields = User.class.getDeclaredFields();
+                        for (Field field : fields) {
+                                // make the field accessible to be able to read its value
+                                field.setAccessible(true);
+                                try {
+                                        // get the value of the field from the group object
+                                        Object value = field.get(user);
+
+                                        // add the value to the results map if it's not null
+                                        if (value != null && !field.getName().startsWith("additionalDataManager") && !field.getName().startsWith("onPremisesExtensionAttributes")) {
+                                                return value;
+                                        }
+                                } catch (IllegalAccessException e) {
+                                        // handle the exception if the field is not accessible
+                                        e.printStackTrace();
+                                }
+                        }
                 }
 
                 // Return the attribute value
-                return attributeValue;
+                return null;
         }
 
 
