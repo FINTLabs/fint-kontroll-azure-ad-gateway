@@ -99,7 +99,7 @@ public class AzureClient {
         do {
             for (User user: page.getCurrentPage()) {
                 log.info("USER object detected!");
-                azureUserProducerService.publish(new AzureUser(user));
+                azureUserProducerService.publish(new AzureUser(user, configUser));
             }
             if (page.getNextPage() == null) {
                 break;
@@ -179,11 +179,15 @@ public class AzureClient {
         initialDelayString = "${fint.flyt.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
         fixedDelayString = "${fint.flyt.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
+
+    //$select=id,displayName&$expand=members($select=id,userPrincipalName,displayName)
     private void pullAllGroups() {
         log.info("*** Fetching all groups from AD >>> ***");
         this.pageThrough(
                this.graphServiceClient.groups()
-                       .buildRequest().expand("members")
+                       .buildRequest()
+                       .select("id,displayName,assignedLabels")
+                       .expand(String.format("members($select=%s)",String.join(",", configUser.AllAttributes())))
                        .get()
         );
         log.info("*** <<< Done fetching all groups from AD ***");
