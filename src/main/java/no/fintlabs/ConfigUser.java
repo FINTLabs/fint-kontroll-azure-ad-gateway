@@ -24,7 +24,8 @@ public class ConfigUser {
             "displayname",
             "givenname",
             "surname",
-            "onPremisesUserPrincipalName"
+            "onPremisesUserPrincipalName",
+            "onPremisesSamAccountName"
     );
 
     private String employeeidattribute;
