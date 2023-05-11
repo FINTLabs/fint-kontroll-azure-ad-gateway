@@ -29,7 +29,6 @@ public class AzureGroup extends BaseObject {
     public AzureGroup(Group group) {
         this.id = group.id;
         this.displayName = group.displayName;
-        //this.members = group.members;
         this.members = groupMembers(group);
         this.assignedLabels = group.assignedLabels;
     }
@@ -50,25 +49,6 @@ public class AzureGroup extends BaseObject {
         }
 
         return userPrincipalNames;
-
-//                        for (Field field : fields) {
-//                                // make the field accessible to be able to read its value
-//                                field.setAccessible(true);
-//                                try {
-//                                        // get the value of the field from the group object
-//                                        Object value = field.get(user);
-//
-//                                        // add the value to the results map if it's not null
-//                                        if(field.getName().endsWith(attributeName))
-//                                                if (value != null) {
-//                                                        return value.toString();
-//                                                }
-//                                } catch (IllegalAccessException e) {
-//                                        // handle the exception if the field is not accessible
-//                                        e.printStackTrace();
-//                                }
-//                        }
-//        return null;
     }
 
 }
