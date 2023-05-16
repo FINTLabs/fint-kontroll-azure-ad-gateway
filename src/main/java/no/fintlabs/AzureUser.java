@@ -36,9 +36,9 @@ public class AzureUser {
                         // Set attribute values
                         OnPremisesExtensionAttributes attributeValues = user.onPremisesExtensionAttributes;
                         try {
-                                Field _field = OnPremisesExtensionAttributes.class.getDeclaredField(attributeParts[1]);
-                                _field.setAccessible(true);
-                                Object value = _field.get(attributeValues);
+                                Field field = OnPremisesExtensionAttributes.class.getDeclaredField(attributeParts[1]);
+                                field.setAccessible(true);
+                                Object value = field.get(attributeValues);
                                 if(value != null)
                                         return value.toString();
                         }
@@ -48,9 +48,9 @@ public class AzureUser {
                 else
                 {
                         try {
-                                Field _field = User.class.getDeclaredField(attributeName);
-                                _field.setAccessible(true);
-                                Object value = _field.get(user);
+                                Field field = User.class.getDeclaredField(attributeName);
+                                field.setAccessible(true);
+                                Object value = field.get(user);
                                 if(value != null)
                                         return value.toString();
                         }
