@@ -23,7 +23,7 @@ public class AzureGroupProducerService {
         entityProducer = entityProducerFactory.createProducer(AzureGroup.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource("azuregroup")
+                .resource(AzureGroup.class.getName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
