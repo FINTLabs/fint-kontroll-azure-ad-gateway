@@ -48,7 +48,7 @@ public class AzureUser {
                 else
                 {
                         try {
-                                Field _field = OnPremisesExtensionAttributes.class.getDeclaredField(attributeName);
+                                Field _field = User.class.getDeclaredField(attributeName);
                                 _field.setAccessible(true);
                                 Object value = _field.get(user);
                                 if(value != null)
