@@ -24,7 +24,7 @@ public class AzureUserProducerService {
         entityProducer = entityProducerFactory.createProducer(AzureUser.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource("azureuser")
+                .resource(AzureUser.class.getName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }

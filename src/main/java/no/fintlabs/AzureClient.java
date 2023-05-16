@@ -1,11 +1,10 @@
 package no.fintlabs;
 
 import com.microsoft.graph.http.BaseCollectionPage;
+import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
-import com.microsoft.graph.requests.GraphServiceClient;
-import com.microsoft.graph.requests.GroupCollectionPage;
-import com.microsoft.graph.requests.UserCollectionPage;
+import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import okhttp3.Request;
@@ -56,6 +55,22 @@ public class AzureClient {
             this.procObject(object);
         }
     }*/
+    private void pageThrough(String group_id, DirectoryObjectCollectionWithReferencesPage inPage) {
+        log.info("Testing123");
+        DirectoryObjectCollectionWithReferencesPage page = inPage;
+        do {
+            log.info("Membership detected");
+            for (DirectoryObject member: page.getCurrentPage()) {
+                azureGroupMembershipProducerService.publish(new AzureGroupMembership(group_id, member));
+            }
+            if (page.getNextPage() == null) {
+                break;
+            } else {
+                log.info("Processing membership page");
+                page = page.getNextPage().buildRequest().select("id").get();
+            }
+        } while (page != null);
+    }
 
     private void pageThrough(GroupCollectionPage inPage) {
         GroupCollectionPage page = inPage;
@@ -63,12 +78,20 @@ public class AzureClient {
             for (Group group: page.getCurrentPage()) {
                 log.info("GROUP object detected!");
                 azureGroupProducerService.publish(new AzureGroup(group));
-                // TODO: Loop through all groups, and get group membership
-                /*pageThrough(
-                        graphServiceClient.groups(group.id).memberOf()
+                // TODO: Loop through all groups, and get group membership}
+                pageThrough(
+                        group.id,
+                        graphServiceClient.groups(group.id).members()
                         .buildRequest()
+                        .select("id")
                         .get()
-                        );*/
+                        );
+                /*this.pageThrough(
+                        this.graphServiceClient.users()
+                                .buildRequest()
+                                .select(String.join(",", configUser.AllAttributes()))
+                                .get()
+                );*/
             }
             if (page.getNextPage() == null) {
                 break;
