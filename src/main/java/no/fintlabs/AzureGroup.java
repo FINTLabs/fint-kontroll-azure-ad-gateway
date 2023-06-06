@@ -29,28 +29,9 @@ public class AzureGroup extends BaseObject {
     public AzureGroup(Group group) {
         this.id = group.id;
         this.displayName = group.displayName;
-        this.members = groupMembers(group);
+        this.members = new ArrayList<>();
         this.assignedLabels = group.assignedLabels;
     }
-
-    private List<String> groupMembers (Group group)
-    {
-        List<String> userPrincipalNames = new ArrayList<>();
-        DirectoryObjectCollectionPage groupMembers = group.members;
-        if (groupMembers != null && groupMembers.getCurrentPage() != null) {
-            List<DirectoryObject> members = groupMembers.getCurrentPage();
-
-            for (DirectoryObject member : members) {
-                if (member instanceof User) {
-                    User user = (User) member;
-                    userPrincipalNames.add(user.userPrincipalName);
-                }
-            }
-        }
-
-        return userPrincipalNames;
-    }
-
 }
 
 
