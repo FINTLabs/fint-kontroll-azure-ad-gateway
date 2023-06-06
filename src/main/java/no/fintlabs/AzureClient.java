@@ -23,45 +23,15 @@ public class AzureClient {
 
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
 
-    /*private final ProducerService<AzureUser> azureUserProducerService;
-    private final ProducerService<AzureGroup> azureGroupProducerService;*/
-
-    /*private <T> void procObject(T object) {
-        if (object instanceof User) {
-            log.info("USER object detected!");
-            azureUserProducerService.publish(new AzureUser((User)object));
-        } else if (object instanceof Group) {
-            log.info("GROUP object detected!");
-            azureGroupProducerService.publish(new AzureGroup((Group)object));
-        } else if (object instanceof GroupMembers) {
-            log.info("GROUP object detected!");
-            azureGroupMembershipProducerService(new AzureGroupMembership(GroupMembers)object))
-        } else {
-            log.info("ERROR unknown object detected!");
-        }
-    }*/
-/*
-     private <T> void procObject(T object) {
-        if (object instanceof User) {
-            log.info("USER object detected!");
-            azureUserProducerService.publish(new AzureUser((User)object));
-        } else {
-            log.info("ERROR unknown object detected!");
-        }
-    }*/
-
-    /*private <T1, T2 extends BaseRequestBuilder<T1>> void procPage(BaseCollectionPage<T1, T2> page) {
-        for (T1 object : page.getCurrentPage()) {
-            this.procObject(object);
-        }
-    }*/
-    private void pageThrough(String group_id, DirectoryObjectCollectionWithReferencesPage inPage) {
+    private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
         log.info("Testing123");
         DirectoryObjectCollectionWithReferencesPage page = inPage;
         do {
             log.info("Membership detected");
             for (DirectoryObject member: page.getCurrentPage()) {
-                azureGroupMembershipProducerService.publish(new AzureGroupMembership(group_id, member));
+                // New member detected
+                azureGroupMembershipProducerService.publish(new AzureGroupMembership(azureGroup.getId(), member));
+                azureGroup.getMembers().add(member.id);
             }
             if (page.getNextPage() == null) {
                 break;
@@ -77,21 +47,16 @@ public class AzureClient {
         do {
             for (Group group: page.getCurrentPage()) {
                 log.info("GROUP object detected!");
-                azureGroupProducerService.publish(new AzureGroup(group));
+                AzureGroup newGroup = new AzureGroup(group);
                 // TODO: Loop through all groups, and get group membership}
                 pageThrough(
-                        group.id,
+                        newGroup,
                         graphServiceClient.groups(group.id).members()
                         .buildRequest()
                         .select("id")
                         .get()
                         );
-                /*this.pageThrough(
-                        this.graphServiceClient.users()
-                                .buildRequest()
-                                .select(String.join(",", configUser.AllAttributes()))
-                                .get()
-                );*/
+                azureGroupProducerService.publish(newGroup);
             }
             if (page.getNextPage() == null) {
                 break;
@@ -101,21 +66,6 @@ public class AzureClient {
             }
         } while (page != null);
     }
-
-    /*private void pageThrough( inPage) {
-        BaseCollectionPage<T1, T2> page = inPage;
-        do {
-            this.procPage(page);
-            if (page.getNextPage() == null) {
-                break;
-            } else {
-                page = page.getNextPage();
-                //log.info("test123");
-                //page = nextPage
-                //page.buildRequest().get()
-            }
-        } while (page != null);
-    }*/
 
     private void pageThrough(UserCollectionPage inPage) {
         UserCollectionPage page = inPage;
@@ -133,34 +83,6 @@ public class AzureClient {
         } while (page != null);
     }
 
-    /*private void pageThrough(GroupCollectionPage inPage) {
-        GroupCollectionPage page = inPage;
-        do {
-            this.procPage(page);
-            if (page.getNextPage() == null) {
-                break;
-            } else {
-                log.info("Processing user page");
-                page = page.getNextPage().buildRequest().get();
-            }
-        } while (page != null);
-    }*/
-
-    /*private <T1, T2 extends BaseRequestBuilder<T1>> void pageThrough(BaseCollectionPage<T1, T2> inPage) {
-        BaseCollectionPage<T1, T2> page = inPage;
-        do {
-            this.procPage(page);
-            if (page.getNextPage() == null) {
-                break;
-            } else {
-                page = page.getNextPage()
-                //log.info("test123");
-                //page = nextPage
-                //page.buildRequest().get()
-            }
-        } while (page != null);
-    }*/
-
     // Fetch full user catalogue
     @Scheduled(
             initialDelayString = "${fint.flyt.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
@@ -174,29 +96,12 @@ public class AzureClient {
                 this.graphServiceClient.users()
                         .buildRequest()
                         .select(String.join(",", configUser.AllAttributes()))
+                        //.top(10)
                         .get()
         );
         log.info("--- finished pulling resources from Azure. ---");
 
     }
-
-
-/*    @Scheduled(
-            initialDelayString = "${fint.flyt.azure-ad-gateway.users.pull.initial-delay-ms}",
-            fixedDelayString = "${fint.flyt.azure-ad-gateway.users.pull.fixed-delay-ms}"
-    )
-    private void pullAllUsers() {
-        log.info("--- Starting to pull group members from Azure --- ");
-        // TODO: Change to while loop (while change != null;
-        // TODO: Do I need some sleep time between requests?
-        this.pageThrough(
-                this.graphServiceClient.builder().a
-                        .buildRequest()
-                        .get()
-        );
-        log.info("--- finished pulling resources from Azure. ---");
-
-    }*/
 
     @Scheduled(
         initialDelayString = "${fint.flyt.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
@@ -211,6 +116,7 @@ public class AzureClient {
                        .buildRequest()
                        .select("id,displayName,assignedLabels")
                        .expand(String.format("members($select=%s)",String.join(",", configUser.AllAttributes())))
+                       //.top(2)
                        .get()
         );
         log.info("*** <<< Done fetching all groups from AD ***");
