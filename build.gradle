@@ -38,6 +38,7 @@ dependencies {
 
     implementation 'com.azure:azure-identity:1.7.2'
     implementation 'com.microsoft.graph:microsoft-graph:5.42.0'
+    implementation group: 'commons-codec', name: 'commons-codec', version: '1.15'
 
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'no.fintlabs:fint-kafka:2.3.0'
