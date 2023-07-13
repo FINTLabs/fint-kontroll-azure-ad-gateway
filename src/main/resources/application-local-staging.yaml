@@ -44,3 +44,5 @@ azurecredentials:
   clientsecret: XXXX
   tenantguid: XXXX
 
+server:
+  port: 8085
