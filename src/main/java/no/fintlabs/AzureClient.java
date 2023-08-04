@@ -23,6 +23,8 @@ public class AzureClient {
 
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
 
+    private final ResourceGroupConsumerService resourceGroupConsumerService;
+
     private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
         log.info("Testing123");
         DirectoryObjectCollectionWithReferencesPage page = inPage;
