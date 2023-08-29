@@ -8,6 +8,11 @@ docker-compose -f docker-compose.yaml up
 
 localhost:
 
+## Using kafkacat/kcat on localhost
+*Debian 11: Install tool with: _apt-get install kafkacat_*
+
+    kafkacat -P -b localhost:9092 -t fintlabs-no.kontroll.entity.resource-group -K!
+
 ## Run on localhost
 
 cd k8s/manifests/local
