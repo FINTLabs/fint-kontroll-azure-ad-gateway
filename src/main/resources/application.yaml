@@ -22,6 +22,7 @@ fint:
     topic:
       org-id: ${fint.org-id}
       domain-context: kontroll
+  #TODO: Endre FLYT -> Kontroll
   flyt:
     azure-ad-gateway:
       users:
@@ -40,7 +41,7 @@ fint:
           interval-ms: 518400000
 
 azurecredentials:
-  clientid: XXXX
+  clientid:   XXXX
   clientsecret: XXXX
   tenantguid: XXXX
 
