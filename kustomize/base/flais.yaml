@@ -1,0 +1,24 @@
+apiVersion: fintlabs.no/v1alpha1
+kind: Application
+metadata:
+  name: fint-kontroll-azure-ad-gateway
+  namespace: fintlabs-no
+spec:
+  orgId: fintlabs.no
+  image: ghcr.io/fintlabs/fint-kontroll-azure-ad-gateway:latest
+  imagePullPolicy: Always
+  env:
+  envFrom:
+    - secretRef:
+        name: kontroll-azure-ad-gateway-fintlabs
+
+  onePassword:
+    itemPath: "vaults/aks-beta-vault/items/kontroll-azure-ad-gateway-fintlabs"
+
+  kafka:
+    enabled: true
+    acls:
+      - topic: 'fintlabs-no.kontroll.*'
+        permission: read
+      - topic: 'fintlabs-no.kontroll.*'
+        permission: admin
