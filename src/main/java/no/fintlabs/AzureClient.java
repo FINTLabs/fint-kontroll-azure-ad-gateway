@@ -124,6 +124,10 @@ public class AzureClient {
         log.info("*** <<< Done fetching all groups from AD ***");
     }
 
+    private void createGroup(AzureGroup azureGroup) {
+        log.info("Azure create group: ");
+        log.info(azureGroup);
+    }
 
     public void run() {
         log.info("Trigger called");
