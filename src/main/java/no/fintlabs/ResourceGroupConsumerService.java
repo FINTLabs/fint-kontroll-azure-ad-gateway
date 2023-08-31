@@ -1,5 +1,6 @@
 package no.fintlabs;
 
+import com.microsoft.graph.models.AssignedLabel;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.requests.GraphServiceClient;
 import lombok.AllArgsConstructor;
@@ -38,15 +39,16 @@ public class ResourceGroupConsumerService {
         log.info("test123\n");
 
         Group group = new Group();
-        group.description = "fint-kontroll-testgroup";
-        group.displayName = "FINT kontroll group";
+        group.description = "fint-kontroll-testgroup2";
+        group.displayName = "FINT kontroll group2";
         //LinkedList<String> groupTypesList = new LinkedList<String>();
         //groupTypesList.add("Security");
         //group.groupTypes = groupTypesList;
         //group.groupTypes = new LinkedList<String>(Arrays.asList("Security"));
         group.mailEnabled = false;
-        group.mailNickname = "FINT-kontroll-group";
+        group.mailNickname = "FINT-kontroll-group2";
         group.securityEnabled = true;
+        //group.assignedLabels.add(new AssignedLabel())
 
         graphServiceClient.groups()
                           .buildRequest()
