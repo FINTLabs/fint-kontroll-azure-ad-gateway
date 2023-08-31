@@ -45,7 +45,7 @@ public class ResourceGroupConsumerService {
         //group.groupTypes = groupTypesList;
         //group.groupTypes = new LinkedList<String>(Arrays.asList("Security"));
         group.mailEnabled = false;
-        //group.mailNickname = "library";
+        group.mailNickname = "FINT-kontroll-group";
         group.securityEnabled = true;
 
         graphServiceClient.groups()
