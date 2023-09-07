@@ -12,7 +12,8 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+//TODO: Change PostConstruct to jakarta when SB -> 3.x
+//import jakarta.annotation.PostConstruct;
 import javax.annotation.PostConstruct;
 import java.util.Arrays;
 import java.util.List;
