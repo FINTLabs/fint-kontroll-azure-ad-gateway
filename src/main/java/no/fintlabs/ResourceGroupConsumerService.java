@@ -36,23 +36,18 @@ public class ResourceGroupConsumerService {
     }
     private void processEntity(ResourceGroup resourceGroup) {
         //TODO: Create group in Azure
-        log.info("test123\n");
+        log.info("Adding Group {} to Azure\n",resourceGroup.resourceName );
 
         Group group = new Group();
-        group.description = "fint-kontroll-testgroup2";
-        group.displayName = "FINT kontroll group2";
-        //LinkedList<String> groupTypesList = new LinkedList<String>();
-        //groupTypesList.add("Security");
-        //group.groupTypes = groupTypesList;
-        //group.groupTypes = new LinkedList<String>(Arrays.asList("Security"));
+        group.description = resourceGroup.resourceName;
+        group.displayName = resourceGroup.resourceName;
         group.mailEnabled = false;
-        group.mailNickname = "FINT-kontroll-group2";
+        group.mailNickname = resourceGroup.resourceName.replace(" ","").trim();
         group.securityEnabled = true;
-        //group.assignedLabels.add(new AssignedLabel())
 
         graphServiceClient.groups()
-                          .buildRequest()
-                          .post(group);
+                         .buildRequest()
+                         .post(group);
 
     }
 }

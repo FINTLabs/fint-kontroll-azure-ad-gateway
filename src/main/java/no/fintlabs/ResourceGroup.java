@@ -7,7 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ResourceGroup
 {
-    private String id;
-    private String resourceId;
-    private String displayName;
+    public String id;
+    public String resourceId;
+    public String displayName;
+    public String identityProviderGroupObjectId;
+    public String resourceName;
+    public String resourceType;
+    public String resourceLimit;
 }
