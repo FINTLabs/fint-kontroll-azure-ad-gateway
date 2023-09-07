@@ -1,4 +1,7 @@
 spring:
+  cache:
+    defaultCacheEntryTimeToLiveMillis: 518400000
+    defaultCacheHeapSize: 1000000
   security:
     oauth2:
       resourceserver:
