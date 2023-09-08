@@ -1,5 +1,7 @@
 package no.fintlabs;
 
+
+import lombok.AllArgsConstructor;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.cache.FintCacheManager;
 import org.springframework.context.annotation.Bean;
@@ -8,12 +10,10 @@ import org.springframework.context.annotation.Configuration;
 import java.util.Locale;
 
 @Configuration
+@AllArgsConstructor
 public class EntityCacheConfiguration {
 
     private final FintCacheManager fintCacheManager;
-
-    public EntityCacheConfiguration(FintCacheManager fintCacheManager) { this.fintCacheManager = fintCacheManager; }
-
 
     @Bean
     FintCache<String, AzureGroup> azureGroupResourceCache(){return createCache(AzureGroup.class);}

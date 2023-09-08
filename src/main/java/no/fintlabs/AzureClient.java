@@ -26,7 +26,7 @@ public class AzureClient {
     private final ResourceGroupConsumerService resourceGroupConsumerService;
 
     private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
-        log.info("Testing123");
+        log.info("Fetching Azure Groups");
         DirectoryObjectCollectionWithReferencesPage page = inPage;
         do {
             log.info("Membership detected");
