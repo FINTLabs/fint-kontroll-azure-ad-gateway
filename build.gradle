@@ -45,6 +45,8 @@ dependencies {
     // TODO: Upgrade with reference to new version when migrating to Spring boot 3
     implementation 'no.fintlabs:fint-kafka:2.4.1'
     implementation 'no.fintlabs:fint-flyt-cache:1.0.0'
+    implementation 'org.ehcache:ehcache:3.10.6'
+    implementation 'net.sf.ehcache:ehcache:2.10.9.2'
 
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
