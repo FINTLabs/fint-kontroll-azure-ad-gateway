@@ -1,5 +1,6 @@
 package no.fintlabs;
 
+import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.AssignedLabel;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
@@ -23,13 +24,12 @@ import java.util.List;
 @Service
 @AllArgsConstructor
 @Slf4j
-@ConfigurationProperties(prefix = "azurecredentials")
 public class ResourceGroupConsumerService {
     // TODO: Check if this is the same object as in AzureClient
-    public String clientid;
-    @Autowired
+        @Autowired
     private final GraphServiceClient<Request> graphServiceClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
+    private final Config config;
 
     @PostConstruct
     public void init() {
@@ -64,13 +64,17 @@ public class ResourceGroupConsumerService {
 
         if (!doesGroupExist(resourceGroup.resourceName)) {
             log.info("Adding Group to Azure: {}", resourceGroup.resourceName);
+//            DirectoryObject directoryObject = new DirectoryObject();
+//            directoryObject.id =  config.clientid;
 
             Group group = new Group();
             group.displayName = resourceGroup.resourceName;
             group.mailEnabled = false;
             group.mailNickname = resourceGroup.resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
             group.securityEnabled = true;
-            group.owners = clientid;
+            //work in progress
+            group.additionalDataManager().put("owners@odata.bind", new JsonPrimitive("https://graph.microsoft.com/v1.0/users/" + config.clientid));
+            //group.additionalDataManager().put("members@odata.bind", new JsonPrimitive("[  \"https://graph.microsoft.com/v1.0/users/ff7cb387-6688-423c-8188-3da9532a73cc\",  \"https://graph.microsoft.com/v1.0/users/69456242-0067-49d3-ba96-9de6f2728e14\"]"));
 
             graphServiceClient.groups()
                     .buildRequest()
