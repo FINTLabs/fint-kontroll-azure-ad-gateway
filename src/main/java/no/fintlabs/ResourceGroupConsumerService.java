@@ -28,7 +28,6 @@ public class ResourceGroupConsumerService {
     private final GraphServiceClient<Request> graphServiceClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
 
-    private final EntityCacheConfiguration entityCacheConfiguration;
     @PostConstruct
     public void init() {
         //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails
