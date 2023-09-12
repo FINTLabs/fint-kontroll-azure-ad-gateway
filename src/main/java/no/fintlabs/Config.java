@@ -26,7 +26,7 @@ import java.util.List;
 @Configuration
 @ConfigurationProperties(prefix = "azurecredentials")
 public class Config {
-    private String clientid;
+    public String clientid;
     private String clientsecret;
     private String tenantguid;
     private String tull;

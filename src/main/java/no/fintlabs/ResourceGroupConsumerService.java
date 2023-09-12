@@ -1,7 +1,9 @@
 package no.fintlabs;
 
 import com.microsoft.graph.models.AssignedLabel;
+import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
+import com.microsoft.graph.requests.DirectoryObjectCollectionPage;
 import com.microsoft.graph.requests.GraphServiceClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +11,7 @@ import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import okhttp3.Request;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
 //TODO: Change PostConstruct to jakarta when SB -> 3.x
 //import jakarta.annotation.PostConstruct;
@@ -20,10 +23,10 @@ import java.util.List;
 @Service
 @AllArgsConstructor
 @Slf4j
-
+@ConfigurationProperties(prefix = "azurecredentials")
 public class ResourceGroupConsumerService {
     // TODO: Check if this is the same object as in AzureClient
-
+    public String clientid;
     @Autowired
     private final GraphServiceClient<Request> graphServiceClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
@@ -61,11 +64,13 @@ public class ResourceGroupConsumerService {
 
         if (!doesGroupExist(resourceGroup.resourceName)) {
             log.info("Adding Group to Azure: {}", resourceGroup.resourceName);
+
             Group group = new Group();
             group.displayName = resourceGroup.resourceName;
             group.mailEnabled = false;
             group.mailNickname = resourceGroup.resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
             group.securityEnabled = true;
+            group.owners = clientid;
 
             graphServiceClient.groups()
                     .buildRequest()
