@@ -24,6 +24,7 @@ public class AzureClient {
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
 
     private final ResourceGroupConsumerService resourceGroupConsumerService;
+    private final ResourceGroupMembershipConsumerService resourceGroupMembershipConsumerService;
 
     private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
         log.info("Fetching Azure Groups");
