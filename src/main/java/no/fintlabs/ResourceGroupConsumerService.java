@@ -41,7 +41,7 @@ public class ResourceGroupConsumerService {
                         .build()
         );
     }
-    private boolean doesGroupExist(String groupName) {
+    public boolean doesGroupExist(String groupName) {
         List<Group> groups = graphServiceClient.groups()
                 .buildRequest()
                 .get()
@@ -49,33 +49,32 @@ public class ResourceGroupConsumerService {
 
         for (Group group : groups) {
             if (group.displayName != null && group.displayName.equalsIgnoreCase(groupName)) {
-                log.debug("Group found");
+                //log.debug("Group found");
                 return true; // Group with the specified name exists
-
             }
         }
-        log.debug("group not found");
+        //log.debug("Group not found");
         return false; // Group with the specified name not found
     }
-    private void processEntity(ResourceGroup resourceGroup) {
-        //TODO: Create group in Azure
-        log.info("Adding Group {} to Azure\n",resourceGroup.resourceName );
+
+    public void processEntity(ResourceGroup resourceGroup) {
 
 
-            if(!doesGroupExist(resourceGroup.resourceName)) {
-                log.info("Creating group");
-                Group group = new Group();
-                group.description = resourceGroup.resourceName;
-                group.displayName = resourceGroup.resourceName;
-                group.mailEnabled = false;
-                group.mailNickname = resourceGroup.resourceName.replace(" ", "").trim();
-                group.securityEnabled = true;
+        if (!doesGroupExist(resourceGroup.resourceName)) {
+            log.info("Adding Group to Azure: {}", resourceGroup.resourceName);
+            Group group = new Group();
+            group.displayName = resourceGroup.resourceName;
+            group.mailEnabled = false;
+            group.mailNickname = resourceGroup.resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
+            group.securityEnabled = true;
 
-                graphServiceClient.groups()
-                        .buildRequest()
-                        .post(group);
-            }
+            graphServiceClient.groups()
+                    .buildRequest()
+                    .post(group);
+        } else {
+            log.info("Group not created as it already exists: {}", resourceGroup.resourceName);
         }
+    }
 
     }
 
