@@ -1,5 +1,6 @@
 package no.fintlabs;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.AssignedLabel;
 import com.microsoft.graph.models.DirectoryObject;
@@ -64,21 +65,21 @@ public class ResourceGroupConsumerService {
 
         if (!doesGroupExist(resourceGroup.resourceName)) {
             log.info("Adding Group to Azure: {}", resourceGroup.resourceName);
-//            DirectoryObject directoryObject = new DirectoryObject();
-//            directoryObject.id =  config.clientid;
+
 
             Group group = new Group();
             group.displayName = resourceGroup.resourceName;
             group.mailEnabled = false;
             group.mailNickname = resourceGroup.resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
             group.securityEnabled = true;
-            //work in progress
-            group.additionalDataManager().put("owners@odata.bind", new JsonPrimitive("https://graph.microsoft.com/v1.0/users/" + config.clientid));
-            //group.additionalDataManager().put("members@odata.bind", new JsonPrimitive("[  \"https://graph.microsoft.com/v1.0/users/ff7cb387-6688-423c-8188-3da9532a73cc\",  \"https://graph.microsoft.com/v1.0/users/69456242-0067-49d3-ba96-9de6f2728e14\"]"));
-
-            graphServiceClient.groups()
+            Group createdGroup = graphServiceClient.groups()
                     .buildRequest()
                     .post(group);
+            DirectoryObject ownerDirectoryObject = new DirectoryObject();
+            ownerDirectoryObject.id = config.getEntobjectid();
+            graphServiceClient.groups(createdGroup.id).owners().references()
+                    .buildRequest()
+                    .post(ownerDirectoryObject);
         } else {
             log.info("Group not created as it already exists: {}", resourceGroup.resourceName);
         }

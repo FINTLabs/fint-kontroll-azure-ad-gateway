@@ -24,27 +24,29 @@ import java.util.List;
 @Getter
 @EnableAutoConfiguration
 @Configuration
-@ConfigurationProperties(prefix = "azurecredentials")
+@ConfigurationProperties(prefix = "azure.credentials")
 public class Config {
-    public String clientid;
+    private String clientid;
     private String clientsecret;
     private String tenantguid;
-    private String tull;
+
+    private String entobjectid;
+
 
     @PostConstruct
     protected void print() {
-        log.info("--- test123 ---");
+        log.info("Starting PostConstruct");
     }
 
     @Bean
-    @ConfigurationProperties(prefix = "fint.flyt.azure-ad-gateway.users")
+    @ConfigurationProperties(prefix = "fint.kontroll.azure-ad-gateway.users")
     public ConfigUser configUser() {
         return new ConfigUser();
     }
 
 
     @Bean
-    @ConfigurationProperties(prefix = "azurecredentials")
+    //@ConfigurationProperties(prefix = "azure.credentials")
     public GraphServiceClient<Request> graphService() {
         List<String> scopes = Arrays.asList("https://graph.microsoft.com/.default");
         ClientSecretCredential clientSecretCredential = new ClientSecretCredentialBuilder()

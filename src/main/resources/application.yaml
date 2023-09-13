@@ -25,8 +25,7 @@ fint:
     topic:
       org-id: ${fint.org-id}
       domain-context: kontroll
-  #TODO: Endre FLYT -> Kontroll
-  flyt:
+  kontroll:
     azure-ad-gateway:
       users:
         #Set employeeID and studentID Attributes. Case sensitive. See User Object in Graph
@@ -43,8 +42,11 @@ fint:
         refresh:
           interval-ms: 518400000
 
-azurecredentials:
-  clientid:   XXXX
-  clientsecret: XXXX
-  tenantguid: XXXX
+azure:
+  credentials:
+    clientid:   XXXX
+    clientsecret: XXXX
+    tenantguid: XXXX
+    appobjectid: ZZZZ
+
 
