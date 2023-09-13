@@ -14,9 +14,11 @@ import java.security.MessageDigest;
 @Getter
 @Setter
 @Log4j2
-public class AzureGroupMembership extends BaseObject {
+public class AzureGroupMembership {
     private String user_id;
     private String group_id;
+
+    protected String id;
 
     public AzureGroupMembership(String group_id, DirectoryObject directoryObject) {
         this.group_id = group_id;

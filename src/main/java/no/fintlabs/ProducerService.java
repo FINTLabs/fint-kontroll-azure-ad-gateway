@@ -19,12 +19,12 @@ import javax.annotation.PostConstruct;
 @Service
 @Slf4j
 @AllArgsConstructor
-public class ProducerService<T extends BaseObject> {
+public class ProducerService<T> {
     /*private final EntityProducerFactory entityProducerFactory;
     //private EntityProducer<T> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
-    private final EntityTopicService entityTopicService;*/
-
+    private final EntityTopicService entityTopicService;
+    protected String id;*/
     @PostConstruct
     public void initVars () {
 /*        entityTopicNameParameters = EntityTopicNameParameters
