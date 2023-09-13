@@ -88,8 +88,8 @@ public class AzureClient {
 
     // Fetch full user catalogue
     @Scheduled(
-            initialDelayString = "${fint.flyt.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
-            fixedDelayString = "${fint.flyt.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
+            initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
+            fixedDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
     )
     private void pullAllUsers() {
         log.info("--- Starting to pull users from Azure --- ");
@@ -107,8 +107,8 @@ public class AzureClient {
     }
 
     @Scheduled(
-        initialDelayString = "${fint.flyt.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
-        fixedDelayString = "${fint.flyt.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
+        initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
+        fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
 
     //$select=id,displayName&$expand=members($select=id,userPrincipalName,displayName)
