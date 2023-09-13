@@ -27,7 +27,7 @@ import java.util.List;
 @Slf4j
 public class ResourceGroupConsumerService {
     // TODO: Check if this is the same object as in AzureClient
-        @Autowired
+    @Autowired
     private final GraphServiceClient<Request> graphServiceClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
@@ -44,6 +44,7 @@ public class ResourceGroupConsumerService {
                         .build()
         );
     }
+
     public boolean doesGroupExist(String groupName) {
         List<Group> groups = graphServiceClient.groups()
                 .buildRequest()
@@ -62,11 +63,8 @@ public class ResourceGroupConsumerService {
 
     public void processEntity(ResourceGroup resourceGroup) {
 
-
         if (!doesGroupExist(resourceGroup.resourceName)) {
             log.info("Adding Group to Azure: {}", resourceGroup.resourceName);
-
-
             Group group = new Group();
             group.displayName = resourceGroup.resourceName;
             group.mailEnabled = false;
@@ -80,10 +78,11 @@ public class ResourceGroupConsumerService {
             graphServiceClient.groups(createdGroup.id).owners().references()
                     .buildRequest()
                     .post(ownerDirectoryObject);
-        } else {
+        }
+        else
+        {
             log.info("Group not created as it already exists: {}", resourceGroup.resourceName);
         }
     }
-
-    }
+}
 

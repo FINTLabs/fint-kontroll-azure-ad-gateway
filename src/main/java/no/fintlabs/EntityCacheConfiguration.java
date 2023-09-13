@@ -13,23 +13,23 @@ import java.util.Locale;
 @AllArgsConstructor
 public class EntityCacheConfiguration {
 
-    private final FintCacheManager fintCacheManager;
-
-    @Bean
-    FintCache<String, AzureGroup> azureGroupResourceCache(){return createCache(AzureGroup.class);}
-
-
-    @Bean
-    FintCache<String, Integer> publishedGroupHashCache() {
-        return createCache(Integer.class);
-    }
-
-    private <V> FintCache<String, V> createCache(Class<V> resourceClass) {
-        return fintCacheManager.createCache(
-                resourceClass.getName().toLowerCase(Locale.ROOT),
-                String.class,
-                resourceClass
-        );
-    }
+//    private final FintCacheManager fintCacheManager;
+//
+//    @Bean
+//    FintCache<String, AzureGroup> azureGroupResourceCache(){return createCache(AzureGroup.class);}
+//
+//
+//    @Bean
+//    FintCache<String, Integer> publishedGroupHashCache() {
+//        return createCache(Integer.class);
+//    }
+//
+//    private <V> FintCache<String, V> createCache(Class<V> resourceClass) {
+//        return fintCacheManager.createCache(
+//                resourceClass.getName().toLowerCase(Locale.ROOT),
+//                String.class,
+//                resourceClass
+//        );
+//    }
 
 }

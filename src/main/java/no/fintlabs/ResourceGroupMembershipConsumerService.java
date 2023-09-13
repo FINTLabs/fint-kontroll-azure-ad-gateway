@@ -1,11 +1,9 @@
 package no.fintlabs;
 
-import com.microsoft.graph.models.DirectoryObject;
-import com.microsoft.graph.models.Group;
-import com.microsoft.graph.models.User;
-import com.microsoft.graph.requests.DirectoryObjectCollectionWithReferencesPage;
-import com.microsoft.graph.requests.GraphServiceClient;
 
+import com.microsoft.graph.http.GraphServiceException;
+import com.microsoft.graph.models.DirectoryObject;
+import com.microsoft.graph.requests.GraphServiceClient;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -48,10 +44,22 @@ public class ResourceGroupMembershipConsumerService {
         DirectoryObject directoryObject = new DirectoryObject();
         directoryObject.id = resourceGroupMembership.userRef;
 
+        try
+        {
         graphServiceClient.groups(resourceGroupMembership.resourceRef).members().references()
                 .buildRequest()
                 .post(directoryObject);
+        } catch (GraphServiceException e) {
+            // Handle the HTTP response exception here
+            if (e.getResponseCode() == 400) {
+                // Handle the 400 Bad Request error
+                log.info("User already exists in group {}: ", resourceGroupMembership.resourceRef);
+            } else {
+                // Handle other HTTP errors
+                log.error("HTTP Error while updating group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage(),resourceGroupMembership.resourceRef);
+            }
         }
-
     }
+}
+
 

@@ -42,11 +42,12 @@ fint:
         refresh:
           interval-ms: 518400000
 
+#placeholders. Do not add creds
 azure:
   credentials:
     clientid:   XXXX
     clientsecret: XXXX
     tenantguid: XXXX
-    appobjectid: ZZZZ
+    entobjectid: ZZZZ
 
 
