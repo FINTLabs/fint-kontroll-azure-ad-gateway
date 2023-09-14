@@ -25,6 +25,10 @@ fint:
     topic:
       org-id: ${fint.org-id}
       domain-context: kontroll
+      resources:
+        resourcegrouptopic: resource-group
+        resourcegroupmembertopic: resource-group-membership
+
   kontroll:
     azure-ad-gateway:
       users:

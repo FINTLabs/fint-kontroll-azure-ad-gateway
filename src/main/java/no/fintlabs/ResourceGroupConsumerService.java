@@ -27,11 +27,13 @@ import java.util.List;
 @Slf4j
 public class ResourceGroupConsumerService {
     // TODO: Check if this is the same object as in AzureClient
+
     @Autowired
     private final GraphServiceClient<Request> graphServiceClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
 
+    private final KafkaTopics kafkaTopics;
     @PostConstruct
     public void init() {
         //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails
@@ -40,7 +42,7 @@ public class ResourceGroupConsumerService {
         ).createContainer(
                 EntityTopicNameParameters
                         .builder()
-                        .resource("resource-group")
+                        .resource(kafkaTopics.getResourcegrouptopic())
                         .build()
         );
     }
