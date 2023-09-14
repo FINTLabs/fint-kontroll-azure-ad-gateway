@@ -57,7 +57,7 @@ public class ResourceGroupMembershipConsumerService {
             // Handle the HTTP response exception here
             if (e.getResponseCode() == 400) {
                 // Handle the 400 Bad Request error
-                log.info("User already exists in group {}: ", resourceGroupMembership.resourceRef);
+                log.info("User {} already exists in group {}: ",resourceGroupMembership.userRef , resourceGroupMembership.resourceRef);
             } else {
                 // Handle other HTTP errors
                 log.error("HTTP Error while updating group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage(),resourceGroupMembership.resourceRef);
