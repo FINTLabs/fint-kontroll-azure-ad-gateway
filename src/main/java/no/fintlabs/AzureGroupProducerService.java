@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-//@AllArgsConstructor
 public class AzureGroupProducerService {
 
     private final EntityProducer<AzureGroup> entityProducer;

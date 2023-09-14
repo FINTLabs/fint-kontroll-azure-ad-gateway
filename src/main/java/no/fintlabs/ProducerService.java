@@ -12,18 +12,19 @@ import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import okhttp3.Request;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
-
+//TODO: Change PostConstruct to jakarta when SB -> 3.x
+//import jakarta.annotation.PostConstruct;
 import javax.annotation.PostConstruct;
 
 @Service
 @Slf4j
 @AllArgsConstructor
-public class ProducerService<T extends BaseObject> {
+public class ProducerService<T> {
     /*private final EntityProducerFactory entityProducerFactory;
     //private EntityProducer<T> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
-    private final EntityTopicService entityTopicService;*/
-
+    private final EntityTopicService entityTopicService;
+    protected String id;*/
     @PostConstruct
     public void initVars () {
 /*        entityTopicNameParameters = EntityTopicNameParameters

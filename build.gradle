@@ -1,5 +1,5 @@
 plugins {
-    id 'org.springframework.boot' version '2.7.4'
+    id 'org.springframework.boot' version '2.7.1'
     id 'io.spring.dependency-management' version '1.0.14.RELEASE'
     id 'java'
     id 'groovy'
@@ -31,18 +31,22 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    // TODO: Uncomment when migrating to Spring boot 3
+    //implementation 'org.springframework.boot:spring-boot-starter-web'
 
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-    implementation 'io.netty:netty-resolver-dns-native-macos:4.1.86.Final:osx-aarch_64'
+    implementation 'io.netty:netty-resolver-dns-native-macos:4.1.90.Final:osx-aarch_64'
 
-    implementation 'com.azure:azure-identity:1.7.2'
-    implementation 'com.microsoft.graph:microsoft-graph:5.42.0'
+    implementation 'com.azure:azure-identity:1.10.1'
+    implementation 'com.microsoft.graph:microsoft-graph:5.58.0'
     implementation group: 'commons-codec', name: 'commons-codec', version: '1.15'
 
     implementation 'org.springframework.kafka:spring-kafka'
-    implementation 'no.fintlabs:fint-kafka:2.3.0'
-    //implementation 'no.fintlabs:fint-flyt-cache:1.0.0'
+    // TODO: Upgrade with reference to new version when migrating to Spring boot 3
+    implementation 'no.fintlabs:fint-kafka:2.4.1'
+    implementation 'no.fintlabs:fint-flyt-cache:1.0.0'
+    implementation 'org.ehcache:ehcache:3.10.6'
+    implementation 'net.sf.ehcache:ehcache:2.10.9.2'
 
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
