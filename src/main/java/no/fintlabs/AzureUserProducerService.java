@@ -10,9 +10,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-//@AllArgsConstructor
-//@Setter
-//@Getter
+
 public class AzureUserProducerService {
     private final EntityProducer<AzureUser> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
@@ -24,7 +22,7 @@ public class AzureUserProducerService {
         entityProducer = entityProducerFactory.createProducer(AzureUser.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource("azureuser")
+                .resource(AzureUser.class.getName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }

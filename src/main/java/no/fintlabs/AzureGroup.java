@@ -19,7 +19,7 @@ import java.util.Map;
 @Setter
 @Getter
 
-public class AzureGroup extends BaseObject {
+public class AzureGroup {
 
     protected String id;
     protected String displayName;

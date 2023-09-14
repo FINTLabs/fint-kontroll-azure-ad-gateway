@@ -12,8 +12,10 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+//TODO: Change PostConstruct to jakarta when SB -> 3.x
+//import jakarta.annotation.PostConstruct;
 import javax.annotation.PostConstruct;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,27 +25,27 @@ import java.util.List;
 @Getter
 @EnableAutoConfiguration
 @Configuration
-@ConfigurationProperties(prefix = "azurecredentials")
+@ConfigurationProperties(prefix = "azure.credentials")
 public class Config {
     private String clientid;
     private String clientsecret;
     private String tenantguid;
-    private String tull;
+
+    private String entobjectid;
 
     @PostConstruct
     protected void print() {
-        log.info("--- test123 ---");
+        log.info("Starting PostConstruct");
     }
 
     @Bean
-    @ConfigurationProperties(prefix = "fint.flyt.azure-ad-gateway.users")
+    @ConfigurationProperties(prefix = "fint.kontroll.azure-ad-gateway.users")
     public ConfigUser configUser() {
         return new ConfigUser();
     }
 
-
     @Bean
-    @ConfigurationProperties(prefix = "azurecredentials")
+    //@ConfigurationProperties(prefix = "azure.credentials")
     public GraphServiceClient<Request> graphService() {
         List<String> scopes = Arrays.asList("https://graph.microsoft.com/.default");
         ClientSecretCredential clientSecretCredential = new ClientSecretCredentialBuilder()

@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Log4j2
-//@ConfigurationProperties(prefix = "azurecredentials")
 @RequiredArgsConstructor
 public class AzureClient {
     protected final GraphServiceClient<Request> graphServiceClient;
@@ -23,8 +22,11 @@ public class AzureClient {
 
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
 
+    private final ResourceGroupConsumerService resourceGroupConsumerService;
+    private final ResourceGroupMembershipConsumerService resourceGroupMembershipConsumerService;
+
     private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
-        log.info("Testing123");
+        log.info("Fetching Azure Groups");
         DirectoryObjectCollectionWithReferencesPage page = inPage;
         do {
             log.info("Membership detected");
@@ -85,8 +87,8 @@ public class AzureClient {
 
     // Fetch full user catalogue
     @Scheduled(
-            initialDelayString = "${fint.flyt.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
-            fixedDelayString = "${fint.flyt.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
+            initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
+            fixedDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
     )
     private void pullAllUsers() {
         log.info("--- Starting to pull users from Azure --- ");
@@ -104,8 +106,8 @@ public class AzureClient {
     }
 
     @Scheduled(
-        initialDelayString = "${fint.flyt.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
-        fixedDelayString = "${fint.flyt.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
+        initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
+        fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
 
     //$select=id,displayName&$expand=members($select=id,userPrincipalName,displayName)
@@ -122,6 +124,10 @@ public class AzureClient {
         log.info("*** <<< Done fetching all groups from AD ***");
     }
 
+    private void createGroup(AzureGroup azureGroup) {
+        log.info("Azure create group: ");
+        log.info(azureGroup);
+    }
 
     public void run() {
         log.info("Trigger called");
