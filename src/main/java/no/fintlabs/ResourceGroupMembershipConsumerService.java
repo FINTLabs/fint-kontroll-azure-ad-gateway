@@ -11,9 +11,11 @@ import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import okhttp3.Request;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.util.Objects;
 
 @Service
 @AllArgsConstructor
@@ -25,6 +27,9 @@ public class ResourceGroupMembershipConsumerService {
     @Autowired
     private final GraphServiceClient<Request> graphServiceClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
+    private final Config config;
+
+    private final KafkaTopics kafkaTopics;
 
     @PostConstruct
     public void init() {
@@ -34,7 +39,7 @@ public class ResourceGroupMembershipConsumerService {
         ).createContainer(
                 EntityTopicNameParameters
                         .builder()
-                        .resource("resource-group-membership")
+                        .resource(kafkaTopics.getResourcegroupmembertopic())
                         .build()
         );
     }
@@ -46,7 +51,7 @@ public class ResourceGroupMembershipConsumerService {
 
         try
         {
-        graphServiceClient.groups(resourceGroupMembership.resourceRef).members().references()
+        Objects.requireNonNull(graphServiceClient.groups(resourceGroupMembership.resourceRef).members().references())
                 .buildRequest()
                 .post(directoryObject);
         } catch (GraphServiceException e) {
