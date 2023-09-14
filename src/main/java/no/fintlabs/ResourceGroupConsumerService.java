@@ -37,7 +37,6 @@ public class ResourceGroupConsumerService {
     @PostConstruct
     public void init() {
         //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails
-        //TODO: Fetch topicname from config
         entityConsumerFactoryService.createFactory(ResourceGroup.class, consumerRecord -> processEntity(consumerRecord.value())
         ).createContainer(
                 EntityTopicNameParameters

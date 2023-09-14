@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Log4j2
-//@ConfigurationProperties(prefix = "azurecredentials")
 @RequiredArgsConstructor
 public class AzureClient {
     protected final GraphServiceClient<Request> graphServiceClient;

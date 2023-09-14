@@ -10,9 +10,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-//@AllArgsConstructor
-//@Setter
-//@Getter
+
 public class AzureUserProducerService {
     private final EntityProducer<AzureUser> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
