@@ -9,7 +9,7 @@ spring:
 
 logging:
   level:
-    root: TRACE
+    root: INFO
 
 fint:
   org-id: fintlabs.no
