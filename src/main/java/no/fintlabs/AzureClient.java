@@ -115,6 +115,22 @@ public class AzureClient {
         log.info("--- finished pulling resources from Azure. ---");
 
     }
+    private void pullAllExtUsers() {
+        log.info("--- Starting to pull users with external flag from Azure --- ");
+        // TODO: Change to while loop (while change != null;
+        // TODO: Do I need some sleep time between requests?
+        this.pageThrough(
+                this.graphServiceClient.users()
+                        .buildRequest()
+                        .select(String.join(",", configUser.AllAttributes()))
+                        .filter("usertype eq 'member'")
+                        //.top(10)
+                        .get()
+        );
+        log.info("--- finished pulling resources from Azure. ---");
+
+    }
+
 
     @Scheduled(
         initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
