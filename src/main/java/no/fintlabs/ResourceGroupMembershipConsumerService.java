@@ -53,6 +53,7 @@ public class ResourceGroupMembershipConsumerService {
                 Objects.requireNonNull(graphServiceClient.groups(resourceGroupMembership.resourceRef).members().references())
                         .buildRequest()
                         .post(directoryObject);
+                log.info("User {} added to group {}: ", resourceGroupMembership.userRef, resourceGroupMembership.resourceRef);
             } catch (GraphServiceException e) {
                 // Handle the HTTP response exception here
                 if (e.getResponseCode() == 400) {
