@@ -31,7 +31,6 @@ public class ResourceGroupConsumerService {
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
 
-    private final KafkaTopics kafkaTopics;
     @PostConstruct
     public void init() {
         //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails
@@ -39,7 +38,7 @@ public class ResourceGroupConsumerService {
         ).createContainer(
                 EntityTopicNameParameters
                         .builder()
-                        .resource(kafkaTopics.getResourcegrouptopic())
+                        .resource("resource-group")
                         .build()
         );
     }
