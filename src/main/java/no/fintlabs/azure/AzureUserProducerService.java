@@ -26,11 +26,11 @@ public class AzureUserProducerService {
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
-    public void publish(AzureUser azureUser) {
+    public void publish(AzureUserExternal azureUser) {
         entityProducer.send(
                 EntityProducerRecord.<AzureUser>builder()
                         .topicNameParameters(entityTopicNameParameters)
-                        .key(azureUser.getId())
+                        .key(azureUser.getIdpUserObjectId())
                         .value(azureUser)
                         .build()
         );
