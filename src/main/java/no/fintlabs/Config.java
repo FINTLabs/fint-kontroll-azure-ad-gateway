@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 //TODO: Change PostConstruct to jakarta when SB -> 3.x
 //import jakarta.annotation.PostConstruct;
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,6 +43,8 @@ public class Config {
     public ConfigUser configUser() {
         return new ConfigUser();
     }
+
+
 
     @Bean
     //@ConfigurationProperties(prefix = "azure.credentials")

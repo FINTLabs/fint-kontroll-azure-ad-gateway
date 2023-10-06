@@ -1,11 +1,13 @@
 package no.fintlabs;
 
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.kafka.entity.EntityProducer;
 import no.fintlabs.kafka.entity.EntityProducerFactory;
 import no.fintlabs.kafka.entity.EntityProducerRecord;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,7 +25,8 @@ public class AzureGroupMembershipProducerService
         entityProducer = entityProducerFactory.createProducer(AzureGroupMembership.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource(AzureGroupMembership.class.getName())
+                //todo: Fix to ref, not static string
+                .resource(AzureGroupMembership.class.getSimpleName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
@@ -32,7 +35,7 @@ public class AzureGroupMembershipProducerService
         entityProducer.send(
                         EntityProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
-                        .key(object.getClass().getName())
+                        .key(object.id)
                         .value(object)
                         .build()
         );
