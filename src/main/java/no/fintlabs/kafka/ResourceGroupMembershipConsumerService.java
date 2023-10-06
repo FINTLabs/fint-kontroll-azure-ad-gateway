@@ -1,4 +1,4 @@
-package no.fintlabs;
+package no.fintlabs.kafka;
 
 
 import com.microsoft.graph.http.GraphServiceException;
@@ -6,6 +6,7 @@ import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.requests.GraphServiceClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.Config;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import okhttp3.Request;

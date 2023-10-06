@@ -1,4 +1,4 @@
-package no.fintlabs;
+package no.fintlabs.azure;
 
 import com.microsoft.graph.models.*;
 import com.microsoft.graph.requests.GraphServiceClient;

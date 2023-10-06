@@ -1,42 +1,37 @@
-package no.fintlabs;
+package no.fintlabs.azure;
 
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.kafka.entity.EntityProducer;
 import no.fintlabs.kafka.entity.EntityProducerFactory;
 import no.fintlabs.kafka.entity.EntityProducerRecord;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-public class AzureGroupProducerService {
 
-    private final EntityProducer<AzureGroup> entityProducer;
+public class AzureUserProducerService {
+    private final EntityProducer<AzureUser> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
-
-    public AzureGroupProducerService (
+    public AzureUserProducerService(
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {
 
-
-        entityProducer = entityProducerFactory.createProducer(AzureGroup.class);
+        entityProducer = entityProducerFactory.createProducer(AzureUser.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                //todo: Fix to ref, not static string
-                .resource(AzureGroup.class.getSimpleName())
+                .resource(AzureUser.class.getSimpleName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
-    public void publish(AzureGroup azureGroup) {
+    public void publish(AzureUser azureUser) {
         entityProducer.send(
-                EntityProducerRecord.<AzureGroup>builder()
+                EntityProducerRecord.<AzureUser>builder()
                         .topicNameParameters(entityTopicNameParameters)
-                        .key(azureGroup.getId())
-                        .value(azureGroup)
+                        .key(azureUser.getId())
+                        .value(azureUser)
                         .build()
         );
     }
