@@ -15,8 +15,6 @@ import okhttp3.Request;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Service;
-//TODO: Change PostConstruct to jakarta when SB -> 3.x
-//import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PostConstruct;
 import java.util.Arrays;
 import java.util.LinkedList;

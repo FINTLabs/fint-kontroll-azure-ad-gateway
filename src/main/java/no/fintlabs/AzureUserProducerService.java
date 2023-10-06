@@ -22,8 +22,7 @@ public class AzureUserProducerService {
         entityProducer = entityProducerFactory.createProducer(AzureUser.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                //todo: Fix to ref, not static string
-                .resource("azureuser")
+                .resource(AzureUser.class.getSimpleName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }

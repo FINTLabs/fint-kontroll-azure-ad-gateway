@@ -28,7 +28,6 @@ fint:
       resources:
         resourcegrouptopic: resource-group
         resourcegroupmembertopic: resource-group-membership
-        azureuserproducertopic: azureuser
 
   kontroll:
     azure-ad-gateway:

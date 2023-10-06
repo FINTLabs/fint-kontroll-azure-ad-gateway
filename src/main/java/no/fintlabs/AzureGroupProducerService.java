@@ -1,11 +1,13 @@
 package no.fintlabs;
 
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.kafka.entity.EntityProducer;
 import no.fintlabs.kafka.entity.EntityProducerFactory;
 import no.fintlabs.kafka.entity.EntityProducerRecord;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,15 +17,17 @@ public class AzureGroupProducerService {
     private final EntityProducer<AzureGroup> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
+
     public AzureGroupProducerService (
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {
+
 
         entityProducer = entityProducerFactory.createProducer(AzureGroup.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
                 //todo: Fix to ref, not static string
-                .resource("azuregroup")
+                .resource(AzureGroup.class.getSimpleName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
