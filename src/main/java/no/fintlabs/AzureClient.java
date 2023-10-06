@@ -84,8 +84,9 @@ public class AzureClient {
         do {
             for (User user: page.getCurrentPage()) {
                 users++;
-
-                azureUserProducerService.publish(new AzureUser(user, configUser));
+                // Todo: If external-user, call "AzureUserExternal"-class
+                //azureUserProducerService.publish(new AzureUser(user, configUser));
+                azureUserProducerService.publish(new AzureUserExternal(user, configUser));
             }
             if (page.getNextPage() == null) {
                 break;

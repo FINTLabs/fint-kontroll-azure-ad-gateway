@@ -35,6 +35,9 @@ fint:
         #Set employeeID and studentID Attributes. Case sensitive. See User Object in Graph
         employeeidattribute: onPremisesExtensionAttributes.extensionAttribute10
         studentidattribute: onPremisesExtensionAttributes.extensionAttribute9
+        mainorgunitidattribute: onPremisesExtensionAttributes.extensionAttribute11
+        mainorgunitnameattribute: onPremisesExtensionAttributes.extensionAttribute12
+
       group-scheduler:
         pull:
           initial-delay-ms: 1000

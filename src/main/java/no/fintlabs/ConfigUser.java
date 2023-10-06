@@ -28,6 +28,8 @@ public class ConfigUser {
             "onPremisesSamAccountName"
     );
 
+    private String mainorgunitidattribute;
+    private String mainorgunitnameattribute;
     private String employeeidattribute;
     private String studentidattribute;
     public List<String> AllAttributes(){
