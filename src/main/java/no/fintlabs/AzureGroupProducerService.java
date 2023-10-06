@@ -23,7 +23,7 @@ public class AzureGroupProducerService {
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
                 //todo: Fix to ref, not static string
-                .resource(AzureGroup.class.getName())
+                .resource("azuregroup")
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
