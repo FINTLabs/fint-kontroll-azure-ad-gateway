@@ -26,10 +26,11 @@ public class AzureClient {
     private final ResourceGroupMembershipConsumerService resourceGroupMembershipConsumerService;
 
     private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
+        int members = 0;
         log.info("Fetching Azure Groups");
         DirectoryObjectCollectionWithReferencesPage page = inPage;
         do {
-            log.info("Membership detected");
+            members++;
             for (DirectoryObject member: page.getCurrentPage()) {
                 // New member detected
                 azureGroupMembershipProducerService.publish(new AzureGroupMembership(azureGroup.getId(), member));
@@ -42,13 +43,17 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().select("id").get();
             }
         } while (page != null);
+
+        log.info("{} memberships detected", members);
     }
 
     private void pageThrough(GroupCollectionPage inPage) {
+        int groups = 0;
         GroupCollectionPage page = inPage;
         do {
             for (Group group: page.getCurrentPage()) {
-                log.info("GROUP object detected!");
+                groups++;
+
                 AzureGroup newGroup = new AzureGroup(group);
                 // TODO: Loop through all groups, and get group membership}
                 pageThrough(
@@ -67,22 +72,27 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
+        log.info("{} Group objects detected!", groups);
     }
 
     private void pageThrough(UserCollectionPage inPage) {
+        int users = 0;
         UserCollectionPage page = inPage;
         do {
             for (User user: page.getCurrentPage()) {
-                log.info("USER object detected!");
+                users++;
+
                 azureUserProducerService.publish(new AzureUser(user, configUser));
             }
             if (page.getNextPage() == null) {
                 break;
             } else {
-                log.info("Processing user page");
+                //log.info("Processing user page");
                 page = page.getNextPage().buildRequest().get();
             }
-        } while (page != null);
+        }while (page != null);
+        log.info("{} User objects detected!", users);
+
     }
 
     // Fetch full user catalogue
@@ -98,12 +108,29 @@ public class AzureClient {
                 this.graphServiceClient.users()
                         .buildRequest()
                         .select(String.join(",", configUser.AllAttributes()))
+                        .filter("usertype eq 'member'")
                         //.top(10)
                         .get()
         );
         log.info("--- finished pulling resources from Azure. ---");
 
     }
+    private void pullAllExtUsers() {
+        log.info("--- Starting to pull users with external flag from Azure --- ");
+        // TODO: Change to while loop (while change != null;
+        // TODO: Do I need some sleep time between requests?
+        this.pageThrough(
+                this.graphServiceClient.users()
+                        .buildRequest()
+                        .select(String.join(",", configUser.AllAttributes()))
+                        .filter("usertype eq 'member'")
+                        //.top(10)
+                        .get()
+        );
+        log.info("--- finished pulling resources from Azure. ---");
+
+    }
+
 
     @Scheduled(
         initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
