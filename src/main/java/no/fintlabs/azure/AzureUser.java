@@ -1,8 +1,9 @@
-package no.fintlabs;
+package no.fintlabs.azure;
 
 import com.microsoft.graph.models.*;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
+import no.fintlabs.ConfigUser;
 
 import java.lang.reflect.Field;
 

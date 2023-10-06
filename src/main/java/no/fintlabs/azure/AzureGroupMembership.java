@@ -1,4 +1,4 @@
-package no.fintlabs;
+package no.fintlabs.azure;
 
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;

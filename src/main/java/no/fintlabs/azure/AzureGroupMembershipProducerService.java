@@ -1,4 +1,4 @@
-package no.fintlabs;
+package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.kafka.entity.EntityProducer;
@@ -11,27 +11,30 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 
-public class AzureUserProducerService {
-    private final EntityProducer<AzureUser> entityProducer;
+public class AzureGroupMembershipProducerService
+{
+    private final EntityProducer<AzureGroupMembership> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
-    public AzureUserProducerService(
+    public AzureGroupMembershipProducerService(
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {
 
-        entityProducer = entityProducerFactory.createProducer(AzureUser.class);
+        entityProducer = entityProducerFactory.createProducer(AzureGroupMembership.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource(AzureUser.class.getSimpleName())
+                //todo: Fix to ref, not static string
+                .resource(AzureGroupMembership.class.getSimpleName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
-    public void publish(AzureUser azureUser) {
+
+    public void publish(AzureGroupMembership object) {
         entityProducer.send(
-                EntityProducerRecord.<AzureUser>builder()
+                        EntityProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
-                        .key(azureUser.getId())
-                        .value(azureUser)
+                        .key(object.id)
+                        .value(object)
                         .build()
         );
     }

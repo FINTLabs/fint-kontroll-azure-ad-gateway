@@ -1,42 +1,40 @@
-package no.fintlabs;
+package no.fintlabs.azure;
 
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.kafka.entity.EntityProducer;
 import no.fintlabs.kafka.entity.EntityProducerFactory;
 import no.fintlabs.kafka.entity.EntityProducerRecord;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
+public class AzureGroupProducerService {
 
-public class AzureGroupMembershipProducerService
-{
-    private final EntityProducer<AzureGroupMembership> entityProducer;
+    private final EntityProducer<AzureGroup> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
-    public AzureGroupMembershipProducerService(
+
+    public AzureGroupProducerService (
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {
 
-        entityProducer = entityProducerFactory.createProducer(AzureGroupMembership.class);
+
+        entityProducer = entityProducerFactory.createProducer(AzureGroup.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
                 //todo: Fix to ref, not static string
-                .resource(AzureGroupMembership.class.getSimpleName())
+                .resource(AzureGroup.class.getSimpleName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
-
-    public void publish(AzureGroupMembership object) {
+    public void publish(AzureGroup azureGroup) {
         entityProducer.send(
-                        EntityProducerRecord.<AzureGroupMembership>builder()
+                EntityProducerRecord.<AzureGroup>builder()
                         .topicNameParameters(entityTopicNameParameters)
-                        .key(object.id)
-                        .value(object)
+                        .key(azureGroup.getId())
+                        .value(azureGroup)
                         .build()
         );
     }
