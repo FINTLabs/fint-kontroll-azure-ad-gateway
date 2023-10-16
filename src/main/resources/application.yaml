@@ -37,6 +37,8 @@ fint:
         studentidattribute: onPremisesExtensionAttributes.extensionAttribute9
         mainorgunitidattribute: onPremisesExtensionAttributes.extensionAttribute11
         mainorgunitnameattribute: onPremisesExtensionAttributes.extensionAttribute12
+      group:
+        fintkontrollidattribute : extension_be2ffab7d262452b888aeb756f742377_FINTKontrollId
 
       group-scheduler:
         pull:
@@ -52,7 +54,7 @@ fint:
 #placeholders. Do not add creds
 azure:
   credentials:
-    clientid:   XXXX
+    clientid: XXXX
     clientsecret: XXXX
     tenantguid: XXXX
     entobjectid: ZZZZ

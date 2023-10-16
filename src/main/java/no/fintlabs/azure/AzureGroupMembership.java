@@ -23,11 +23,6 @@ public class AzureGroupMembership {
     public AzureGroupMembership(String group_id, DirectoryObject directoryObject) {
         this.group_id = group_id;
         this.user_id = directoryObject.id;
-        //this.id = DigestUtils.sha3_512Hex(this.group_id + this.user_id);
         this.id = this.group_id + "_" + this.user_id;
     }
-    /*public AzureGroupMembership(T membership) {
-        this.id = membership.groupId;
-        //this.user_id = group.
-    }*/
 }

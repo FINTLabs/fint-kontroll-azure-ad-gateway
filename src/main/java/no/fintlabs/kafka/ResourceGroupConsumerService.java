@@ -1,7 +1,12 @@
 package no.fintlabs.kafka;
 
-import com.microsoft.graph.models.DirectoryObject;
-import com.microsoft.graph.models.Group;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.microsoft.graph.models.*;
+import com.microsoft.graph.requests.DirectoryObjectCollectionPage;
+import com.microsoft.graph.requests.ExtensionCollectionPage;
 import com.microsoft.graph.requests.GraphServiceClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 
+import javax.management.openmbean.OpenType;
+import java.util.*;
 import java.util.List;
 
 @Service
@@ -25,6 +32,7 @@ public class ResourceGroupConsumerService {
     private final GraphServiceClient<Request> graphServiceClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
+
 
     @PostConstruct
     public void init() {
@@ -41,6 +49,7 @@ public class ResourceGroupConsumerService {
     public boolean doesGroupExist(String groupName) {
         List<Group> groups = graphServiceClient.groups()
                 .buildRequest()
+                .select(String.format("id,displayName,description,extension_%s_FINTKontrollId", config.getClientid().replaceAll("-","")))
                 .get()
                 .getCurrentPage();
 
@@ -63,15 +72,31 @@ public class ResourceGroupConsumerService {
             group.mailEnabled = false;
             group.mailNickname = resourceGroup.resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
             group.securityEnabled = true;
-            //group.("FINT-Kontroll",group.id)
+            //String clientId = config.getClientid();
+            String extensionName = String.format("extension_%s_FINTKontrollId", config.getClientid().replaceAll("-",""));
+            group.additionalDataManager().put(extensionName, new JsonPrimitive(resourceGroup.id));
+
+//            String owner = "https://graph.microsoft.com/v1.0/users/" + config.getEntobjectid();
+//            JsonArray jsonArray = new JsonArray();
+//            jsonArray.add(owner);
+//            group.additionalDataManager().put("owners@odata.bind",  jsonArray);
+
+
             Group createdGroup = graphServiceClient.groups()
                     .buildRequest()
                     .post(group);
+
             DirectoryObject ownerDirectoryObject = new DirectoryObject();
             ownerDirectoryObject.id = config.getEntobjectid();
             graphServiceClient.groups(createdGroup.id).owners().references()
                     .buildRequest()
                     .post(ownerDirectoryObject);
+
+            var GroupOwner = graphServiceClient.groups(createdGroup.id).buildRequest().get();
+            log.info(GroupOwner.owners.toString());
+
+
+
         }
         else if(resourceGroup.resourceName == null)
         {
@@ -86,5 +111,5 @@ public class ResourceGroupConsumerService {
             log.info("Group not created as it already exists: {}", resourceGroup.resourceName);
         }
     }
-}
+ }
 

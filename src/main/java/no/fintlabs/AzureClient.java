@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 public class AzureClient {
     protected final GraphServiceClient<Request> graphServiceClient;
     protected final ConfigUser configUser;
+    protected final ConfigGroup configGroup;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
 
@@ -57,7 +58,7 @@ public class AzureClient {
             for (Group group: page.getCurrentPage()) {
                 groups++;
 
-                AzureGroup newGroup = new AzureGroup(group);
+                AzureGroup newGroup = new AzureGroup(group, configGroup);
                 // TODO: Loop through all groups, and get group membership}
                 pageThrough(
                         newGroup,
@@ -147,9 +148,8 @@ public class AzureClient {
         this.pageThrough(
                this.graphServiceClient.groups()
                        .buildRequest()
-                       .select("id,displayName,assignedLabels")
+                       .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                        .expand(String.format("members($select=%s)",String.join(",", configUser.AllAttributes())))
-                       //.top(2)
                        .get()
         );
         log.info("*** <<< Done fetching all groups from AD ***");
