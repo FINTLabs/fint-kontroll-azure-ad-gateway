@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 //TODO: Change PostConstruct to jakarta when SB -> 3.x
 //import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PostConstruct;
-import java.util.ArrayList;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,6 +33,7 @@ public class Config {
 
     private String entobjectid;
 
+
     @PostConstruct
     protected void print() {
         log.info("Starting PostConstruct");
@@ -44,7 +45,11 @@ public class Config {
         return new ConfigUser();
     }
 
-
+    @Bean
+    @ConfigurationProperties(prefix = "fint.kontroll.azure-ad-gateway.group")
+    public ConfigGroup configGroup() {
+        return new ConfigGroup();
+    }
 
     @Bean
     //@ConfigurationProperties(prefix = "azure.credentials")

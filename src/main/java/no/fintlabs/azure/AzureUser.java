@@ -58,8 +58,6 @@ public class AzureUser {
                 // Return null if no attribute values
                 return null;
         }
-
-
 }
 
 
