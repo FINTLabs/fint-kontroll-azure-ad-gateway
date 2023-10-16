@@ -36,6 +36,8 @@ public class ConfigUser {
         List<String> AllAttribs = new ArrayList<>();
         AllAttribs.add(this.getStudentidattribute());
         AllAttribs.add(this.getEmployeeidattribute());
+        AllAttribs.add(this.getMainorgunitidattribute());
+        AllAttribs.add(this.getMainorgunitnameattribute());
         AllAttribs.addAll(userAttributes);
         return AllAttribs;
     };
