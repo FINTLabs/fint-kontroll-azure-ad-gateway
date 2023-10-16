@@ -11,28 +11,27 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 
-public class AzureUserProducerService {
-    private final EntityProducer<AzureUser> entityProducer;
+public class AzureUserExternalProducerService {
+    private final EntityProducer<AzureUserExternal> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
-    public AzureUserProducerService(
+    public AzureUserExternalProducerService(
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {
 
-        entityProducer = entityProducerFactory.createProducer(AzureUser.class);
+        entityProducer = entityProducerFactory.createProducer(AzureUserExternal.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource(AzureUser.class.getSimpleName())
+                .resource(AzureUserExternal.class.getSimpleName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
-
-    public void publish(AzureUser azureUser) {
+    public void publish(AzureUserExternal azureUserExternal) {
         entityProducer.send(
-                EntityProducerRecord.<AzureUser>builder()
+                EntityProducerRecord.<AzureUserExternal>builder()
                         .topicNameParameters(entityTopicNameParameters)
-                        .key(azureUser.getIdpUserObjectId())
-                        .value(azureUser)
+                        .key(azureUserExternal.getIdpUserObjectId())
+                        .value(azureUserExternal)
                         .build()
         );
     }

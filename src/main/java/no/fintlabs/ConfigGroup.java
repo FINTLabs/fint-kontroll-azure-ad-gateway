@@ -13,8 +13,4 @@ public class ConfigGroup {
 
     public String fintkontrollidattribute;
 
-
-//    public String fintkontrollidattribute() {
-//        return fintkontrollidattribute;
-//    }
 }

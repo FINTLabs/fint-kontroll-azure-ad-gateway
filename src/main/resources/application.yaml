@@ -35,8 +35,8 @@ fint:
         #Set employeeID and studentID Attributes. Case sensitive. See User Object in Graph
         employeeidattribute: onPremisesExtensionAttributes.extensionAttribute10
         studentidattribute: onPremisesExtensionAttributes.extensionAttribute9
-        mainorgunitidattribute: onPremisesExtensionAttributes.extensionAttribute11
-        mainorgunitnameattribute: onPremisesExtensionAttributes.extensionAttribute12
+        mainorgunitidattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitId
+        mainorgunitnameattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitName
       group:
         fintkontrollidattribute : extension_be2ffab7d262452b888aeb756f742377_FINTKontrollId
 

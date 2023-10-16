@@ -34,7 +34,7 @@ public class AzureGroup {
         this.members = new ArrayList<>();
         this.assignedLabels = group.assignedLabels;
         this.extensions = group.extensions;
-        this.fintKontrollId = group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString();
+        //this.fintKontrollId = group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString() ;
 
 
     }

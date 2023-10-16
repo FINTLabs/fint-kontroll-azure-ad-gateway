@@ -22,6 +22,7 @@ public class AzureClient {
     protected final ConfigUser configUser;
     protected final ConfigGroup configGroup;
     private final AzureUserProducerService azureUserProducerService;
+    private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
 
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
@@ -86,8 +87,13 @@ public class AzureClient {
             for (User user: page.getCurrentPage()) {
                 users++;
                 // Todo: If external-user, call "AzureUserExternal"-class
-                //azureUserProducerService.publish(new AzureUser(user, configUser));
-                azureUserProducerService.publish(new AzureUserExternal(user, configUser));
+                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
+                    azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+                }
+                else {
+                    azureUserProducerService.publish(new AzureUser(user, configUser));
+                }
+
             }
             if (page.getNextPage() == null) {
                 break;
