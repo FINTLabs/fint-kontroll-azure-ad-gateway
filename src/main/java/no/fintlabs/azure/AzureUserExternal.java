@@ -33,5 +33,6 @@ public class AzureUserExternal extends AzureUser {
         this.mainOrganisationUnitName = user.additionalDataManager().get(configUser.getMainorgunitnameattribute()).getAsString();
         this.mainOrganisationUnitId = user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString();
         this.userType = "external";
+        this.userName = user.userPrincipalName;
     }
 }
