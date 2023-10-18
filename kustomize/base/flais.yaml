@@ -10,10 +10,8 @@ spec:
   env:
   envFrom:
     - secretRef:
-        name: kontroll-azure-ad-gateway-fintlabs
+        name: kontroll-azure-ad-gateway
 
-  onePassword:
-    itemPath: "vaults/aks-beta-vault/items/kontroll-azure-ad-gateway-fintlabs"
 
   kafka:
     enabled: true
