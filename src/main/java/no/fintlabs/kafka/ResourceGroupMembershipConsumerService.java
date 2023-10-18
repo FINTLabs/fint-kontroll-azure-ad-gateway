@@ -55,7 +55,7 @@ public class ResourceGroupMembershipConsumerService {
                 // Handle the HTTP response exception here
                 if (e.getResponseCode() == 400) {
                     // Handle the 400 Bad Request error
-                    log.info("User {} already exists in group {} or azureGroupRef is not correct: ", resourceGroupMembership.azureUserRef, resourceGroupMembership.azureGroupRef);
+                    log.warn("User {} already exists in group {} or azureGroupRef is not correct: ", resourceGroupMembership.azureUserRef, resourceGroupMembership.azureGroupRef);
                 } else {
                     // Handle other HTTP errors
                     log.error("HTTP Error while updating group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage(), resourceGroupMembership.azureGroupRef);
@@ -73,7 +73,7 @@ public class ResourceGroupMembershipConsumerService {
                         .reference()
                         .buildRequest()
                         .delete());
-                log.info("User: {} removed from group: {}", user, group);
+                log.warn("User: {} removed from group: {}", user, group);
             }
             catch (GraphServiceException e)
             {

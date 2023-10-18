@@ -36,7 +36,7 @@ public class Config {
 
     @PostConstruct
     protected void print() {
-        log.info("Starting PostConstruct");
+        log.debug("Starting PostConstruct");
     }
 
     @Bean

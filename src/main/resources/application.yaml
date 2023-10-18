@@ -12,6 +12,7 @@ spring:
 logging:
   level:
     root: INFO
+    com.azure: WARN
 
 fint:
   cache:
@@ -38,7 +39,7 @@ fint:
         mainorgunitidattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitId
         mainorgunitnameattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitName
       group:
-        fintkontrollidattribute : extension_be2ffab7d262452b888aeb756f742377_FINTKontrollId
+        fintkontrollidattribute : extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
 
       group-scheduler:
         pull:
