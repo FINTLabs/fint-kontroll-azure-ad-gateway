@@ -29,9 +29,14 @@ public class AzureUserExternal extends AzureUser {
         this.lastName = user.surname;
         this.mobilePhone = user.mobilePhone;
         this.email = user.mail;
-        //Todo: Make it not fail on missing attributes in additionalDataManager
-        this.mainOrganisationUnitName = user.additionalDataManager().get(configUser.getMainorgunitnameattribute()).getAsString();
-        this.mainOrganisationUnitId = user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString();
+        if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().containsKey(configUser.getMainorgunitnameattribute())) {
+            this.mainOrganisationUnitName = user.additionalDataManager().get(configUser.getMainorgunitnameattribute()).getAsString();
+        }
+        if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().containsKey(configUser.getMainorgunitidattribute())) {
+
+            this.mainOrganisationUnitId = user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString();
+        }
+        //TODO: Fetch this from Azure.. Needs to be set in Azure first
         this.userType = "external";
         this.userName = user.userPrincipalName;
     }
