@@ -35,8 +35,9 @@ public class AzureGroup {
         this.assignedLabels = group.assignedLabels;
         this.extensions = group.extensions;
         //TODO: Get resource ID on Azure object
-        if (!group.additionalDataManager().isEmpty()) {
-            this.fintKontrollId = group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString() ;
+        if (!group.additionalDataManager().isEmpty() && group.additionalDataManager().containsKey(configGroup.getFintkontrollidattribute()))
+        {
+            this.fintKontrollId = group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString();
         }
 
 
