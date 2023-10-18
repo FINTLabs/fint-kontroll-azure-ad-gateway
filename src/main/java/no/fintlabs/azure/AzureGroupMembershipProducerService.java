@@ -23,7 +23,7 @@ public class AzureGroupMembershipProducerService
         entityProducer = entityProducerFactory.createProducer(AzureGroupMembership.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource(AzureGroupMembership.class.getSimpleName())
+                .resource("azuread-resource-group-membership")
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
