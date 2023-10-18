@@ -1,4 +1,4 @@
-package no.fintlabs;
+package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.kafka.entity.EntityProducer;
@@ -26,11 +26,12 @@ public class AzureUserProducerService {
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
+
     public void publish(AzureUser azureUser) {
         entityProducer.send(
                 EntityProducerRecord.<AzureUser>builder()
                         .topicNameParameters(entityTopicNameParameters)
-                        .key(azureUser.getId())
+                        .key(azureUser.getIdpUserObjectId())
                         .value(azureUser)
                         .build()
         );

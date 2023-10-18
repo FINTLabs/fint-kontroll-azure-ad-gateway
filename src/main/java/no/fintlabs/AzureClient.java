@@ -7,6 +7,9 @@ import com.microsoft.graph.models.User;
 import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import no.fintlabs.azure.*;
+import no.fintlabs.kafka.ResourceGroupConsumerService;
+import no.fintlabs.kafka.ResourceGroupMembershipConsumerService;
 import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -17,7 +20,9 @@ import org.springframework.stereotype.Component;
 public class AzureClient {
     protected final GraphServiceClient<Request> graphServiceClient;
     protected final ConfigUser configUser;
+    protected final ConfigGroup configGroup;
     private final AzureUserProducerService azureUserProducerService;
+    private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
 
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
@@ -54,7 +59,7 @@ public class AzureClient {
             for (Group group: page.getCurrentPage()) {
                 groups++;
 
-                AzureGroup newGroup = new AzureGroup(group);
+                AzureGroup newGroup = new AzureGroup(group, configGroup);
                 // TODO: Loop through all groups, and get group membership}
                 pageThrough(
                         newGroup,
@@ -81,8 +86,14 @@ public class AzureClient {
         do {
             for (User user: page.getCurrentPage()) {
                 users++;
+                // Todo: If external-user, call "AzureUserExternal"-class
+                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
+                    azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+                }
+                else {
+                    azureUserProducerService.publish(new AzureUser(user, configUser));
+                }
 
-                azureUserProducerService.publish(new AzureUser(user, configUser));
             }
             if (page.getNextPage() == null) {
                 break;
@@ -143,9 +154,8 @@ public class AzureClient {
         this.pageThrough(
                this.graphServiceClient.groups()
                        .buildRequest()
-                       .select("id,displayName,assignedLabels")
+                       .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                        .expand(String.format("members($select=%s)",String.join(",", configUser.AllAttributes())))
-                       //.top(2)
                        .get()
         );
         log.info("*** <<< Done fetching all groups from AD ***");

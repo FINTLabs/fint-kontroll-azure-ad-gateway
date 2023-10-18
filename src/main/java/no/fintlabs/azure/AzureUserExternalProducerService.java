@@ -1,42 +1,37 @@
-package no.fintlabs;
+package no.fintlabs.azure;
 
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.kafka.entity.EntityProducer;
 import no.fintlabs.kafka.entity.EntityProducerFactory;
 import no.fintlabs.kafka.entity.EntityProducerRecord;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
 
-public class AzureGroupMembershipProducerService
-{
-    private final EntityProducer<AzureGroupMembership> entityProducer;
+public class AzureUserExternalProducerService {
+    private final EntityProducer<AzureUserExternal> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
-    public AzureGroupMembershipProducerService(
+    public AzureUserExternalProducerService(
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {
 
-        entityProducer = entityProducerFactory.createProducer(AzureGroupMembership.class);
+        entityProducer = entityProducerFactory.createProducer(AzureUserExternal.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                //todo: Fix to ref, not static string
-                .resource(AzureGroupMembership.class.getSimpleName())
+                .resource(AzureUserExternal.class.getSimpleName())
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
-
-    public void publish(AzureGroupMembership object) {
+    public void publish(AzureUserExternal azureUserExternal) {
         entityProducer.send(
-                        EntityProducerRecord.<AzureGroupMembership>builder()
+                EntityProducerRecord.<AzureUserExternal>builder()
                         .topicNameParameters(entityTopicNameParameters)
-                        .key(object.id)
-                        .value(object)
+                        .key(azureUserExternal.getIdpUserObjectId())
+                        .value(azureUserExternal)
                         .build()
         );
     }
