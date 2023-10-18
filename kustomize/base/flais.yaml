@@ -10,7 +10,7 @@ spec:
   env:
   envFrom:
     - secretRef:
-        name: kontroll-azure-ad-gateway
+        name: fint-kontroll-azure-ad-gateway
 
 
   kafka:
