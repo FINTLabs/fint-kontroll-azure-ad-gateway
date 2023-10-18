@@ -71,7 +71,7 @@ public class ResourceGroupConsumerService {
     public void processEntity(ResourceGroup resourceGroup, String kafkaGroupId) {
 
         if (resourceGroup.resourceName != null && !doesGroupExist(resourceGroup)) {
-            log.info("Adding Group to Azure: {}", resourceGroup.resourceName);
+            log.debug("Adding Group to Azure: {}", resourceGroup.resourceName);
             Group group = new Group();
             group.displayName = resourceGroup.resourceName;
             group.mailEnabled = false;
@@ -95,7 +95,7 @@ public class ResourceGroupConsumerService {
                     .buildRequest()
                             .delete();
 
-            log.info("Group with kafkaId {} deleted ", kafkaGroupId);
+            log.warn("Group with kafkaId {} deleted ", kafkaGroupId);
         }
         else
         {

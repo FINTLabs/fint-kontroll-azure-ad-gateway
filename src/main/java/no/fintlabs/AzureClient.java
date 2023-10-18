@@ -32,7 +32,7 @@ public class AzureClient {
 
     private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
         int members = 0;
-        log.info("Fetching Azure Groups");
+        log.debug("Fetching Azure Groups");
         DirectoryObjectCollectionWithReferencesPage page = inPage;
         do {
             members++;
@@ -44,12 +44,12 @@ public class AzureClient {
             if (page.getNextPage() == null) {
                 break;
             } else {
-                log.info("Processing membership page");
+                log.debug("Processing membership page");
                 page = page.getNextPage().buildRequest().select("id").get();
             }
         } while (page != null);
 
-        log.info("{} memberships detected", members);
+        log.debug("{} memberships detected", members);
     }
 
     private void pageThrough(GroupCollectionPage inPage) {
@@ -73,11 +73,11 @@ public class AzureClient {
             if (page.getNextPage() == null) {
                 break;
             } else {
-                log.info("Processing group page");
+                log.debug("Processing group page");
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
-        log.info("{} Group objects detected!", groups);
+        log.debug("{} Group objects detected!", groups);
     }
 
     private void pageThrough(UserCollectionPage inPage) {
@@ -102,7 +102,7 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().get();
             }
         }while (page != null);
-        log.info("{} User objects detected!", users);
+        log.debug("{} User objects detected!", users);
 
     }
 
@@ -112,7 +112,7 @@ public class AzureClient {
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
     )
     private void pullAllUsers() {
-        log.info("--- Starting to pull users from Azure --- ");
+        log.debug("--- Starting to pull users from Azure --- ");
         // TODO: Change to while loop (while change != null;
         // TODO: Do I need some sleep time between requests?
         this.pageThrough(
@@ -123,11 +123,11 @@ public class AzureClient {
                         //.top(10)
                         .get()
         );
-        log.info("--- finished pulling resources from Azure. ---");
+        log.debug("--- finished pulling resources from Azure. ---");
 
     }
     private void pullAllExtUsers() {
-        log.info("--- Starting to pull users with external flag from Azure --- ");
+        log.debug("--- Starting to pull users with external flag from Azure --- ");
         // TODO: Change to while loop (while change != null;
         // TODO: Do I need some sleep time between requests?
         this.pageThrough(
@@ -138,7 +138,7 @@ public class AzureClient {
                         //.top(10)
                         .get()
         );
-        log.info("--- finished pulling resources from Azure. ---");
+        log.debug("--- finished pulling resources from Azure. ---");
 
     }
 
@@ -150,7 +150,7 @@ public class AzureClient {
 
     //$select=id,displayName&$expand=members($select=id,userPrincipalName,displayName)
     private void pullAllGroups() {
-        log.info("*** Fetching all groups from AD >>> ***");
+        log.debug("*** Fetching all groups from AD >>> ***");
         this.pageThrough(
                this.graphServiceClient.groups()
                        .buildRequest()
@@ -158,17 +158,16 @@ public class AzureClient {
                        .expand(String.format("members($select=%s)",String.join(",", configUser.AllAttributes())))
                        .get()
         );
-        log.info("*** <<< Done fetching all groups from AD ***");
+        log.debug("*** <<< Done fetching all groups from AD ***");
     }
 
     private void createGroup(AzureGroup azureGroup) {
-        log.info("Azure create group: ");
-        log.info(azureGroup);
+        log.debug("Azure create group: {}", azureGroup.getDisplayName());
     }
 
     public void run() {
-        log.info("Trigger called");
-        log.info(this.graphServiceClient.users());
+        log.debug("Trigger called");
+        log.debug(this.graphServiceClient.users());
     }
 
     private void iterPage(BaseCollectionPage collection) {
