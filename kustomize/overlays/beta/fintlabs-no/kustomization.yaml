@@ -19,4 +19,11 @@ patches:
     target:
       kind: KafkaUserAndAcl
       name: fint-kontroll-azure-ad-gateway
+  - patch: |-
+      - op: replace
+        path: "/spec/itemPath"
+        value: "vaults/aks-beta-vault/items/kontroll-azure-ad-gateway-fintlabs"
+    target:
+      kind: OnePasswordItem
+      name: fint-kontroll-azure-ad-gateway
 
