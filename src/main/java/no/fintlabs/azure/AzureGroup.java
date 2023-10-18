@@ -18,7 +18,7 @@ public class AzureGroup {
     protected String displayName;
     protected List<String> members;
 
-    protected int fintKontrollRoleId;
+    protected long fintKontrollRoleId;
     protected ExtensionCollectionPage extensions;
 
     public AzureGroup(Group group, ConfigGroup configGroup) {
@@ -31,7 +31,7 @@ public class AzureGroup {
         //TODO: Get resource ID on Azure object
         if (!group.additionalDataManager().isEmpty() && group.additionalDataManager().containsKey(configGroup.getFintkontrollidattribute()))
         {
-            this.fintKontrollRoleId = group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsInt();
+            this.fintKontrollRoleId = group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsLong();
         }
 
 
