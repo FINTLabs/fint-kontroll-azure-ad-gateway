@@ -13,6 +13,7 @@ import java.lang.reflect.Field;
 @Log4j2
 public class AzureUser {
         private String mail;
+        private String id;
         private String userPrincipalName;
         private String employeeId;
         private String studentId;
@@ -21,6 +22,7 @@ public class AzureUser {
 
         public AzureUser(User user, ConfigUser configUser) {
                 this.mail = user.mail;
+                this.id = user.id;
                 this.userPrincipalName = user.userPrincipalName;
                 this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
                 this.studentId = getAttributeValue(user, configUser.getStudentidattribute());
