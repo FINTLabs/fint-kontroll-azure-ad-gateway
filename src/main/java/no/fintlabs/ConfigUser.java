@@ -19,6 +19,7 @@ public class ConfigUser {
     private static List<String> userAttributes = Arrays.asList (
             "id",
             "mail",
+            "mobilePhone",
             "onPremisesExtensionAttributes",
             "userPrincipalName",
             "displayname",
@@ -28,12 +29,16 @@ public class ConfigUser {
             "onPremisesSamAccountName"
     );
 
+    private String mainorgunitidattribute;
+    private String mainorgunitnameattribute;
     private String employeeidattribute;
     private String studentidattribute;
     public List<String> AllAttributes(){
         List<String> AllAttribs = new ArrayList<>();
         AllAttribs.add(this.getStudentidattribute());
         AllAttribs.add(this.getEmployeeidattribute());
+        AllAttribs.add(this.getMainorgunitidattribute());
+        AllAttribs.add(this.getMainorgunitnameattribute());
         AllAttribs.addAll(userAttributes);
         return AllAttribs;
     };

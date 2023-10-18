@@ -1,4 +1,4 @@
-package no.fintlabs;
+package no.fintlabs.kafka;
 
 
 import com.microsoft.graph.http.GraphServiceException;
@@ -6,6 +6,7 @@ import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.requests.GraphServiceClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.Config;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import okhttp3.Request;
@@ -27,8 +28,6 @@ public class ResourceGroupMembershipConsumerService {
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
 
-    private final KafkaTopics kafkaTopics;
-
     @PostConstruct
     public void init() {
         //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails
@@ -36,7 +35,7 @@ public class ResourceGroupMembershipConsumerService {
         ).createContainer(
                 EntityTopicNameParameters
                         .builder()
-                        .resource(kafkaTopics.getResourcegroupmembertopic())
+                        .resource("resource-group-membership")
                         .build()
         );
     }

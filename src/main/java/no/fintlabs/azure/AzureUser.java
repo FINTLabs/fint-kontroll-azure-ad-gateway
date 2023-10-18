@@ -1,8 +1,9 @@
-package no.fintlabs;
+package no.fintlabs.azure;
 
 import com.microsoft.graph.models.*;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
+import no.fintlabs.ConfigUser;
 
 import java.lang.reflect.Field;
 
@@ -11,24 +12,23 @@ import java.lang.reflect.Field;
 @RequiredArgsConstructor
 @Log4j2
 public class AzureUser {
-
-
-        private String id;
         private String mail;
         private String userPrincipalName;
         private String employeeId;
         private String studentId;
+        private String idpUserObjectId;
+        public String userType;
 
         public AzureUser(User user, ConfigUser configUser) {
-
-                this.id = user.id;
                 this.mail = user.mail;
                 this.userPrincipalName = user.userPrincipalName;
                 this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
                 this.studentId = getAttributeValue(user, configUser.getStudentidattribute());
+                this.idpUserObjectId = user.id;
+
         }
 
-        private String getAttributeValue(User user, String attributeName) {
+        String getAttributeValue(User user, String attributeName) {
                 // Split the attribute name by dot to get the nested field names
                 String[] attributeParts = attributeName.split("\\.");
 
@@ -60,8 +60,6 @@ public class AzureUser {
                 // Return null if no attribute values
                 return null;
         }
-
-
 }
 
 
