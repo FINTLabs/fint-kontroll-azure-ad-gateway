@@ -13,6 +13,9 @@ logging:
   level:
     root: INFO
     com.azure: WARN
+    com.microsoft: WARN
+    org.apache: WARN
+
 
 fint:
   cache:
