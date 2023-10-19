@@ -156,6 +156,8 @@ public class AzureClient {
                        .buildRequest()
                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                        .expand(String.format("members($select=%s)",String.join(",", configUser.AllAttributes())))
+                       //TODO: Filter to only get where FintKontrollIds is set
+                       //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
                        .get()
         );
         log.debug("*** <<< Done fetching all groups from AD ***");
