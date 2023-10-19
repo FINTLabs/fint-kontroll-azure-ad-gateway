@@ -29,12 +29,14 @@ public class AzureGroupProducerService {
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
     public void publish(AzureGroup azureGroup) {
-        entityProducer.send(
-                EntityProducerRecord.<AzureGroup>builder()
-                        .topicNameParameters(entityTopicNameParameters)
-                        .key(azureGroup.getId())
-                        .value(azureGroup)
-                        .build()
-        );
+        if (azureGroup.fintKontrollRoleId != null) {
+            entityProducer.send(
+                    EntityProducerRecord.<AzureGroup>builder()
+                            .topicNameParameters(entityTopicNameParameters)
+                            .key(azureGroup.getId())
+                            .value(azureGroup)
+                            .build()
+            );
+        }
     }
 }

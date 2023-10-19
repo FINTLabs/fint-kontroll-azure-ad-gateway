@@ -48,7 +48,7 @@ public class ResourceGroupConsumerService {
         );
     }
 
-    public boolean doesGroupExist(ResourceGroup resourceGroup) {
+    public boolean doesGroupExist(String resourceGroupId) {
         List<Group> groups = graphServiceClient.groups()
                 .buildRequest()
                 .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
@@ -58,7 +58,7 @@ public class ResourceGroupConsumerService {
         for (Group group : groups) {
             if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()) != null)
             {
-                if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString().equals(resourceGroup.id))
+                if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString().equals(resourceGroupId))
                 {
                     return true; // Group with the specified ResourceID found
                 }
@@ -70,7 +70,7 @@ public class ResourceGroupConsumerService {
 
     public void processEntity(ResourceGroup resourceGroup, String kafkaGroupId) {
 
-        if (resourceGroup.resourceName != null && !doesGroupExist(resourceGroup)) {
+        if (resourceGroup.resourceName != null && !doesGroupExist(resourceGroup.id)) {
             log.debug("Adding Group to Azure: {}", resourceGroup.resourceName);
             Group group = new Group();
             group.displayName = resourceGroup.resourceName;
