@@ -13,7 +13,7 @@ import no.fintlabs.ConfigUser;
 @RequiredArgsConstructor
 @Log4j2
 
-public class AzureUserExternal extends AzureUser {
+public class AzureUserExternal  {
     private String firstName;
     private String lastName;
     private String mobilePhone;
@@ -21,10 +21,13 @@ public class AzureUserExternal extends AzureUser {
     private String mainOrganisationUnitName;
     private String mainOrganisationUnitId;
     private String userName;
+    private String idpUserObjectId;
+    private String userPrincipalName;
 
 
     public AzureUserExternal(User user, ConfigUser configUser) {
-        super(user, configUser);
+        this.idpUserObjectId = user.id;
+        this.userPrincipalName = user.userPrincipalName;
         this.firstName = user.givenName;
         this.lastName = user.surname;
         this.mobilePhone = user.mobilePhone;
@@ -36,8 +39,6 @@ public class AzureUserExternal extends AzureUser {
 
             this.mainOrganisationUnitId = user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString();
         }
-        //TODO: Fetch this from Azure.. Needs to be set in Azure first
-        this.userType = "external";
         this.userName = user.userPrincipalName;
     }
 }

@@ -18,7 +18,6 @@ public class AzureUser {
         private String employeeId;
         private String studentId;
         private String idpUserObjectId;
-        public String userType;
 
         public AzureUser(User user, ConfigUser configUser) {
                 this.mail = user.mail;
