@@ -1,5 +1,7 @@
 package no.fintlabs;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.http.BaseCollectionPage;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
@@ -8,17 +10,21 @@ import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
+import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupConsumerService;
 import no.fintlabs.kafka.ResourceGroupMembershipConsumerService;
 import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 @Log4j2
 @RequiredArgsConstructor
 public class AzureClient {
     protected final GraphServiceClient<Request> graphServiceClient;
+    protected final Config config;
     protected final ConfigUser configUser;
     protected final ConfigGroup configGroup;
     private final AzureUserProducerService azureUserProducerService;
@@ -26,8 +32,6 @@ public class AzureClient {
     private final AzureGroupProducerService azureGroupProducerService;
 
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
-
-    private final ResourceGroupConsumerService resourceGroupConsumerService;
     private final ResourceGroupMembershipConsumerService resourceGroupMembershipConsumerService;
 
     private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
@@ -36,7 +40,7 @@ public class AzureClient {
         DirectoryObjectCollectionWithReferencesPage page = inPage;
         do {
             members++;
-            for (DirectoryObject member: page.getCurrentPage()) {
+            for (DirectoryObject member : page.getCurrentPage()) {
                 // New member detected
                 azureGroupMembershipProducerService.publish(new AzureGroupMembership(azureGroup.getId(), member));
                 azureGroup.getMembers().add(member.id);
@@ -56,7 +60,7 @@ public class AzureClient {
         int groups = 0;
         GroupCollectionPage page = inPage;
         do {
-            for (Group group: page.getCurrentPage()) {
+            for (Group group : page.getCurrentPage()) {
                 groups++;
 
                 AzureGroup newGroup = new AzureGroup(group, configGroup);
@@ -64,10 +68,10 @@ public class AzureClient {
                 pageThrough(
                         newGroup,
                         graphServiceClient.groups(group.id).members()
-                        .buildRequest()
-                        .select("id")
-                        .get()
-                        );
+                                .buildRequest()
+                                .select("id")
+                                .get()
+                );
                 azureGroupProducerService.publish(newGroup);
             }
             if (page.getNextPage() == null) {
@@ -84,13 +88,12 @@ public class AzureClient {
         int users = 0;
         UserCollectionPage page = inPage;
         do {
-            for (User user: page.getCurrentPage()) {
+            for (User user : page.getCurrentPage()) {
                 users++;
                 // Todo: If external-user, call "AzureUserExternal"-class
                 if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
                     azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
-                }
-                else {
+                } else {
                     azureUserProducerService.publish(new AzureUser(user, configUser));
                 }
 
@@ -101,7 +104,7 @@ public class AzureClient {
                 //log.info("Processing user page");
                 page = page.getNextPage().buildRequest().get();
             }
-        }while (page != null);
+        } while (page != null);
         log.debug("{} User objects detected!", users);
 
     }
@@ -126,6 +129,7 @@ public class AzureClient {
         log.debug("--- finished pulling resources from Azure. ---");
 
     }
+
     private void pullAllExtUsers() {
         log.debug("--- Starting to pull users with external flag from Azure --- ");
         // TODO: Change to while loop (while change != null;
@@ -144,35 +148,80 @@ public class AzureClient {
 
 
     @Scheduled(
-        initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
-        fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
+            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
+            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
-
     //$select=id,displayName&$expand=members($select=id,userPrincipalName,displayName)
     private void pullAllGroups() {
         log.debug("*** Fetching all groups from AD >>> ***");
         this.pageThrough(
-               this.graphServiceClient.groups()
-                       .buildRequest()
-                       .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
-                       .expand(String.format("members($select=%s)",String.join(",", configUser.AllAttributes())))
-                       //TODO: Filter to only get where FintKontrollIds is set
-                       //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
-                       .get()
+                this.graphServiceClient.groups()
+                        .buildRequest()
+                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+                        .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
+                        //TODO: Filter to only get where FintKontrollIds is set
+                        //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
+                        .get()
         );
         log.debug("*** <<< Done fetching all groups from AD ***");
     }
 
-    private void createGroup(AzureGroup azureGroup) {
-        log.debug("Azure create group: {}", azureGroup.getDisplayName());
+    public boolean doesGroupExist(String resourceGroupId) {
+        // TODO: loop through ALL pages, not just the first page
+        List<Group> groups = graphServiceClient.groups()
+                .buildRequest()
+                .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
+                .get()
+                .getCurrentPage();
+
+        for (Group group : groups) {
+            if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()) != null)
+            {
+                if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString().equals(resourceGroupId))
+                {
+                    return true; // Group with the specified ResourceID found
+                }
+            }
+        }
+        // Group with resourceID not found
+        return false;
     }
 
-    public void run() {
-        log.debug("Trigger called");
-        log.debug(this.graphServiceClient.users());
+    public void addGroupToAzure(ResourceGroup resourceGroup) {
+        Group group = new Group();
+        group.displayName = configGroup.getPrefix() + resourceGroup.resourceName + configGroup.getSuffix();
+        if (configGroup.aslowercase)
+            group.displayName = group.displayName.toLowerCase();
+        group.mailEnabled = false;
+        group.mailNickname = resourceGroup.resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
+        group.securityEnabled = true;
+        group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.id));
+
+        String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
+        var owners = new JsonArray();
+        owners.add(owner);
+        group.additionalDataManager().put("owners@odata.bind",  owners);
+
+        log.debug("Adding Group to Azure: {}", resourceGroup.resourceName);
+
+        graphServiceClient.groups()
+                .buildRequest()
+                .post(group);
+
+    }
+    public void deleteGroup(String groupID) {
+        graphServiceClient.groups(groupID)
+                .buildRequest()
+                .delete();
+        log.debug("Group with kafkaId {} deleted ", groupID);
     }
 
-    private void iterPage(BaseCollectionPage collection) {
+    public void updateGroup(ResourceGroup resourceGroup) {
+        //Todo: Implement functionality
+        Group group = new Group();
+        group.displayName = configGroup.getPrefix() + resourceGroup.resourceName + configGroup.getSuffix();
+        if (configGroup.aslowercase)
+            group.displayName = group.displayName.toLowerCase();
+        log.debug("Current resource {}", group.toString());
     }
-
 }
