@@ -28,8 +28,6 @@ import java.util.List;
 @AllArgsConstructor
 @Slf4j
 public class ResourceGroupConsumerService {
-    // TODO: Check if this is the same object as in AzureClient
-
     @Autowired
     private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
