@@ -64,7 +64,6 @@ public class AzureClient {
                 groups++;
 
                 AzureGroup newGroup = new AzureGroup(group, configGroup);
-                // TODO: Loop through all groups, and get group membership}
                 pageThrough(
                         newGroup,
                         graphServiceClient.groups(group.id).members()
@@ -90,7 +89,6 @@ public class AzureClient {
         do {
             for (User user : page.getCurrentPage()) {
                 users++;
-                // Todo: If external-user, call "AzureUserExternal"-class
                 if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
                     azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
                 } else {
@@ -114,16 +112,14 @@ public class AzureClient {
             initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
     )
+
     private void pullAllUsers() {
         log.debug("--- Starting to pull users from Azure --- ");
-        // TODO: Change to while loop (while change != null;
-        // TODO: Do I need some sleep time between requests?
         this.pageThrough(
                 this.graphServiceClient.users()
                         .buildRequest()
                         .select(String.join(",", configUser.AllAttributes()))
                         .filter("usertype eq 'member'")
-                        //.top(10)
                         .get()
         );
         log.debug("--- finished pulling resources from Azure. ---");
@@ -132,8 +128,6 @@ public class AzureClient {
 
     private void pullAllExtUsers() {
         log.debug("--- Starting to pull users with external flag from Azure --- ");
-        // TODO: Change to while loop (while change != null;
-        // TODO: Do I need some sleep time between requests?
         this.pageThrough(
                 this.graphServiceClient.users()
                         .buildRequest()
@@ -159,15 +153,17 @@ public class AzureClient {
                         .buildRequest()
                         .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                         .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
-                        //TODO: Filter to only get where FintKontrollIds is set
+                        // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
                         //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
                         .get()
         );
         log.debug("*** <<< Done fetching all groups from AD ***");
     }
 
+    //private void iterateGroupPages
+
     public boolean doesGroupExist(String resourceGroupId) {
-        // TODO: loop through ALL pages, not just the first page
+        // TODO: loop through ALL pages, not just the first page [FKS-197, FKS-198]
         List<Group> groups = graphServiceClient.groups()
                 .buildRequest()
                 .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
@@ -217,8 +213,8 @@ public class AzureClient {
     }
 
     public void updateGroup(ResourceGroup resourceGroup) {
-        //Todo: Implement functionality
         Group group = new Group();
+        // TODO: Implement actual functionality to update the group in Azure [FKS-199]
         group.displayName = configGroup.getPrefix() + resourceGroup.resourceName + configGroup.getSuffix();
         if (configGroup.aslowercase)
             group.displayName = group.displayName.toLowerCase();
