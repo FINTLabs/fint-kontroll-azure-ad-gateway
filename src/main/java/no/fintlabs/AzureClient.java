@@ -170,7 +170,6 @@ public class AzureClient {
                 .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
                 .get();
 
-        //List<Group> page = groupCollectionPage.getCurrentPage();
         while (groupCollectionPage != null) {
             for (Group group : groupCollectionPage.getCurrentPage()) {
                 if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()) != null)
