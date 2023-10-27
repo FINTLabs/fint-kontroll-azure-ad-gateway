@@ -163,22 +163,34 @@ public class AzureClient {
     //private void iterateGroupPages
 
     public boolean doesGroupExist(String resourceGroupId) {
-        // TODO: loop through ALL pages, not just the first page [FKS-197, FKS-198]
-        List<Group> groups = graphServiceClient.groups()
+        // TODO: Should this be implemented as a simpler call to MS Graph? [FKS-200]
+
+        GroupCollectionPage groupCollectionPage = graphServiceClient.groups()
                 .buildRequest()
                 .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
-                .get()
-                .getCurrentPage();
+                .get();
 
-        for (Group group : groups) {
-            if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()) != null)
-            {
-                if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString().equals(resourceGroupId))
+        //List<Group> page = groupCollectionPage.getCurrentPage();
+        while (groupCollectionPage != null) {
+            for (Group group : groupCollectionPage.getCurrentPage()) {
+                if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()) != null)
                 {
-                    return true; // Group with the specified ResourceID found
+                    if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString().equals(resourceGroupId))
+                    {
+                        return true; // Group with the specified ResourceID found
+                    }
                 }
             }
+            if (groupCollectionPage.getNextPage() != null) {
+                groupCollectionPage = groupCollectionPage.getNextPage()
+                        .buildRequest()
+                        .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
+                        .get();
+            } else {
+                break;
+            }
         }
+
         // Group with resourceID not found
         return false;
     }

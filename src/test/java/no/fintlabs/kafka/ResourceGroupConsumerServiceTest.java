@@ -12,7 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ResourceGroupConsumerServiceTest {
@@ -43,6 +43,7 @@ class ResourceGroupConsumerServiceTest {
         when(azureClient.doesGroupExist(resourceGroupID)).thenReturn(false);
 
         resourceGroupConsumerService.processEntity(resourceGroup, null);
+        verify(azureClient, times(1));
 
         // asserts (hvis returnvalue)
         // verify (mockito)
