@@ -1,11 +1,8 @@
 package no.fintlabs;
 
+import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.Group;
-import com.microsoft.graph.requests.GraphServiceClient;
-import com.microsoft.graph.requests.GroupCollectionPage;
-import com.microsoft.graph.requests.GroupCollectionRequest;
-import com.microsoft.graph.requests.GroupCollectionRequestBuilder;
-import no.fintlabs.azure.AzureGroup;
+import com.microsoft.graph.requests.*;
 import no.fintlabs.kafka.ResourceGroup;
 import okhttp3.Request;
 import org.junit.jupiter.api.Test;
@@ -31,64 +28,84 @@ class AzureClientTest {
     @Mock
     private GroupCollectionRequestBuilder groupCollectionRequestBuilder;
     @Mock ConfigGroup configGroup;
-    @Mock Group group;
+    //@Mock Group group;
+
+    @Mock
+    private Config config;
 
     @InjectMocks
     private AzureClient azureClient;
+    private List<Group> getTestGrouplist(int numberOfGroups) {
+        List<Group> retGroupList = new ArrayList<>();
+        for (int i=0; i<numberOfGroups; i++) {
+            Group group = new Group();
+            group.id = "12" + (i + 2);
+            group.displayName = "testgroup1";
+            group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive("123"));
+            retGroupList.add(group);
+        }
 
+        return retGroupList;
+    }
     @Test
     void doesGroupExist_found() {
         String resourceGroupID = "123";
-        //when(azureClient.doesGroupExist(resourceGroupID)).thenReturn(false);
-
 
         when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
         when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().select(anyString())).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().get()).thenReturn(groupCollectionPage);
 
+        List<Group> groupList = getTestGrouplist(3);
 
-        List<Group> groupList = new ArrayList<Group>();
-        Group group = new Group();
-        group.displayName = "testgroup1";
-        groupList.add(group);
-        group.displayName = "testgroup2";
-        groupList.add(group);
         when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
 
         boolean checkvar = azureClient.doesGroupExist(resourceGroupID);
+
         assertTrue(checkvar);
     }
     @Test
     void doesGroupExist_notfound() {
+        String resourceGroupID = "234";
 
-    }
-    @Test
-    void doesGroupExist() {
-        String resourceGroupID = "12";
-        //ResourceGroup resourceGroup = new ResourceGroup(resourceGroupID, "testresource", "testDisplayname", "testidp", "testresourcename", "testresourcetype", "testresourcelimit");
-        //doesGroupExist(resourceGroupID);
-        //azureClient.doesGroupExist("");
-        //String resourceGroupID = "testresourcegroup";
-        //ResourceGroup resourceGroup = new ResourceGroup(resourceGroupID, "testresource", "testDisplayname", "testidp", "testresourcename", "testresourcetype", "testresourcelimit");
+        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
+        when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
+        when(graphServiceClient.groups().buildRequest().select(anyString())).thenReturn(groupCollectionRequest);
+        when(graphServiceClient.groups().buildRequest().get()).thenReturn(groupCollectionPage);
 
-        //when(azureClient.doesGroupExist(resourceGroupID)).thenReturn(false);
+        List<Group> groupList = getTestGrouplist(3);
+        when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
 
-        //resourceGroupConsumerService.processEntity(resourceGroup, null);
-        //verify(azureClient, times(1));
 
-        // asserts (hvis returnvalue)
-        // verify (mockito)
-        // Kan også verifisere input til kall. Sjekk parameterverdien er innafor <a,b> osv
+        assertFalse(azureClient.doesGroupExist(resourceGroupID));
 
     }
 
     @Test
     void addGroupToAzure() {
+        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
+        when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
+
+        ResourceGroup resourceGroup = new ResourceGroup("12", "123", "testdisplayname", "testidpgroup", "testresourcename", "testresourcetype", "1000");
+        azureClient.addGroupToAzure(resourceGroup);
+
+        verify(groupCollectionRequest, times(1)).post(any(Group.class));
     }
+
+    @Mock
+    private GroupRequestBuilder groupRequestBuilder;
+    @Mock
+    private GroupRequest groupRequest;
 
     @Test
     void deleteGroup() {
+        String delGroupID = "123";
+        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+        when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
+
+        azureClient.deleteGroup(delGroupID);
+
+        verify(groupRequest, times(1)).delete();
     }
 
     @Test
