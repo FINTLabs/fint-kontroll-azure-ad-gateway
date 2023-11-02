@@ -155,11 +155,9 @@ public class AzureClient {
         log.debug("*** <<< Done fetching all groups from AD ***");
     }
 
-    //private void iterateGroupPages
-
     public boolean doesGroupExist(String resourceGroupId) {
         // TODO: Should this be implemented as a simpler call to MS Graph? [FKS-200]
-    // Form the selection criteria for the MS Graph request
+        // Form the selection criteria for the MS Graph request
         String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute());
 
         GroupCollectionPage groupCollectionPage = graphServiceClient.groups()
@@ -186,31 +184,6 @@ public class AzureClient {
 
         return false; // Group with resourceID not found
     }
-
-    /*GroupCollectionPage groupCollectionPage = graphServiceClient.groups()
-            .buildRequest()
-            .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
-            .get();
-
-        while (groupCollectionPage != null) {
-        for (Group group : groupCollectionPage.getCurrentPage()) {
-            if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()) != null)
-            {
-                if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString().equals(resourceGroupId))
-                {
-                    return true; // Group with the specified ResourceID found
-                }
-            }
-        }
-        if (groupCollectionPage.getNextPage() != null) {
-            groupCollectionPage = groupCollectionPage.getNextPage()
-                    .buildRequest()
-                    .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
-                    .get();
-        } else {
-            break;
-        }
-    }*/qq
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
         Group group = resourceGroup.toMSGraphGroup();
