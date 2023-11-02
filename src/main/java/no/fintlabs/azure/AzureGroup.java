@@ -8,6 +8,7 @@ import com.microsoft.graph.models.Group;
 import lombok.Getter;
 import lombok.Setter;
 import no.fintlabs.ConfigGroup;
+import no.fintlabs.kafka.ResourceGroup;
 
 @Setter
 @Getter
@@ -20,7 +21,6 @@ public class AzureGroup {
     protected Long fintKontrollRoleId;
 
     protected ExtensionCollectionPage extensions;
-
     public AzureGroup(Group group, ConfigGroup configGroup) {
 
         this.id = group.id;
@@ -33,7 +33,6 @@ public class AzureGroup {
         {
             this.fintKontrollRoleId = Long.valueOf(group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString());
         }
-
 
     }
 }

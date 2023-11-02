@@ -16,7 +16,6 @@ logging:
     com.microsoft: WARN
     org.apache: WARN
 
-
 fint:
   cache:
     defaultCacheEntryTimeToLiveMillis: 518400000
@@ -46,6 +45,7 @@ fint:
         prefix: "-pre-"
         suffix: "-suff-"
         aslowercase: true
+        spelExpression: "cfgPrefix + resourceName + cfgSuffix"
       group-scheduler:
         pull:
           initial-delay-ms: 1000
@@ -64,5 +64,3 @@ azure:
     clientsecret: XXXX
     tenantguid: XXXX
     entobjectid: ZZZZ
-
-
