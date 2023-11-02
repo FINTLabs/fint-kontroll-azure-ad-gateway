@@ -1,8 +1,5 @@
 package no.fintlabs;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonPrimitive;
-import com.microsoft.graph.http.BaseCollectionPage;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
@@ -11,13 +8,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
 import no.fintlabs.kafka.ResourceGroup;
-import no.fintlabs.kafka.ResourceGroupConsumerService;
 import no.fintlabs.kafka.ResourceGroupMembershipConsumerService;
 import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 @Log4j2
@@ -195,7 +189,8 @@ public class AzureClient {
     }
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
-        Group group = new Group();
+        Group group = resourceGroup.toMSGraphGroup();
+        /*new Group();
         group.displayName = configGroup.getPrefix() + resourceGroup.resourceName + configGroup.getSuffix();
         if (configGroup.aslowercase)
             group.displayName = group.displayName.toLowerCase();
@@ -208,7 +203,7 @@ public class AzureClient {
         var owners = new JsonArray();
         owners.add(owner);
         group.additionalDataManager().put("owners@odata.bind",  owners);
-
+*/
         log.debug("Adding Group to Azure: {}", resourceGroup.resourceName);
 
         graphServiceClient.groups()

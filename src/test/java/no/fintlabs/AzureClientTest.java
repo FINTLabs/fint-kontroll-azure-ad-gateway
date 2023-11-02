@@ -27,7 +27,8 @@ class AzureClientTest {
     private GroupCollectionRequest groupCollectionRequest;
     @Mock
     private GroupCollectionRequestBuilder groupCollectionRequestBuilder;
-    @Mock ConfigGroup configGroup;
+    @Mock
+    private ConfigGroup configGroup;
     //@Mock Group group;
 
     @Mock

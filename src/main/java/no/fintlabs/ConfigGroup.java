@@ -9,7 +9,7 @@ import lombok.Setter;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class ConfigGroup {
+public class    ConfigGroup {
     public String fintkontrollidattribute;
     public String prefix;
     public String suffix;
