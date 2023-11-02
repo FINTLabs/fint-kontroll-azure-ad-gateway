@@ -157,6 +157,33 @@ public class AzureClient {
     //private void iterateGroupPages
 
     public boolean doesGroupExist(String resourceGroupId) {
+    // Form the selection criteria for the MS Graph request
+    String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute());
+
+    GroupCollectionPage groupCollectionPage = graphServiceClient.groups()
+            .buildRequest()
+            .select(selectionCriteria)
+            .get();
+
+    while (groupCollectionPage != null) {
+        for (Group group : groupCollectionPage.getCurrentPage()) {
+            JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
+            
+            if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
+                return true; // Group with the specified ResourceID found
+            }
+        }
+
+        // Move to the next page if available
+        groupCollectionPage = groupCollectionPage.getNextPage() == null ? null :
+            groupCollectionPage.getNextPage()
+            .buildRequest()
+            .select(selectionCriteria)
+            .get();
+    }
+
+    return false; // Group with resourceID not found
+}
         // TODO: Should this be implemented as a simpler call to MS Graph? [FKS-200]
 
         GroupCollectionPage groupCollectionPage = graphServiceClient.groups()
