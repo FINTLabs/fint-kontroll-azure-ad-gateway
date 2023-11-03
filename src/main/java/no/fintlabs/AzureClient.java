@@ -18,10 +18,7 @@ import org.springframework.stereotype.Component;
 @Log4j2
 @RequiredArgsConstructor
 public class AzureClient {
-    protected final GraphServiceClient<Request> graphServiceClient;
     protected final Config config;
-    protected final ConfigUser configUser;
-    protected final ConfigGroup configGroup;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
@@ -58,10 +55,10 @@ public class AzureClient {
             for (Group group : page.getCurrentPage()) {
                 groups++;
 
-                AzureGroup newGroup = new AzureGroup(group, configGroup);
+                AzureGroup newGroup = new AzureGroup(group, config.configGroup());
                 pageThrough(
                         newGroup,
-                        graphServiceClient.groups(group.id).members()
+                        config.graphService().groups(group.id).members()
                                 .buildRequest()
                                 .select("id")
                                 .get()
@@ -84,10 +81,10 @@ public class AzureClient {
         do {
             for (User user : page.getCurrentPage()) {
                 users++;
-                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
-                    azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(config.configUser().getMainorgunitidattribute()).getAsString() != null) {
+                    azureUserExternalProducerService.publish(new AzureUserExternal(user, config.configUser()));
                 } else {
-                    azureUserProducerService.publish(new AzureUser(user, configUser));
+                    azureUserProducerService.publish(new AzureUser(user, config.configUser()));
                 }
 
             }
@@ -111,9 +108,9 @@ public class AzureClient {
     private void pullAllUsers() {
         log.debug("--- Starting to pull users from Azure --- ");
         this.pageThrough(
-                this.graphServiceClient.users()
+                config.graphService().users()
                         .buildRequest()
-                        .select(String.join(",", configUser.AllAttributes()))
+                        .select(String.join(",", config.configUser().AllAttributes()))
                         .filter("usertype eq 'member'")
                         .get()
         );
@@ -124,9 +121,9 @@ public class AzureClient {
     private void pullAllExtUsers() {
         log.debug("--- Starting to pull users with external flag from Azure --- ");
         this.pageThrough(
-                this.graphServiceClient.users()
+                config.graphService().users()
                         .buildRequest()
-                        .select(String.join(",", configUser.AllAttributes()))
+                        .select(String.join(",", config.configUser().AllAttributes()))
                         .filter("usertype eq 'member'")
                         //.top(10)
                         .get()
@@ -144,10 +141,10 @@ public class AzureClient {
     private void pullAllGroups() {
         log.debug("*** Fetching all groups from AD >>> ***");
         this.pageThrough(
-                this.graphServiceClient.groups()
+                config.graphService().groups()
                         .buildRequest()
-                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
-                        .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
+                        .select(String.format("id,displayName,description,members,%s", config.configGroup().getFintkontrollidattribute()))
+                        .expand(String.format("members($select=%s)", String.join(",", config.configUser().AllAttributes())))
                         // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
                         //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
                         .get()
@@ -158,16 +155,16 @@ public class AzureClient {
     public boolean doesGroupExist(String resourceGroupId) {
         // TODO: Should this be implemented as a simpler call to MS Graph? [FKS-200]
         // Form the selection criteria for the MS Graph request
-        String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute());
+        String selectionCriteria = String.format("id,displayName,description,%s", config.configGroup().getFintkontrollidattribute());
 
-        GroupCollectionPage groupCollectionPage = graphServiceClient.groups()
+        GroupCollectionPage groupCollectionPage = config.graphService().groups()
                 .buildRequest()
                 .select(selectionCriteria)
                 .get();
 
         while (groupCollectionPage != null) {
             for (Group group : groupCollectionPage.getCurrentPage()) {
-                JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
+                JsonElement attributeValue = group.additionalDataManager().get(config.configGroup().getFintkontrollidattribute());
 
                 if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
                     return true; // Group with the specified ResourceID found
@@ -186,30 +183,18 @@ public class AzureClient {
     }
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
-        Group group = resourceGroup.toMSGraphGroup();
-        /*new Group();
-        group.displayName = configGroup.getPrefix() + resourceGroup.resourceName + configGroup.getSuffix();
-        if (configGroup.aslowercase)
-            group.displayName = group.displayName.toLowerCase();
-        group.mailEnabled = false;
-        group.mailNickname = resourceGroup.resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
-        group.securityEnabled = true;
-        group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.id));
+        Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, config.configGroup(), config);
 
-        String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
-        var owners = new JsonArray();
-        owners.add(owner);
-        group.additionalDataManager().put("owners@odata.bind",  owners);
-*/
         log.debug("Adding Group to Azure: {}", resourceGroup.resourceName);
 
-        graphServiceClient.groups()
+        config.graphService().groups()
                 .buildRequest()
                 .post(group);
 
     }
+
     public void deleteGroup(String groupID) {
-        graphServiceClient.groups(groupID)
+        config.graphService().groups(groupID)
                 .buildRequest()
                 .delete();
         log.debug("Group with kafkaId {} deleted ", groupID);
@@ -218,8 +203,8 @@ public class AzureClient {
     public void updateGroup(ResourceGroup resourceGroup) {
         Group group = new Group();
         // TODO: Implement actual functionality to update the group in Azure [FKS-199]
-        group.displayName = configGroup.getPrefix() + resourceGroup.resourceName + configGroup.getSuffix();
-        if (configGroup.aslowercase)
+        group.displayName = config.configGroup().getPrefix() + resourceGroup.resourceName + config.configGroup().getSuffix();
+        if (config.configGroup().isAslowercase())
             group.displayName = group.displayName.toLowerCase();
         log.debug("Current resource {}", group.toString());
     }

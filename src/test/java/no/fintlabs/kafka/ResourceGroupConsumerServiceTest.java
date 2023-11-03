@@ -36,36 +36,11 @@ import static org.mockito.Mockito.*;
 public class ResourceGroupConsumerServiceTest {
 
     @Mock
-    private ConfigGroup configGroup;
-    @Mock
     private GraphServiceClient graphServiceClient;
     @InjectMocks
     private AzureClient azureClient;
     @InjectMocks
     private ResourceGroupConsumerService resourceGroupConsumerService;
-    @InjectMocks
-    private ResourceGroup group2;
-
-    @Test
-    void testToMsGraphGroup() {
-        //when(configGroup.getPrefix()).thenReturn("-pre-");
-        //when(configGroup.getSuffix()).thenReturn("-suff-");
-        /*ConfigGroup cgroup = new ConfigGroup();
-        cgroup.setPrefix("hei");
-        cgroup.setSuffix("hopp");*/
-
-        ResourceGroup group = new ResourceGroup(
-                RandomStringUtils.random(4),
-                "testResourceID" + RandomStringUtils.random(4),
-                "TestDisplayName " + RandomStringUtils.random(6),
-                RandomStringUtils.random(12),
-                "testResourceName",
-                "testResourceType",
-                "1000");
-        Group msGroup = group.toMSGraphGroup();
-        //afk-lic-adobe.cloud-kon
-
-    }
 
     @Test
     void processEntity() {

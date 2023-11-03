@@ -9,9 +9,10 @@ import lombok.Setter;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class    ConfigGroup {
-    public String fintkontrollidattribute;
-    public String prefix;
-    public String suffix;
-    public boolean aslowercase;
+public class ConfigGroup {
+
+    private String fintkontrollidattribute;
+    private String prefix;
+    private String suffix;
+    private boolean aslowercase;
 }
