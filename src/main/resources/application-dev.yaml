@@ -7,17 +7,10 @@ logging:
     #org.apache: ERROR
 
 fint:
-  org-id: fintlabs.no
-  application-id: fint-kontroll-azure-ad-gateway
   kafka:
-    default-replicas: 1
     bootstrap-servers: localhost:9092
-#    application-id: ${fint.application-id}
     consumer:
       group-id: ${fint.application-id}
-    topic:
-      org-id: ${fint.org-id}
-      domain-context: kontroll
 
-server:
-  port: 8085
+#server:
+  #port: 8085

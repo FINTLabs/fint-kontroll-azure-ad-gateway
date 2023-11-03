@@ -49,16 +49,16 @@ public class ResourceGroupConsumerService {
     public void processEntity(ResourceGroup resourceGroup, String kafkaGroupId) {
 
         // TODO: Split doesGroupExist to POST or PUT
-        if (resourceGroup.resourceName != null && !azureClient.doesGroupExist(resourceGroup.id)) {
+        if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getResourceId())) {
             azureClient.addGroupToAzure(resourceGroup);
         }
-        else if(resourceGroup.resourceName == null)
+        else if(resourceGroup.getResourceName() == null)
         {
             azureClient.deleteGroup(kafkaGroupId);
         }
         else
         {
-            log.debug("Group not created as it already exists: {}", resourceGroup.resourceName);
+            log.debug("Group not created as it already exists: {}", resourceGroup.getResourceName());
             azureClient.updateGroup(resourceGroup);
         }
     }

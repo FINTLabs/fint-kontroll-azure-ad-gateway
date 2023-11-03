@@ -19,6 +19,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AzureClient {
     protected final Config config;
+
+    protected final ConfigGroup configGroup;
+
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
@@ -185,7 +188,7 @@ public class AzureClient {
     public void addGroupToAzure(ResourceGroup resourceGroup) {
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, config.configGroup(), config);
 
-        log.debug("Adding Group to Azure: {}", resourceGroup.resourceName);
+        log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
 
         config.graphService().groups()
                 .buildRequest()
@@ -201,11 +204,6 @@ public class AzureClient {
     }
 
     public void updateGroup(ResourceGroup resourceGroup) {
-        Group group = new Group();
         // TODO: Implement actual functionality to update the group in Azure [FKS-199]
-        group.displayName = config.configGroup().getPrefix() + resourceGroup.resourceName + config.configGroup().getSuffix();
-        if (config.configGroup().isAslowercase())
-            group.displayName = group.displayName.toLowerCase();
-        log.debug("Current resource {}", group.toString());
     }
 }
