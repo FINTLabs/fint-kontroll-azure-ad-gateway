@@ -21,6 +21,8 @@ public class AzureClient {
     protected final Config config;
 
     protected final ConfigGroup configGroup;
+    protected final ConfigUser configUser;
+    protected final GraphServiceClient<Request> graphService;
 
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
@@ -58,10 +60,10 @@ public class AzureClient {
             for (Group group : page.getCurrentPage()) {
                 groups++;
 
-                AzureGroup newGroup = new AzureGroup(group, config.configGroup());
+                AzureGroup newGroup = new AzureGroup(group, configGroup);
                 pageThrough(
                         newGroup,
-                        config.graphService().groups(group.id).members()
+                        graphService.groups(group.id).members()
                                 .buildRequest()
                                 .select("id")
                                 .get()
@@ -84,10 +86,10 @@ public class AzureClient {
         do {
             for (User user : page.getCurrentPage()) {
                 users++;
-                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(config.configUser().getMainorgunitidattribute()).getAsString() != null) {
-                    azureUserExternalProducerService.publish(new AzureUserExternal(user, config.configUser()));
+                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
+                    azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
                 } else {
-                    azureUserProducerService.publish(new AzureUser(user, config.configUser()));
+                    azureUserProducerService.publish(new AzureUser(user, configUser));
                 }
 
             }
@@ -111,9 +113,9 @@ public class AzureClient {
     private void pullAllUsers() {
         log.debug("--- Starting to pull users from Azure --- ");
         this.pageThrough(
-                config.graphService().users()
+                graphService.users()
                         .buildRequest()
-                        .select(String.join(",", config.configUser().AllAttributes()))
+                        .select(String.join(",", configUser.AllAttributes()))
                         .filter("usertype eq 'member'")
                         .get()
         );
@@ -124,9 +126,9 @@ public class AzureClient {
     private void pullAllExtUsers() {
         log.debug("--- Starting to pull users with external flag from Azure --- ");
         this.pageThrough(
-                config.graphService().users()
+                graphService.users()
                         .buildRequest()
-                        .select(String.join(",", config.configUser().AllAttributes()))
+                        .select(String.join(",", configUser.AllAttributes()))
                         .filter("usertype eq 'member'")
                         //.top(10)
                         .get()
@@ -144,10 +146,10 @@ public class AzureClient {
     private void pullAllGroups() {
         log.debug("*** Fetching all groups from AD >>> ***");
         this.pageThrough(
-                config.graphService().groups()
+                graphService.groups()
                         .buildRequest()
                         .select(String.format("id,displayName,description,members,%s", config.configGroup().getFintkontrollidattribute()))
-                        .expand(String.format("members($select=%s)", String.join(",", config.configUser().AllAttributes())))
+                        .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                         // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
                         //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
                         .get()
@@ -158,16 +160,16 @@ public class AzureClient {
     public boolean doesGroupExist(String resourceGroupId) {
         // TODO: Should this be implemented as a simpler call to MS Graph? [FKS-200]
         // Form the selection criteria for the MS Graph request
-        String selectionCriteria = String.format("id,displayName,description,%s", config.configGroup().getFintkontrollidattribute());
+        String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute());
 
-        GroupCollectionPage groupCollectionPage = config.graphService().groups()
+        GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
                 .select(selectionCriteria)
                 .get();
 
         while (groupCollectionPage != null) {
             for (Group group : groupCollectionPage.getCurrentPage()) {
-                JsonElement attributeValue = group.additionalDataManager().get(config.configGroup().getFintkontrollidattribute());
+                JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
 
                 if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
                     return true; // Group with the specified ResourceID found
@@ -186,18 +188,18 @@ public class AzureClient {
     }
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
-        Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, config.configGroup(), config);
+        Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
 
         log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
 
-        config.graphService().groups()
+        graphService.groups()
                 .buildRequest()
                 .post(group);
 
     }
 
     public void deleteGroup(String groupID) {
-        config.graphService().groups(groupID)
+        graphService.groups(groupID)
                 .buildRequest()
                 .delete();
         log.debug("Group with kafkaId {} deleted ", groupID);

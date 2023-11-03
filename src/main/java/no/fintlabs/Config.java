@@ -20,8 +20,8 @@ import java.util.List;
 
 
 @Log4j2
-@Setter
 @Getter
+@Setter
 @EnableAutoConfiguration
 @Configuration
 @ConfigurationProperties(prefix = "azure.credentials")

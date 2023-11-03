@@ -30,7 +30,6 @@ class AzureClientTest {
     @Mock
     private ConfigGroup configGroup;
     //@Mock Group group;
-
     @Mock
     private Config config;
 
@@ -87,6 +86,7 @@ class AzureClientTest {
     void addGroupToAzure() {
         when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
         when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
+        //when(config.getEntobjectid()).thenReturn("testentobjectid");
 
         ResourceGroup resourceGroup = ResourceGroup.builder()
                 .id("12")
