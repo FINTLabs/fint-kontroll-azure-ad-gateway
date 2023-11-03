@@ -36,6 +36,7 @@ class AzureClientTest {
 
     @InjectMocks
     private AzureClient azureClient;
+
     private List<Group> getTestGrouplist(int numberOfGroups) {
         List<Group> retGroupList = new ArrayList<>();
         for (int i=0; i<numberOfGroups; i++) {
@@ -87,8 +88,17 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
         when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
 
-        ResourceGroup resourceGroup = new ResourceGroup("12", "123", "testdisplayname", "testidpgroup", "testresourcename", "testresourcetype", "1000");
-        azureClient.addGroupToAzure(resourceGroup);
+        ResourceGroup resourceGroup = ResourceGroup.builder()
+                .id("12")
+                .resourceId("123")
+                .displayName("testdisplayname")
+                .identityProviderGroupObjectId("testidpgroup")
+                .resourceName("testresourcename")
+                .resourceType("testresourcetype")
+                .resourceLimit("1000")
+                .build();
+
+                azureClient.addGroupToAzure(resourceGroup);
 
         verify(groupCollectionRequest, times(1)).post(any(Group.class));
     }

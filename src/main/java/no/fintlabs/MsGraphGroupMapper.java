@@ -10,30 +10,28 @@ public class MsGraphGroupMapper {
     public Group toMsGraphGroup(ResourceGroup resourceGroup, ConfigGroup configGroup, Config config) {
         Group group = new Group();
 
-        //String spelExpression = 'configGroup.prefix + resourceType.substring(0, 3).toLowerCase() + "-" + resourceName.replace("\s", ".").toLowerCase() + configGroup.suffix'
-        /*ExpressionParser parser = new SpelExpressionParser();
-        String spelExpression = "displayName";
-        Expression exp = parser.parseExpression(spelExpression);
+        int groupMailEnabledMaxLen = 64;
 
-        EvaluationContext context = new SimpleEvaluationContext.Builder().withRootObject(this).build();
-        group.displayName = (String) exp.getValue(context);*/
-
-        //group.displayName = (String) exp.getValue();
-
-        //group.displayName = configGroup.prefix + resourceName + configGroup.suffix;
-
-        // group.displayName = cfgPrefix + resourceGroup.resourceName + cfgSuffix;
-        // if (configGroup.aslowercase)
-        //    group.displayName = group.displayName.toLowerCase();
         group.displayName = (configGroup.getPrefix() +
-                             resourceGroup.resourceType.substring(0, 3) +
+                             resourceGroup.getResourceType().substring(0, 3) +
                              "-" +
-                             resourceGroup.resourceName.replace("\s", ".") +
+                             resourceGroup.getResourceName().replace("\s", ".") +
                              configGroup.getSuffix()).toLowerCase();
+
         group.mailEnabled = false;
         group.securityEnabled = true;
-        group.mailNickname = resourceGroup.resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
-        group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.id));
+
+        // Remove special characters
+        group.mailNickname = resourceGroup.getResourceName()
+                .replaceAll("[^a-zA-Z0-9]", "")
+                .toLowerCase();
+
+        // Make length max [groupMailEnabledMaxLen] long
+        if (resourceGroup.getResourceName().length() > groupMailEnabledMaxLen) {
+            group.mailNickname = group.mailNickname.substring(0, groupMailEnabledMaxLen);
+        }
+
+        group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.getResourceId()));
 
         String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
         var owners = new JsonArray();

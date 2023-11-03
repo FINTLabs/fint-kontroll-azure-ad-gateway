@@ -5,6 +5,8 @@ import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.Group;
 import jakarta.annotation.Resource;
 import lombok.Builder;
+import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.Config;
@@ -22,16 +24,18 @@ import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.SimpleEvaluationContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
-@Builder
-@RequiredArgsConstructor
+@Builder(toBuilder = true)
+@Getter
 @Slf4j
+
 public class ResourceGroup
 {
-    public final String id;
-    public final String resourceId;
-    public final String displayName;
-    public final String identityProviderGroupObjectId;
-    public final String resourceName;
-    public final String resourceType;
-    public final String resourceLimit;
+    @NonNull
+    private final String id;
+    private final String resourceId;
+    private final String displayName;
+    private final String identityProviderGroupObjectId;
+    private final String resourceName;
+    private final String resourceType;
+    private final String resourceLimit;
 }

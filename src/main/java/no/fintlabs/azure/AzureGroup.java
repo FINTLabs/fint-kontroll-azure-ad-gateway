@@ -14,7 +14,6 @@ import no.fintlabs.kafka.ResourceGroup;
 @Getter
 public class AzureGroup {
 
-
     protected String id;
     protected String displayName;
     protected List<String> members;

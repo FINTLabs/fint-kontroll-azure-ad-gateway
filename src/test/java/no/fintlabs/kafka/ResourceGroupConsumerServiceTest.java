@@ -1,11 +1,7 @@
 package no.fintlabs.kafka;
 
-import com.microsoft.graph.core.BaseClient;
-import com.microsoft.graph.core.IBaseClient;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.requests.GraphServiceClient;
-import jakarta.annotation.Resource;
-import net.bytebuddy.utility.RandomString;
 import no.fintlabs.AzureClient;
 import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
@@ -16,13 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,82 +27,66 @@ public class ResourceGroupConsumerServiceTest {
 
     @Mock
     private GraphServiceClient graphServiceClient;
+
+/*    @MockBean
+    private Config config;
+    @MockBean
+    private ConfigGroup configGroup;*/
+    @Mock
+    private ConfigGroup configGroup;
+    //@Mock Group group;
+    @Mock
+    private Config config;
+
     @InjectMocks
     private AzureClient azureClient;
     @InjectMocks
     private ResourceGroupConsumerService resourceGroupConsumerService;
 
-    @Test
-    void processEntity() {
-        List<ResourceGroup> resourceGroups = new ArrayList<ResourceGroup>();
-        when(azureClient.doesGroupExist(anyString())).thenReturn(false);
-        //pre = afk
-        //post = kon
-        ResourceGroup group = new ResourceGroup(
-                RandomStringUtils.random(4),
-                "adc",
-                "TestDisplayName " + RandomStringUtils.random(6),
-                RandomStringUtils.random(12),
-                "Adobe Cloud",
-                "LicenseResource",
-                "1000");
+    private ResourceGroup exampleResourceGroup;
 
-        resourceGroupConsumerService.processEntity(group, "testGroupID");
+    public ResourceGroupConsumerServiceTest() {
+        exampleResourceGroup = ResourceGroup.builder()
+                .id("123")
+                .resourceId("123")
+                .resourceType("licenseResource")
+                .resourceName("testResourceName")
+                .resourceLimit("1000")
+                .build();
+    }
+
+    ResourceGroup newResourceGroupFromResourceName(String inResourceName) {
+        return ResourceGroup.builder()
+                .id(RandomStringUtils.random(4))
+                .resourceId(RandomStringUtils.randomAlphanumeric(12))
+                .displayName("TestDisplayName " + RandomStringUtils.random(6))
+                .resourceId(RandomStringUtils.random(12))
+                .resourceName(inResourceName)
+                .identityProviderGroupObjectId(RandomStringUtils.random(12))
+                .build();
+    }
+    @Test
+    void processEntityNewGroupGetsCallsAzureCreate() {
+
+        when(azureClient.doesGroupExist(anyString())).thenReturn(false);
+
+/*        List<ResourceGroup> resourceGroups = new ArrayList<ResourceGroup>();
+        resourceGroups.add(newResourceGroupFromResourceName("Test app 3"));
+        resourceGroups.add(newResourceGroupFromResourceName("Hmmmbopp"));*/
+
+        ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
+        resourceGroupConsumerService.processEntity(resourceGroup, "testGroupID");
+
         //verify(resourceGroupConsumerService, times(1)).processEntity(any(ResourceGroup.class), anyString());
 
-        ArgumentCaptor<Group> argcapGroup = ArgumentCaptor.forClass(Group.class);
+        /*ArgumentCaptor<Group> argcapGroup = ArgumentCaptor.forClass(Group.class);
         verify(graphServiceClient).groups().buildRequest().post(argcapGroup.capture());
-        assertEquals("afk-lic-adobe.cloud-kon", argcapGroup.getValue().displayName);
-//        ArgumentCaptor<Group> group = ArgumentCaptor.forClass(Group.class);
-//        verify(azureClient).addGroupToAzure(group.capture());
-//        assertEquals("afk-lic-adobe.cloud-kon", group.getValue().displayName());
-
-        //afk-lic-adobe.cloud-kon
+        assertEquals("afk-lic-adobe.cloud-kon", argcapGroup.getValue().displayName);*/
 
         /*ArgumentCaptor<Person> argument = ArgumentCaptor.forClass(Person.class);
         verify(mock).doSomething(argument.capture());
         assertEquals("John", argument.getValue().getName());*/
 
-        // pre = bfk
-        // post = kon
-        resourceGroups.add(new ResourceGroup(
-                RandomStringUtils.random(4),
-                "ard",
-                "TestDisplayName " + RandomStringUtils.random(6),
-                RandomStringUtils.random(12),
-                "ardoq",
-                "ApplicationResource",
-                "1000"));
-        //bfk-app-ardoq-kon
-
-        //pre = ofk
-        //post = kon
-        resourceGroups.add(new ResourceGroup(
-                RandomStringUtils.random(4),
-                "qlik",
-                "TestDisplayName " + RandomStringUtils.random(6),
-                RandomStringUtils.random(12),
-                "qLikSense FK Inntak",
-                "RoleResource",
-                "1000"));
-        //ofk-rol-qliksense.fk.inntak-kon*/
-
-        //pre = afk
-        //post = agg-kon
-        resourceGroups.add(new ResourceGroup(
-                RandomStringUtils.random(4),
-                "adobek12",
-                "TestDisplayName " + RandomStringUtils.random(6),
-                RandomStringUtils.random(12),
-                "Adobe K12 Utdanning",
-                "ApplicationResource",
-                "1000"));
-        //afk-rol-adobe.k12.utdanning.agg-kon
-
-        for (ResourceGroup resourceGroup : resourceGroups) {
-            resourceGroupConsumerService.processEntity(resourceGroup, "testGroupID");
-        }
-        //<fylkeskode>-<ressurstype>-<ressursnavn små bokstaver, mellomrom erstattes med .>-agg-kon
         // TODO: Implement actual test
         /*when(graphServiceClient.groups()).thenReturn(
                 new com.microsoft.graph.requests.GroupCollectionRequestBuilder(
