@@ -59,11 +59,11 @@ public class ResourceGroup
         // group.displayName = cfgPrefix + resourceGroup.resourceName + cfgSuffix;
         // if (configGroup.aslowercase)
         //    group.displayName = group.displayName.toLowerCase();
-        group.displayName = configGroup.getPrefix() +
-                resourceType.substring(0, 3).toLowerCase() +
+        group.displayName = (configGroup.getPrefix() +
+                resourceType.substring(0, 3) +
                 "-" +
-                resourceName.replace("\s", ".").toLowerCase() +
-                configGroup.getSuffix();
+                resourceName.replace("\s", ".") +
+                configGroup.getSuffix()).toLowerCase();
         group.mailEnabled = false;
         group.securityEnabled = true;
         group.mailNickname = resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
