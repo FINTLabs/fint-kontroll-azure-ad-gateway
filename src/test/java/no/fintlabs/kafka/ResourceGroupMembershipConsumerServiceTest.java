@@ -1,22 +1,32 @@
 package no.fintlabs.kafka;
 
+import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.ResourceReference;
+import no.fintlabs.AzureClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.stereotype.Service;
 
 import static org.junit.jupiter.api.Assertions.*;
-@Service
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
+@Service
+@ExtendWith(MockitoExtension.class)
 class ResourceGroupMembershipConsumerServiceTest {
 
     @Mock
-    private ResourceGroupConsumerService resourceGroupConsumerService;
-    private ResourceGroupMembership resourceGroupMembership;
-    private String resourceGroupMembershipKey;
+    private AzureClient azureClient;
+    @InjectMocks
+    private ResourceGroupMembershipConsumerService resourceGroupMembershipConsumerService;
+
     static private ResourceGroupMembership exampleGroupMembership;
 
     @BeforeAll()
@@ -29,31 +39,24 @@ class ResourceGroupMembershipConsumerServiceTest {
                 .build();
     }
 
-    @BeforeEach
-    void setUp() {
-        resourceGroupMembership = ResourceGroupMembership.builder()
-                .azureGroupRef("fakeAzureGroup")
-                .azureUserRef("fakeUserUUID")
-                .roleRef("someRoleRef")
-                .build();
-    }
-
-    @AfterEach
-    void tearDown() {
-    }
-
     @Test
     void processEntityNewGroupmemberhipDetected() {
-        // TODO: Implement group membership test [FKS-112]
+
+        ResourceGroupMembership resourceGroupMembership = exampleGroupMembership.toBuilder()
+                .id(null)
+                .build();
+
+        resourceGroupMembershipConsumerService.processEntity(resourceGroupMembership, "exampleID");
+
+        verify(azureClient, times(1)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(azureClient, times(0)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
     }
 
     @Test
-    void processEntityUpdateGroupmemberhip() {
-        // TODO: Implement group membership test [FKS-112]
-    }
+    void processEntityDeleteGroupmemberhip() {
+        resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, "exampleID");
 
-    @Test
-    void processEntityRemoveGroupMembership() {
-        // TODO: Implement removal of group membership test [FKS-212]
+        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(azureClient, times(1)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
     }
 }
