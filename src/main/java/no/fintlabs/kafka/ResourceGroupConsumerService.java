@@ -36,7 +36,7 @@ public class ResourceGroupConsumerService {
 
     @PostConstruct
     public void init() {
-        //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails
+        //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails [FKS-214]
         entityConsumerFactoryService.createFactory(ResourceGroup.class, consumerRecord -> processEntity(consumerRecord.value(), consumerRecord.key())
         ).createContainer(
                 EntityTopicNameParameters
@@ -48,7 +48,7 @@ public class ResourceGroupConsumerService {
 
     public void processEntity(ResourceGroup resourceGroup, String kafkaGroupId) {
 
-        // TODO: Split doesGroupExist to POST or PUT
+        // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
         if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getResourceId())) {
             azureClient.addGroupToAzure(resourceGroup);
         }

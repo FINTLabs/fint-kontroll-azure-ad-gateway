@@ -134,7 +134,7 @@ class AzureClientTest {
 
     @Test
     void updateGroup() {
-        // TODO: Implement test
+        // TODO: Implement test [FKS-187]
     }
 
     @Mock

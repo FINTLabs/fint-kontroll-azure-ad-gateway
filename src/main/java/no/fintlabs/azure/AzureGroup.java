@@ -26,13 +26,11 @@ public class AzureGroup {
         this.displayName = group.displayName;
         this.members = new ArrayList<>();
 
-        //this.extensions = group.extensions;
-        //TODO: Get resource ID on Azure object
+        //TODO: Implement tests to verify ResourceID as LONG from kafka [FKS-216]
         if (!group.additionalDataManager().isEmpty() && group.additionalDataManager().containsKey(configGroup.getFintkontrollidattribute()))
         {
             this.fintKontrollRoleId = Long.valueOf(group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString());
         }
-
     }
 }
 
