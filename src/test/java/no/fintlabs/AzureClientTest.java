@@ -122,4 +122,13 @@ class AzureClientTest {
     @Test
     void updateGroup() {
     }
+
+    @Test
+    public  void addGroupMembership () {
+
+    }
+
+    @Test
+    public void updateGroupMembership () {
+    }
 }

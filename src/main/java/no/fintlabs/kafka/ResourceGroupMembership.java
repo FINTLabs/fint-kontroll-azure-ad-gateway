@@ -1,14 +1,22 @@
 package no.fintlabs.kafka;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
-@AllArgsConstructor
+@Builder(toBuilder = true)
+@Getter
 @Slf4j
+
 public class ResourceGroupMembership
 {
-    public String id;
-    public String azureGroupRef;
-    public String azureUserRef;
-    public String roleRef;
+    private String id;
+    @NonNull
+    private String azureGroupRef;
+    @NonNull
+    private String azureUserRef;
+    @NonNull
+    private String roleRef;
 }

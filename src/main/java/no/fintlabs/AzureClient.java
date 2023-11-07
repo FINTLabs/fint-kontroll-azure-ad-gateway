@@ -1,6 +1,7 @@
 package no.fintlabs;
 
 import com.google.gson.JsonElement;
+import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
@@ -9,10 +10,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
 import no.fintlabs.kafka.ResourceGroup;
+import no.fintlabs.kafka.ResourceGroupMembership;
 import no.fintlabs.kafka.ResourceGroupMembershipConsumerService;
 import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.util.Objects;
 
 @Component
 @Log4j2
@@ -29,7 +33,6 @@ public class AzureClient {
     private final AzureGroupProducerService azureGroupProducerService;
 
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
-    private final ResourceGroupMembershipConsumerService resourceGroupMembershipConsumerService;
 
     private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
         int members = 0;
@@ -209,5 +212,48 @@ public class AzureClient {
 
     public void updateGroup(ResourceGroup resourceGroup) {
         // TODO: Implement actual functionality to update the group in Azure [FKS-199]
+    }
+
+    public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
+        DirectoryObject directoryObject = new DirectoryObject();
+        directoryObject.id = resourceGroupMembership.getAzureUserRef();
+
+        try {
+            Objects.requireNonNull(graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references())
+                    .buildRequest()
+                    .post(directoryObject);
+            log.info("User {} added to group {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+        } catch (GraphServiceException e) {
+            // Handle the HTTP response exception here
+            if (e.getResponseCode() == 400) {
+                // Handle the 400 Bad Request error
+                log.warn("User {} already exists in group {} or azureGroupRef is not correct: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+            } else {
+                // Handle other HTTP errors
+                log.error("HTTP Error while updating group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage(), resourceGroupMembership.getAzureGroupRef());
+            }
+        }
+    }
+
+    public void updateGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
+        String group = resourceGroupMembershipKey.split("_")[0];
+        String user = resourceGroupMembershipKey.split("_")[1];
+
+        try {
+            Objects.requireNonNull(graphService.groups(group)
+                    .members(user)
+                    .reference()
+                    .buildRequest()
+                    .delete());
+            log.warn("User: {} removed from group: {}", user, group);
+        }
+        catch (GraphServiceException e)
+        {
+            log.error("HTTP Error while removing user from group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage());
+        }
+    }
+
+    public void removeGroupMemberhip(String resourceGroupMembershipKey) {
+        // TODO: Implement removal of group membership [FKS-212]
     }
 }
