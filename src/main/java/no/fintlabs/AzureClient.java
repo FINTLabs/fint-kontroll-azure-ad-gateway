@@ -148,6 +148,7 @@ public class AzureClient {
         this.pageThrough(
                 graphService.groups()
                         .buildRequest()
+                        // TODO: Attributes should not be hard-coded [FKS-210]
                         .select(String.format("id,displayName,description,members,%s", config.configGroup().getFintkontrollidattribute()))
                         .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                         // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
@@ -160,6 +161,7 @@ public class AzureClient {
     public boolean doesGroupExist(String resourceGroupId) {
         // TODO: Should this be implemented as a simpler call to MS Graph? [FKS-200]
         // Form the selection criteria for the MS Graph request
+        // TODO: Attributes should not be hard-coded [FKS-210]
         String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute());
 
         GroupCollectionPage groupCollectionPage = graphService.groups()
