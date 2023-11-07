@@ -10,6 +10,7 @@ import com.microsoft.graph.requests.ExtensionCollectionPage;
 import com.microsoft.graph.requests.GraphServiceClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.AzureClient;
 import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
@@ -27,12 +28,9 @@ import java.util.List;
 @AllArgsConstructor
 @Slf4j
 public class ResourceGroupConsumerService {
-    // TODO: Check if this is the same object as in AzureClient
-
     @Autowired
-    private final GraphServiceClient<Request> graphServiceClient;
+    private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
-    private final Config config;
     private final ConfigGroup configGroup;
 
 
@@ -48,58 +46,20 @@ public class ResourceGroupConsumerService {
         );
     }
 
-    public boolean doesGroupExist(String resourceGroupId) {
-        List<Group> groups = graphServiceClient.groups()
-                .buildRequest()
-                .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
-                .get()
-                .getCurrentPage();
-
-        for (Group group : groups) {
-            if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()) != null)
-            {
-                if (group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString().equals(resourceGroupId))
-                {
-                    return true; // Group with the specified ResourceID found
-                }
-            }
-        }
-        // Group with resourceID not found
-        return false;
-    }
-
     public void processEntity(ResourceGroup resourceGroup, String kafkaGroupId) {
 
-        if (resourceGroup.resourceName != null && !doesGroupExist(resourceGroup.id)) {
-            log.debug("Adding Group to Azure: {}", resourceGroup.resourceName);
-            Group group = new Group();
-            group.displayName = resourceGroup.resourceName;
-            group.mailEnabled = false;
-            group.mailNickname = resourceGroup.resourceName.replaceAll("[^a-zA-Z0-9]", ""); // Remove special characters
-            group.securityEnabled = true;
-            group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.id));
-
-            String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
-            var owners = new JsonArray();
-            owners.add(owner);
-            group.additionalDataManager().put("owners@odata.bind",  owners);
-
-            graphServiceClient.groups()
-                    .buildRequest()
-                    .post(group);
-
+        // TODO: Split doesGroupExist to POST or PUT
+        if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getResourceId())) {
+            azureClient.addGroupToAzure(resourceGroup);
         }
-        else if(resourceGroup.resourceName == null)
+        else if(resourceGroup.getResourceName() == null)
         {
-            graphServiceClient.groups(kafkaGroupId)
-                    .buildRequest()
-                            .delete();
-
-            log.warn("Group with kafkaId {} deleted ", kafkaGroupId);
+            azureClient.deleteGroup(kafkaGroupId);
         }
         else
         {
-            log.info("Group not created as it already exists: {}", resourceGroup.resourceName);
+            log.debug("Group not created as it already exists: {}", resourceGroup.getResourceName());
+            azureClient.updateGroup(resourceGroup);
         }
     }
  }

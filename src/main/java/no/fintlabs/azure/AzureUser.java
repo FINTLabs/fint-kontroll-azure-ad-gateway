@@ -26,7 +26,6 @@ public class AzureUser {
                 this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
                 this.studentId = getAttributeValue(user, configUser.getStudentidattribute());
                 this.idpUserObjectId = user.id;
-
         }
 
         String getAttributeValue(User user, String attributeName) {
