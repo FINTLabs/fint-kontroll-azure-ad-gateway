@@ -16,7 +16,8 @@ import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.Objects;
+import java.lang.reflect.Array;
+import java.util.*;
 
 @Component
 @Log4j2
@@ -235,9 +236,14 @@ public class AzureClient {
         }
     }
 
-    public void updateGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
-        String group = resourceGroupMembershipKey.split("_")[0];
-        String user = resourceGroupMembershipKey.split("_")[1];
+    public void deleteGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
+        String[] splitString = resourceGroupMembershipKey.split     ("_");
+        if (splitString.length != 2) {
+            log.error("Group index not formatted correctly. NOT deleting group");
+            return;
+        }
+        String group = splitString[0];
+        String user = splitString[1];
 
         try {
             Objects.requireNonNull(graphService.groups(group)
@@ -251,9 +257,5 @@ public class AzureClient {
         {
             log.error("HTTP Error while removing user from group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage());
         }
-    }
-
-    public void removeGroupMemberhip(String resourceGroupMembershipKey) {
-        // TODO: Implement removal of group membership [FKS-212]
     }
 }

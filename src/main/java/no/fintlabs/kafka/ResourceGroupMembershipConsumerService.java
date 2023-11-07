@@ -44,7 +44,7 @@ public class ResourceGroupMembershipConsumerService {
 
         // Already existing membership
         if (resourceGroupMembership.getId() != null) {
-            azureClient.updateGroupMembership(resourceGroupMembership, resourceGroupMembershipKey);
+            azureClient.deleteGroupMembership(resourceGroupMembership, resourceGroupMembershipKey);
         }
         else
         {
