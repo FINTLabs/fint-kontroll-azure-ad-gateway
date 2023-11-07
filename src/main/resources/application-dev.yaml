@@ -1,0 +1,16 @@
+logging:
+  level:
+    root: INFO
+    com.azure: DEBUG
+    com.microsoft: DEBUG
+    no.fintlabs: DEBUG
+    #org.apache: ERROR
+
+fint:
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: ${fint.application-id}
+
+#server:
+  #port: 8085

@@ -16,7 +16,6 @@ logging:
     com.microsoft: WARN
     org.apache: WARN
 
-
 fint:
   cache:
     defaultCacheEntryTimeToLiveMillis: 518400000
@@ -42,8 +41,9 @@ fint:
         mainorgunitidattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitId
         mainorgunitnameattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitName
       group:
-        fintkontrollidattribute : extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
-
+        fintkontrollidattribute: extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
+        prefix: "-pre-"
+        suffix: "-suff-"
       group-scheduler:
         pull:
           initial-delay-ms: 1000
@@ -62,5 +62,3 @@ azure:
     clientsecret: XXXX
     tenantguid: XXXX
     entobjectid: ZZZZ
-
-

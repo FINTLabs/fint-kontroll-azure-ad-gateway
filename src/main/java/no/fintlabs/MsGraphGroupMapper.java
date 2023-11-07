@@ -1,0 +1,43 @@
+package no.fintlabs;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonPrimitive;
+import com.microsoft.graph.models.Group;
+import no.fintlabs.kafka.ResourceGroup;
+
+public class MsGraphGroupMapper {
+
+    public Group toMsGraphGroup(ResourceGroup resourceGroup, ConfigGroup configGroup, Config config) {
+        Group group = new Group();
+
+        int groupMailEnabledMaxLen = 64;
+
+        group.displayName = (configGroup.getPrefix() +
+                             resourceGroup.getResourceType().substring(0, 3) +
+                             "-" +
+                             resourceGroup.getResourceName().replace("\s", ".") +
+                             configGroup.getSuffix()).toLowerCase();
+
+        group.mailEnabled = false;
+        group.securityEnabled = true;
+
+        // Remove special characters
+        group.mailNickname = resourceGroup.getResourceName()
+                .replaceAll("[^a-zA-Z0-9]", "")
+                .toLowerCase();
+
+        // Make length max [groupMailEnabledMaxLen] long
+        if (resourceGroup.getResourceName().length() > groupMailEnabledMaxLen) {
+            group.mailNickname = group.mailNickname.substring(0, groupMailEnabledMaxLen);
+        }
+
+        group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.getResourceId()));
+
+        String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
+        var owners = new JsonArray();
+        owners.add(owner);
+        group.additionalDataManager().put("owners@odata.bind",  owners);
+
+        return group;
+    }
+}
