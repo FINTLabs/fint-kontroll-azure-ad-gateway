@@ -22,8 +22,6 @@ import java.util.Objects;
 @Slf4j
 
 public class ResourceGroupMembershipConsumerService {
-    // TODO: Check if this is the same object as in AzureClient
-
     @Autowired
     private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
@@ -31,7 +29,7 @@ public class ResourceGroupMembershipConsumerService {
 
     @PostConstruct
     public void init() {
-        //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails
+        //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails [FKS-214]
         entityConsumerFactoryService.createFactory(ResourceGroupMembership.class, consumerRecord -> processEntity(consumerRecord.value(), consumerRecord.key())
         ).createContainer(
                 EntityTopicNameParameters
