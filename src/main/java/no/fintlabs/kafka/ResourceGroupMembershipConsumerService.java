@@ -6,6 +6,7 @@ import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.requests.GraphServiceClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.AzureClient;
 import no.fintlabs.Config;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
@@ -24,7 +25,7 @@ public class ResourceGroupMembershipConsumerService {
     // TODO: Check if this is the same object as in AzureClient
 
     @Autowired
-    private final GraphServiceClient<Request> graphServiceClient;
+    private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
 
@@ -41,45 +42,13 @@ public class ResourceGroupMembershipConsumerService {
     }
     public void processEntity(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
 
-
-        if (resourceGroupMembership.id != null) {
-            DirectoryObject directoryObject = new DirectoryObject();
-            directoryObject.id = resourceGroupMembership.azureUserRef;
-
-            try {
-                Objects.requireNonNull(graphServiceClient.groups(resourceGroupMembership.azureGroupRef).members().references())
-                        .buildRequest()
-                        .post(directoryObject);
-                log.info("User {} added to group {}: ", resourceGroupMembership.azureUserRef, resourceGroupMembership.azureGroupRef);
-            } catch (GraphServiceException e) {
-                // Handle the HTTP response exception here
-                if (e.getResponseCode() == 400) {
-                    // Handle the 400 Bad Request error
-                    log.warn("User {} already exists in group {} or azureGroupRef is not correct: ", resourceGroupMembership.azureUserRef, resourceGroupMembership.azureGroupRef);
-                } else {
-                    // Handle other HTTP errors
-                    log.error("HTTP Error while updating group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage(), resourceGroupMembership.azureGroupRef);
-                }
-            }
+        // Already existing membership
+        if (resourceGroupMembership.getId() != null) {
+            azureClient.updateGroupMembership(resourceGroupMembership, resourceGroupMembershipKey);
         }
         else
         {
-            String group = resourceGroupMembershipKey.split("_")[0];
-            String user = resourceGroupMembershipKey.split("_")[1];
-
-            try {
-                Objects.requireNonNull(graphServiceClient.groups(group)
-                        .members(user)
-                        .reference()
-                        .buildRequest()
-                        .delete());
-                log.warn("User: {} removed from group: {}", user, group);
-            }
-            catch (GraphServiceException e)
-            {
-                log.error("HTTP Error while removing user from group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage());
-            }
-
+            azureClient.addGroupMembership(resourceGroupMembership, resourceGroupMembershipKey);
         }
     }
 }
