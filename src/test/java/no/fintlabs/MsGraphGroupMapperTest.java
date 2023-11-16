@@ -31,7 +31,7 @@ public class MsGraphGroupMapperTest {
     public MsGraphGroupMapperTest() {
         resourceGroup = ResourceGroup.builder()
                 .id("123")
-                .resourceId("123")
+                .resourceId("resource123")
                 .resourceType("licenseResource")
                 .resourceName("testResourceName")
                 .resourceLimit("1000")
@@ -45,17 +45,18 @@ public class MsGraphGroupMapperTest {
     @Test
     public void shouldMapFromResourceGroupToMsGraphGroup() {
         String fintKontrollIdAttribute = "fakeFintKontrollId";
-        String resourceId = RandomStringUtils.random(4);
+        //String resourceId = RandomStringUtils.random(4);
+        String Id = RandomStringUtils.randomNumeric(8);
 
         when(configGroup.getPrefix()).thenReturn("afk-");
         when(configGroup.getSuffix()).thenReturn("-agg-kon");
         when(configGroup.getFintkontrollidattribute()).thenReturn(fintKontrollIdAttribute);
 
         ResourceGroup group = ResourceGroup.builder()
-                .id(RandomStringUtils.random(6))
+                .id(Id)
                 .identityProviderGroupObjectId(RandomStringUtils.random(4))
                 .displayName("TestDisplayName " + RandomStringUtils.random(6))
-                .resourceId(resourceId)
+                .resourceId("TestResourceID" + RandomStringUtils.randomAlphanumeric(6))
                 .resourceName("Adobe Cloud")
                 .resourceType("licenceResource")
                 .build();
@@ -66,7 +67,7 @@ public class MsGraphGroupMapperTest {
         assertThat(msGroup.mailEnabled).isFalse();
         assertThat(msGroup.securityEnabled).isTrue();
         assertThat(msGroup.mailNickname).isEqualTo("adobecloud");
-        assertThat(msGroup.additionalDataManager().get(fintKontrollIdAttribute).getAsString()).isEqualTo(resourceId);
+        assertThat(msGroup.additionalDataManager().get(fintKontrollIdAttribute).getAsString()).isEqualTo(Id);
     }
 
     @Test
