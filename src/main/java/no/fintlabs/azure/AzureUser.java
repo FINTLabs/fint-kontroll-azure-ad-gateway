@@ -7,9 +7,11 @@ import no.fintlabs.ConfigUser;
 
 import java.lang.reflect.Field;
 
-@Setter
 @Getter
+@Builder
 @RequiredArgsConstructor
+@AllArgsConstructor
+
 @Log4j2
 public class AzureUser {
         private String mail;
