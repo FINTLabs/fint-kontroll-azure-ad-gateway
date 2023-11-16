@@ -39,7 +39,7 @@ public class Config {
     }
 
     @Bean
-    @ConfigurationProperties(prefix = "fint.kontroll.azure-ad-gateway.users")
+    @ConfigurationProperties(prefix = "fint.kontroll.azure-ad-gateway.user")
     public ConfigUser configUser() {
         return new ConfigUser();
     }
