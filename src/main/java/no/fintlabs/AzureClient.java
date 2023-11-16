@@ -64,7 +64,15 @@ public class AzureClient {
             for (Group group : page.getCurrentPage()) {
                 groups++;
 
-                AzureGroup newGroup = new AzureGroup(group, configGroup);
+
+                AzureGroup newGroup;
+                try {
+                    newGroup = new AzureGroup(group, configGroup);
+                } catch (NumberFormatException e) {
+                    log.warn("Problems converting resourceID to LONG! {}. Skipping creation of group", e);
+                    continue;
+                }
+
                 pageThrough(
                         newGroup,
                         graphService.groups(group.id).members()
