@@ -19,6 +19,9 @@ patches:
       - op: replace
         path: "/spec/kafka/acls/1/topic"
         value: "fintlabs-no.kontroll.entity.azure*"
+      - op: replace
+        path: "/spec/kafka/acls/2/topic"
+        value: "fintlabs-no.kontroll.entity.resource-group*"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
