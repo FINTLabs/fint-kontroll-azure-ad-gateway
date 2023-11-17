@@ -15,7 +15,7 @@ patches:
   - patch: |-
       - op: replace
         path: "/spec/acls/0/topic"
-        value: "fintlabs-no.kontroll.*"
+        value: "beta-fintlabs-no.kontroll.*"
     target:
       kind: KafkaUserAndAcl
       name: fint-kontroll-azure-ad-gateway
