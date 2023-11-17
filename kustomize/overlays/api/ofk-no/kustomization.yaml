@@ -16,7 +16,6 @@ patches:
       - op: replace
         path: "/spec/kafka/acls/0/topic"
         value: "ofk-no.kontroll.*"
-  - patch: |-
       - op: replace
         path: "/spec/kafka/acls/1/topic"
         value: "ofk-no.kontroll.*"
