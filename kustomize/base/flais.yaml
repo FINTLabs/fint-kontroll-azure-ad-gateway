@@ -16,7 +16,9 @@ spec:
   kafka:
     enabled: true
     acls:
-      - topic: 'fintlabs-no.kontroll.*'
+      - topic: 'placeholder-fintlabs-no.kontroll.*'
         permission: read
-      - topic: 'fintlabs-no.kontroll.*'
+      - topic: 'placeholder-fintlabs-no.kontroll.*'
         permission: admin
+      - topic: 'placeholder-fintlabs-no.kontroll.entity.resource-group*'
+        permission: read

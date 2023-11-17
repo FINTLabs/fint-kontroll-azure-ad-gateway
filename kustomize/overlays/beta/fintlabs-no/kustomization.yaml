@@ -15,10 +15,10 @@ patches:
   - patch: |-
       - op: replace
         path: "/spec/kafka/acls/0/topic"
-        value: "beta-fintlabs-no.kontroll.*"
+        value: "fintlabs-no.kontroll.entity.azure*"
       - op: replace
         path: "/spec/kafka/acls/1/topic"
-        value: "beta-fintlabs-no.kontroll.*"
+        value: "fintlabs-no.kontroll.entity.azure*"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
