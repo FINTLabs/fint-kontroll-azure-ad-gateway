@@ -33,7 +33,6 @@ public class ResourceGroupConsumerService {
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final ConfigGroup configGroup;
 
-
     @PostConstruct
     public void init() {
         //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails [FKS-214]
