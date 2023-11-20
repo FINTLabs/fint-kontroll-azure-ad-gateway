@@ -4,11 +4,8 @@ package no.fintlabs.azure;
 import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.Group;
 
-import groovy.util.logging.Log4j2;
 import groovy.util.logging.Slf4j;
-import no.fintlabs.AzureClient;
 import no.fintlabs.ConfigGroup;
-import no.fintlabs.ConfigUser;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,8 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
-
-import org.mockito.junit.jupiter.MockitoExtension;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +44,6 @@ class AzureGroupTest {
 
         AzureGroup newTestGroup = new AzureGroup(testgroup, configGroup);
 
-        assertThat(newTestGroup.getFintKontrollRoleId() == Long.valueOf(number));
+        assertThat(newTestGroup.getResourceGroupID() == Long.valueOf(number));
     }
 }
