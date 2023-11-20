@@ -29,7 +29,7 @@ public class AzureGroupProducerService {
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
     public void publish(AzureGroup azureGroup) {
-        if (azureGroup.fintKontrollRoleId != null) {
+        if (azureGroup.resourceGroupID != null) {
             entityProducer.send(
                     EntityProducerRecord.<AzureGroup>builder()
                             .topicNameParameters(entityTopicNameParameters)
