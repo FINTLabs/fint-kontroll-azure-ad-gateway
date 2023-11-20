@@ -50,7 +50,7 @@ public class AzureClient {
                 break;
             } else {
                 log.debug("Processing membership page");
-                page = page.getNextPage().buildRequest().select("id").get();
+                page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
 
