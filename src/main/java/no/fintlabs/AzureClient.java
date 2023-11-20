@@ -194,7 +194,6 @@ public class AzureClient {
             groupCollectionPage = groupCollectionPage.getNextPage() == null ? null :
                     groupCollectionPage.getNextPage()
                             .buildRequest()
-                            .select(selectionCriteria)
                             .get();
         }
 
