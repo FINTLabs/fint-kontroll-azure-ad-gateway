@@ -11,12 +11,10 @@ import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
-import no.fintlabs.kafka.ResourceGroupMembershipConsumerService;
 import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 @Component
@@ -98,12 +96,15 @@ public class AzureClient {
         do {
             for (User user : page.getCurrentPage()) {
                 users++;
-                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
+//                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
+                if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()) == configUser.getExternaluservalue()) // && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
+                {
                     azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
-                } else {
+                }
+                else
+                {
                     azureUserProducerService.publish(new AzureUser(user, configUser));
                 }
-
             }
             if (page.getNextPage() == null) {
                 break;
