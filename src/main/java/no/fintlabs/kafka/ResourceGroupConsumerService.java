@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
 import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
+import no.fintlabs.azure.AzureGroup;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import okhttp3.Request;
@@ -32,34 +34,44 @@ public class ResourceGroupConsumerService {
     private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final ConfigGroup configGroup;
+    private final FintCache<String, ResourceGroup> resourceGroupCache;
+    private final FintCache<String, AzureGroup> azureGroupCache;
 
     @PostConstruct
     public void init() {
+
+        // Initialize azoureGroupCache from Microsoft Graph
+
+
         //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails [FKS-214]
-        entityConsumerFactoryService.createFactory(ResourceGroup.class, consumerRecord -> processEntity(consumerRecord.value(), consumerRecord.key())
+        entityConsumerFactoryService.createFactory(
+                ResourceGroup.class,
+                consumerRecord -> processEntity(
+                        consumerRecord.value(), consumerRecord.key()
+                )
         ).createContainer(
-                EntityTopicNameParameters
+             EntityTopicNameParameters
                         .builder()
                         .resource("resource-group")
                         .build()
         );
+
     }
 
     public void processEntity(ResourceGroup resourceGroup, String kafkaGroupId) {
-
+        // Populate cache with
+        // Check resourceGroupCache if object is known from before
+        if (!resourceGroupCache.containsKey(kafkaGroupId)) {
+            resourceGroupCache.put(kafkaGroupId, resourceGroup);
+        }
         // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
         if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getResourceId())) {
             azureClient.addGroupToAzure(resourceGroup);
-        }
-        else if(resourceGroup.getResourceName() == null)
-        {
+        } else if(resourceGroup.getResourceName() == null) {
             azureClient.deleteGroup(kafkaGroupId);
-        }
-        else
-        {
+        } else {
             log.debug("Group not created as it already exists: {}", resourceGroup.getResourceName());
             azureClient.updateGroup(resourceGroup);
         }
     }
  }
-
