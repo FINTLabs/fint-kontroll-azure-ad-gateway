@@ -1,6 +1,7 @@
 package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityProducer;
 import no.fintlabs.kafka.entity.EntityProducerFactory;
 import no.fintlabs.kafka.entity.EntityProducerRecord;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Service;
 public class AzureUserProducerService {
     private final EntityProducer<AzureUser> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
-
     public AzureUserProducerService(
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {

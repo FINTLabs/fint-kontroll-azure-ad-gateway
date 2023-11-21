@@ -9,6 +9,7 @@ import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import okhttp3.Request;
@@ -32,6 +33,8 @@ public class AzureClient {
     private final AzureGroupProducerService azureGroupProducerService;
 
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
+    private final FintCache<String, ResourceGroup> resourceGroupCache;
+    private final FintCache<String, AzureGroup> azureGroupCache;
 
     private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
         int members = 0;
@@ -62,7 +65,6 @@ public class AzureClient {
             for (Group group : page.getCurrentPage()) {
                 groups++;
 
-
                 AzureGroup newGroup;
                 try {
                     newGroup = new AzureGroup(group, configGroup);
@@ -71,6 +73,7 @@ public class AzureClient {
                     continue;
                 }
 
+                // Put object into cache
                 pageThrough(
                         newGroup,
                         graphService.groups(group.id).members()
@@ -88,6 +91,33 @@ public class AzureClient {
             }
         } while (page != null);
         log.debug("{} Group objects detected!", groups);
+    }
+
+    private List<AzureGroup> pageThroughGetGroups(GroupCollectionPage inPage) {
+        int groups = 0;
+        GroupCollectionPage page = inPage;
+        List<AzureGroup> retGroupList = new ArrayList<AzureGroup>();
+        do {
+            for (Group group : page.getCurrentPage()) {
+
+                AzureGroup newGroup;
+                try {
+                    newGroup = new AzureGroup(group, configGroup);
+                } catch (NumberFormatException e) {
+                    log.warn("Problems converting resourceID to LONG! {}. Skipping creation of group", e);
+                    continue;
+                }
+                retGroupList.add(newGroup);
+            }
+            if (page.getNextPage() == null) {
+                break;
+            } else {
+                log.debug("Processing group page");
+                page = page.getNextPage().buildRequest().get();
+            }
+        } while (page != null);
+        log.debug("{} Group objects detected!", groups);
+        return retGroupList;
     }
 
     private void pageThrough(UserCollectionPage inPage) {
@@ -114,7 +144,6 @@ public class AzureClient {
             }
         } while (page != null);
         log.debug("{} User objects detected!", users);
-
     }
 
     // Fetch full user catalogue
@@ -150,12 +179,20 @@ public class AzureClient {
 
     }
 
+    public List<AzureGroup> getAllGroups() {
+        return this.pageThroughGetGroups(
+                graphService.groups()
+                        .buildRequest()
+                        .select(String.format("id,displayName,description,members,%s", config.configGroup().getFintkontrollidattribute()))
+                        .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
+                        .get()
+        );
+    }
 
     @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
-    //$select=id,displayName&$expand=members($select=id,userPrincipalName,displayName)
     private void pullAllGroups() {
         log.debug("*** Fetching all groups from AD >>> ***");
         this.pageThrough(
