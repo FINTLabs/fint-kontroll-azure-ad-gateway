@@ -20,7 +20,8 @@ public class AzureUser {
         private String employeeId;
         private String studentId;
         private String idpUserObjectId;
-        private String externalUserTagAttr;
+        private String externaluserattribute;
+        private String externaluservalue;
 
         public AzureUser(User user, ConfigUser configUser) {
                 this.mail = user.mail;
@@ -29,7 +30,8 @@ public class AzureUser {
                 this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
                 this.studentId = getAttributeValue(user, configUser.getStudentidattribute());
                 this.idpUserObjectId = user.id;
-                this.externalUserTagAttr = getAttributeValue(user, configUser.getExternaluserattribute());
+                this.externaluserattribute = getAttributeValue(user, configUser.getExternaluserattribute());
+                this.externaluservalue = getAttributeValue(user, configUser.getExternaluservalue());
         }
 
         public static String getAttributeValue(User user, String attributeName) {
