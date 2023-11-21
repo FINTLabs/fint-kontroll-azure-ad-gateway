@@ -7,10 +7,8 @@ import java.util.List;
 import com.microsoft.graph.models.Group;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.ConfigGroup;
-import no.fintlabs.kafka.ResourceGroup;
 
 @Setter
 @Getter
@@ -20,7 +18,7 @@ public class AzureGroup {
     protected String id;
     protected String displayName;
     protected List<String> members;
-    protected Long fintKontrollRoleId;
+    protected Long resourceGroupID;
 
     protected ExtensionCollectionPage extensions;
     public AzureGroup(Group group, ConfigGroup configGroup) {
@@ -33,7 +31,7 @@ public class AzureGroup {
         if (!group.additionalDataManager().isEmpty() && group.additionalDataManager().containsKey(configGroup.getFintkontrollidattribute()))
         {
             try {
-                this.fintKontrollRoleId = Long.valueOf(group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString());
+                this.resourceGroupID = Long.valueOf(group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString());
             } catch (NumberFormatException e) {
                 log.warn("Error converting value {} to long", e.getMessage());
                 throw e;
