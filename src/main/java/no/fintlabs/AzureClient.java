@@ -97,7 +97,7 @@ public class AzureClient {
             for (User user : page.getCurrentPage()) {
                 users++;
 //                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
-                if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()) == configUser.getExternaluservalue()) // && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
+                if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).toLowerCase() == configUser.getExternaluservalue().toLowerCase())
                 {
                     azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
                 }
