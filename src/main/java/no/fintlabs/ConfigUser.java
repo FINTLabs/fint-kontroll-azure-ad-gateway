@@ -33,12 +33,15 @@ public class ConfigUser {
     private String mainorgunitnameattribute;
     private String employeeidattribute;
     private String studentidattribute;
+    private String externaluserattribute;
+    private String externaluservalue;
     public List<String> AllAttributes(){
         List<String> AllAttribs = new ArrayList<>();
         AllAttribs.add(this.getStudentidattribute());
         AllAttribs.add(this.getEmployeeidattribute());
         AllAttribs.add(this.getMainorgunitidattribute());
         AllAttribs.add(this.getMainorgunitnameattribute());
+        AllAttribs.add(this.getExternaluserattribute());
         AllAttribs.addAll(userAttributes);
         return AllAttribs;
     };
