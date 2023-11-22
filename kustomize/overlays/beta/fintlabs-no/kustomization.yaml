@@ -32,4 +32,3 @@ patches:
     target:
       kind: OnePasswordItem
       name: fint-kontroll-azure-ad-gateway
-

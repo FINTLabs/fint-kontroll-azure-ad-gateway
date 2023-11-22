@@ -3,6 +3,7 @@ package no.fintlabs.kafka;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.ResourceReference;
 import no.fintlabs.AzureClient;
+import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,9 @@ class ResourceGroupMembershipConsumerServiceTest {
     @InjectMocks
     private ResourceGroupMembershipConsumerService resourceGroupMembershipConsumerService;
 
+    @Mock
+    private EntityTopicService entityTopicService;
+
     static private ResourceGroupMembership exampleGroupMembership;
 
     @BeforeAll()
@@ -37,6 +41,11 @@ class ResourceGroupMembershipConsumerServiceTest {
                 .azureGroupRef("exampleGroupRef")
                 .roleRef("exampleRole")
                 .build();
+    }
+
+    @Test
+    void handleNonExistingKafkaQueue() {
+
     }
 
     @Test
