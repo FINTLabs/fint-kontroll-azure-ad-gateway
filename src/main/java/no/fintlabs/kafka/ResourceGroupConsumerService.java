@@ -58,20 +58,33 @@ public class ResourceGroupConsumerService {
 
     }
 
-    public void processEntity(ResourceGroup resourceGroup, String kafkaGroupId) {
-        // Populate cache with
-        // Check resourceGroupCache if object is known from before
-        if (!resourceGroupCache.containsKey(kafkaGroupId)) {
-            resourceGroupCache.put(kafkaGroupId, resourceGroup);
-        }
-        // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
-        if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getResourceId())) {
-            azureClient.addGroupToAzure(resourceGroup);
-        } else if(resourceGroup.getResourceName() == null) {
-            azureClient.deleteGroup(kafkaGroupId);
-        } else {
-            log.debug("Group not created as it already exists: {}", resourceGroup.getResourceName());
-            azureClient.updateGroup(resourceGroup);
+    public void processEntity(ResourceGroup resourceGroup, String kafkaKey) {
+        synchronized (resourceGroupCache) {
+            // Populate cache with
+            // Check resourceGroupCache if object is known from before
+            if (!resourceGroupCache.containsKey(kafkaKey)) {
+
+                ResourceGroup fromCache = resourceGroupCache.get(kafkaKey);
+                if (resourceGroup.equals(fromCache)){
+                    // New kafka message, but unchanged resourceGroup from last time
+                    log.debug("Skip element as it is unchanged: {}", resourceGroup.getResourceName());
+                    return;
+                }
+
+                resourceGroupCache.put(kafkaKey, resourceGroup);
+            }
+
+            // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
+            if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getResourceId())) {
+                log.debug("Create group as not found: {}", resourceGroup.getResourceName());
+                azureClient.addGroupToAzure(resourceGroup);
+            } else if (resourceGroup.getResourceName() == null) {
+                log.debug("Delete group");
+                azureClient.deleteGroup(kafkaKey);
+            } else {
+                log.debug("Group not created as it already exists: {}", resourceGroup.getResourceName());
+                azureClient.updateGroup(resourceGroup);
+            }
         }
     }
  }
