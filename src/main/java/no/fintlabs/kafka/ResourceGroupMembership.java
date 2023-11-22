@@ -17,6 +17,6 @@ public class ResourceGroupMembership
     private String azureGroupRef;
     @NonNull
     private String azureUserRef;
-    @NonNull
+
     private String roleRef;
 }
