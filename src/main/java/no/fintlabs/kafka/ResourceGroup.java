@@ -4,10 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.Group;
 import jakarta.annotation.Resource;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
@@ -27,7 +24,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 @Builder(toBuilder = true)
 @Getter
 @Slf4j
-
+@Data
 public class ResourceGroup
 {
     @NonNull

@@ -8,6 +8,7 @@ import com.microsoft.graph.requests.GroupCollectionRequestBuilder;
 import no.fintlabs.AzureClient;
 import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import okhttp3.Request;
@@ -39,6 +40,10 @@ public class ResourceGroupConsumerServiceTest {
 
     @Mock
     private EntityConsumerFactoryService entityConsumerFactoryService;
+
+    @Mock
+    private FintCache<String, ResourceGroup> resourceGroupCache;
+
     @InjectMocks
     private ResourceGroupConsumerService resourceGroupConsumerService;
 
@@ -83,6 +88,7 @@ public class ResourceGroupConsumerServiceTest {
         verify(azureClient, times(1)).addGroupToAzure(any());
         verify(azureClient, times(0)).updateGroup(any());
         verify(azureClient, times(0)).deleteGroup(any());
+        verify(resourceGroupCache, times(1)).put(anyString(), any());
     }
 
     @Test
@@ -97,5 +103,6 @@ public class ResourceGroupConsumerServiceTest {
         verify(azureClient, times(0)).addGroupToAzure(any());
         verify(azureClient, times(1)).updateGroup(any());
         verify(azureClient, times(0)).deleteGroup(any());
+        verify(resourceGroupCache, times(1)).put(anyString(), any());
     }
 }
