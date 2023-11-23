@@ -38,6 +38,6 @@ public class AzureUserExternal  {
 
             this.mainOrganisationUnitId = user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString();
         }
-        this.userName = user.userPrincipalName;
+        this.userName = user.mail;
     }
 }
