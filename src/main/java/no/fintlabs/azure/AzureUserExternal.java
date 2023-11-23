@@ -24,7 +24,6 @@ public class AzureUserExternal  {
     private String idpUserObjectId;
     private String userPrincipalName;
 
-
     public AzureUserExternal(User user, ConfigUser configUser) {
         this.idpUserObjectId = user.id;
         this.userPrincipalName = user.userPrincipalName;

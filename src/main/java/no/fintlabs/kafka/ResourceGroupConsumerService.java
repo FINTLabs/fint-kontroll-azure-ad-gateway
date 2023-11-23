@@ -80,10 +80,10 @@ public class ResourceGroupConsumerService {
         log.debug("Starting updateAzure function {}.", randomUUID);
         // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
         if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
-            log.debug("Create group as not found: {}", resourceGroup.getResourceName());
+            log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
             azureClient.addGroupToAzure(resourceGroup);
         } else if (resourceGroup.getResourceName() == null) {
-            log.debug("Delete group");
+            log.debug("Delete group from Azure, {}",resourceGroup.getResourceName());
             azureClient.deleteGroup(kafkaKey);
         } else {
             log.debug("Group not created as it already exists: {}", resourceGroup.getResourceName());
