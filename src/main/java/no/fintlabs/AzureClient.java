@@ -126,13 +126,15 @@ public class AzureClient {
         do {
             for (User user : page.getCurrentPage()) {
                 users++;
-//                if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString() != null) {
-                if (!Objects.requireNonNull(AzureUser.getAttributeValue(user, configUser.getExternaluserattribute())).isEmpty() && (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).toLowerCase() == configUser.getExternaluservalue().toLowerCase()))
+                if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()) != null
+                        && (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).equalsIgnoreCase(configUser.getExternaluservalue())))
                 {
+                    log.debug("Adding external user to Kafka, {}",user.userPrincipalName);
                     azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
                 }
                 else
                 {
+                    log.debug("Adding user to Kafka, {}",user.userPrincipalName);
                     azureUserProducerService.publish(new AzureUser(user, configUser));
                 }
             }
