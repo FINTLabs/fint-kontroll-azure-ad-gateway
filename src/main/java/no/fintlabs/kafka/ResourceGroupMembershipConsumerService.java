@@ -41,7 +41,7 @@ public class ResourceGroupMembershipConsumerService {
     public void processEntity(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
 
         // Already existing membership
-        if (resourceGroupMembership.getId() != null) {
+        if (resourceGroupMembership.getAzureUserRef() == null) {
             azureClient.deleteGroupMembership(resourceGroupMembership, resourceGroupMembershipKey);
         }
         else
