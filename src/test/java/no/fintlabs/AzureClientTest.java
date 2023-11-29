@@ -294,6 +294,11 @@ class AzureClientTest {
 
         verify(directoryObjectReferenceRequest, times(1) ).delete();
     }
+
+    @Test
+    public void makeSureExternalAttributeNullIsSupported() {
+
+    }
     @Test
     public void logAndSkipDeletionWhenKafkaIDIswithoutUnderscore () {
         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
