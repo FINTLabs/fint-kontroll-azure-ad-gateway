@@ -295,6 +295,9 @@ class AzureClientTest {
         verify(directoryObjectReferenceRequest, times(1) ).delete();
     }
 
+    /*@Test
+    public void makeSureNulluser*/
+
     @Test
     public void makeSureExternalAttributeNullIsSupported() {
 

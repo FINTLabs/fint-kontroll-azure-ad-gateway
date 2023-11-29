@@ -40,8 +40,12 @@ public class ResourceGroupMembershipConsumerService {
     }
     public void processEntity(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
 
+        if (resourceGroupMembershipKey == null) {
+            log.error("Error when processing entity. Kafka key (objekt id in kafka) is not set. Unsupported!");
+            return;
+        }
         // Already existing membership
-        if (resourceGroupMembership.getAzureUserRef() == null) {
+        if (resourceGroupMembership == null) {
             azureClient.deleteGroupMembership(resourceGroupMembership, resourceGroupMembershipKey);
         }
         else

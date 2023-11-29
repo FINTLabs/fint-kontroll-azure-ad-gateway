@@ -60,12 +60,40 @@ class ResourceGroupMembershipConsumerServiceTest {
 //        verify(azureClient, times(1)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
 //        verify(azureClient, times(0)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
 //    }
+    @Test
+    void makeSureWhenKeyExistButMembershipIsAlmostEmpty() {
 
-//    @Test
-//    void processEntityDeleteGroupmemberhip() {
-//        resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, "exampleID");
-//
-//        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-//        verify(azureClient, times(1)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
-//    }
+        String rGroupKey = "exampleID";
+        resourceGroupMembershipConsumerService.processEntity(ResourceGroupMembership.builder().azureGroupRef("123").azureUserRef("234").build(), rGroupKey);
+
+        verify(azureClient, times(1)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(azureClient, times(0)).deleteGroupMembership(null, rGroupKey);
+    }
+
+    @Test
+    void makeSureNullGroupMembershipIsDeletedWhenKeyIsDefined() {
+
+        String rGroupKey = "exampleID";
+        resourceGroupMembershipConsumerService.processEntity(null, rGroupKey);
+
+        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(azureClient, times(1)).deleteGroupMembership(null, rGroupKey);
+    }
+
+    @Test
+    void makeSureNullParametersDoesntCallAzureClient() {
+
+        resourceGroupMembershipConsumerService.processEntity(null, null);
+
+        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(azureClient, times(0)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
+    }
+
+    @Test
+    void processEntityDeleteGroupmemberhip() {
+        resourceGroupMembershipConsumerService.processEntity(null, "exampleID");
+
+        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(azureClient, times(1)).deleteGroupMembership(null, "exampleID");
+    }
 }
