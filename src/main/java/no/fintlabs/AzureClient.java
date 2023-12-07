@@ -243,7 +243,7 @@ public class AzureClient {
     public void addGroupToAzure(ResourceGroup resourceGroup) {
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
 
-        log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
+        log.info("Adding Group to Azure: {}", resourceGroup.getResourceName());
 
         graphService.groups()
                 .buildRequest()
@@ -255,7 +255,7 @@ public class AzureClient {
         graphService.groups(groupID)
                 .buildRequest()
                 .delete();
-        log.debug("Group with kafkaId {} deleted ", groupID);
+        log.info("Group with kafkaId {} deleted ", groupID);
     }
 
     public void updateGroup(ResourceGroup resourceGroup) {
