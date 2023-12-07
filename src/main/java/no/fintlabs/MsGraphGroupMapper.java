@@ -22,14 +22,15 @@ public class MsGraphGroupMapper {
         group.securityEnabled = true;
 
         // Remove special characters
-        group.mailNickname = resourceGroup.getResourceName()
+        String mailNickname = resourceGroup.getResourceName()
                 .replaceAll("[^a-zA-Z0-9]", "")
                 .toLowerCase();
 
         // Make length max [groupMailEnabledMaxLen] long
-        if (resourceGroup.getResourceName().length() > groupMailEnabledMaxLen) {
-            group.mailNickname = group.mailNickname.substring(0, groupMailEnabledMaxLen);
+        if (mailNickname.length() > groupMailEnabledMaxLen) {
+            mailNickname = mailNickname.substring(0, groupMailEnabledMaxLen);
         }
+        group.mailNickname = mailNickname;
 
         group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.getId()));
 
