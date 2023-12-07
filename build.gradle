@@ -43,7 +43,7 @@ dependencies {
 
     implementation 'org.springframework.kafka:spring-kafka'
     // TODO: Upgrade with reference to new version when migrating to Spring boot 3 [FKS-214]
-    implementation 'no.fintlabs:fint-kafka:3.0.0-rc-1'
+    implementation 'no.fintlabs:fint-kafka:3.1.0-rc-1'
     implementation 'no.fintlabs:fint-flyt-cache:1.0.0'
     implementation 'org.ehcache:ehcache:3.10.6'
     implementation 'net.sf.ehcache:ehcache:2.10.9.2'
