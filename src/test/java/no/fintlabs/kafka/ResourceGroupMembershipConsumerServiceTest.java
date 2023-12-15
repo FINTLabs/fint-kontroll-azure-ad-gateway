@@ -3,6 +3,7 @@ package no.fintlabs.kafka;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.ResourceReference;
 import no.fintlabs.AzureClient;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -13,11 +14,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.stereotype.Service;
+import reactor.util.function.Tuples;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import java.util.Optional;
 
 @Service
 @ExtendWith(MockitoExtension.class)
@@ -25,6 +28,8 @@ class ResourceGroupMembershipConsumerServiceTest {
 
     @Mock
     private AzureClient azureClient;
+    @Mock
+    private FintCache<String, ResourceGroupMembership> resourceGroupMembershipCache;
     @InjectMocks
     private ResourceGroupMembershipConsumerService resourceGroupMembershipConsumerService;
 
@@ -70,11 +75,12 @@ class ResourceGroupMembershipConsumerServiceTest {
         verify(azureClient, times(0)).deleteGroupMembership(null, rGroupKey);
     }
 
-    @Test
     void makeSureNullGroupMembershipIsDeletedWhenKeyIsDefined() {
 
         String rGroupKey = "exampleID";
         resourceGroupMembershipConsumerService.processEntity(null, rGroupKey);
+
+        verify(resourceGroupMembershipCache, times(1)).put(rGroupKey, null);
 
         verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
         verify(azureClient, times(1)).deleteGroupMembership(null, rGroupKey);
