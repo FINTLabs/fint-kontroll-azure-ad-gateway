@@ -14,12 +14,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.stereotype.Service;
+import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -102,4 +106,23 @@ class ResourceGroupMembershipConsumerServiceTest {
         verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
         verify(azureClient, times(1)).deleteGroupMembership(null, "exampleID");
     }
+
+    /*@Test
+    void checkCacheComparisonWorksAsExpected() {
+        String kafkaKey = "123";
+        when(resourceGroupMembershipCache.get(kafkaKey)).thenReturn(exampleGroupMembership);
+
+        resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, kafkaKey);
+
+        verify(exampleGroupMembership);
+    }*/
+
+    /*void addListOfMemberships() {
+        List<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipList = new ArrayList<>();
+        for (int i=0; i<10; i++) {
+            resourceGroupMembershipList.add(new Tuple2<String, Optional<ResourceGroupMembership>>("testid", Optional.of(exampleGroupMembership.toBuilder()
+                            .build())));
+        }
+
+    }*/
 }
