@@ -14,6 +14,7 @@ import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -25,7 +26,7 @@ public class ResourceGroupMembershipConsumerService {
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
     private final FintCache<String, ResourceGroupMembership> resourceGroupMembershipCache;
-    private final Sinks.Many<Tuple2<String, ResourceGroupMembership>> resourceGroupMembershipSink;
+    private final Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
     public ResourceGroupMembershipConsumerService(
             AzureClient azureClient,
@@ -54,16 +55,16 @@ public class ResourceGroupMembershipConsumerService {
         );
     }
 
-    private synchronized void updateAzureWithMembership(String kafkakKey, ResourceGroupMembership resourceGroupMembership) {
+    private synchronized void updateAzureWithMembership(String kafkakKey, Optional<ResourceGroupMembership> resourceGroupMembership) {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzureWithMembership function {}.", randomUUID);
 
-        if (resourceGroupMembership == null) {
-            azureClient.deleteGroupMembership(resourceGroupMembership, kafkakKey);
+        if (resourceGroupMembership.isEmpty()) {
+            azureClient.deleteGroupMembership(null, kafkakKey);
         }
         else
         {
-            azureClient.addGroupMembership(resourceGroupMembership, kafkakKey);
+            azureClient.addGroupMembership(resourceGroupMembership.get(), kafkakKey);
         }
         log.debug("Stopping updateAzureWithMembership function {}.", randomUUID);
     }
@@ -85,7 +86,7 @@ public class ResourceGroupMembershipConsumerService {
                 }
             }
             resourceGroupMembershipCache.put(kafkaKey, resourceGroupMembership);
-            resourceGroupMembershipSink.tryEmitNext(Tuples.of(kafkaKey, resourceGroupMembership));
+            resourceGroupMembershipSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroupMembership)));
         }
 
     }

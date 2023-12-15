@@ -1,4 +1,4 @@
-package no.fintlabs;
+ package no.fintlabs;
 
 import com.azure.core.http.rest.Response;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -327,6 +327,20 @@ class AzureClientTest {
         verify(directoryObjectReferenceRequest, times(1)).delete();
     }
 
+    @Test
+    public void makeSureDeleteAzureMembershipCanBeCalledWithNull() {
+        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+        when(groupRequestBuilder.members(anyString())).thenReturn(directoryObjectWithReferenceRequestBuilder);
+        when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
+        when(directoryObjectReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectReferenceRequest);
+
+        when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
+
+        String membershipkey = "someid_1234";
+        azureClient.deleteGroupMembership(null, membershipkey);
+
+        verify(directoryObjectReferenceRequest, times(1)).delete();
+    }
     @Test
     public void logAndSkipDeletionWhenKafkaIDhaveMultipleUnderscores () {
         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
