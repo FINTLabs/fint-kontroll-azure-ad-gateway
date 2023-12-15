@@ -1,6 +1,7 @@
 package no.fintlabs.kafka;
 
 
+import com.microsoft.graph.options.Option;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
@@ -25,14 +26,14 @@ public class ResourceGroupMembershipConsumerService {
     private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
-    private final FintCache<String, ResourceGroupMembership> resourceGroupMembershipCache;
+    private final FintCache<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private final Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
     public ResourceGroupMembershipConsumerService(
             AzureClient azureClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
             Config config,
-            FintCache<String, ResourceGroupMembership> resourceGroupMembershipCache) {
+            FintCache<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache) {
         this.azureClient = azureClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.config = config;
@@ -78,14 +79,14 @@ public class ResourceGroupMembershipConsumerService {
         synchronized (resourceGroupMembershipCache) {
             // Check resourceGroupCache if object is known from before
             if (resourceGroupMembershipCache.containsKey(kafkaKey)) {
-                ResourceGroupMembership fromCache = resourceGroupMembershipCache.get(kafkaKey);
-                if (resourceGroupMembershipCache.equals(fromCache)){
+                Optional<ResourceGroupMembership> fromCache = resourceGroupMembershipCache.get(kafkaKey);
+                if (resourceGroupMembership.equals(fromCache)){
                     // New kafka message, but unchanged resourceGroupMembership from last time
                     log.debug("Skipping processing of group membership, as it is unchanged from before: userID: {} groupID {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef() );
                     return;
                 }
             }
-            resourceGroupMembershipCache.put(kafkaKey, resourceGroupMembership);
+            resourceGroupMembershipCache.put(kafkaKey, Optional.ofNullable(resourceGroupMembership));
             resourceGroupMembershipSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroupMembership)));
         }
 
