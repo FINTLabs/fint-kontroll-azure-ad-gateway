@@ -4,6 +4,7 @@ import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.cache.FintCacheManager;
 import no.fintlabs.kafka.ResourceGroup;
+import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +21,11 @@ public class CacheConfiguration {
     @Bean
     FintCache<String, ResourceGroup> resourceGroupCache() {
         return createResourceCache(ResourceGroup.class);
+    }
+
+    @Bean
+    FintCache<String, ResourceGroupMembership> resourceGroupMembershipCache() {
+        return createResourceCache(ResourceGroupMembership.class);
     }
 
     @Bean

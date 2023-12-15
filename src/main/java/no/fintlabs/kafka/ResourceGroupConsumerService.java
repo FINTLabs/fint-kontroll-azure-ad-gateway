@@ -53,7 +53,8 @@ public class ResourceGroupConsumerService {
 
         resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
         resourceGroupSink.asFlux().subscribe(
-                keyAndResourceGroup -> updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2()));
+                keyAndResourceGroup -> updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
+        );
     }
 
     @PostConstruct
