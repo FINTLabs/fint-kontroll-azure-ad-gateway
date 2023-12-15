@@ -5,6 +5,7 @@ import com.microsoft.graph.models.ResourceReference;
 import no.fintlabs.AzureClient;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,15 +115,20 @@ class ResourceGroupMembershipConsumerServiceTest {
 
         resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, kafkaKey);
 
-        verify(exampleGroupMembership);
+        verify(exampleGroupMembership, times(1)).equals(any(ResourceGroupMembership.class));
     }*/
 
-    /*void addListOfMemberships() {
-        List<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipList = new ArrayList<>();
-        for (int i=0; i<10; i++) {
-            resourceGroupMembershipList.add(new Tuple2<String, Optional<ResourceGroupMembership>>("testid", Optional.of(exampleGroupMembership.toBuilder()
-                            .build())));
-        }
+/*    @Test
+    void makeSureObjectIsCreatedAndDeleted() {
+        //List<Optional<ResourceGroupMembership>> resourceGroupMembershipList = new ArrayList<>();
+        String kafkaKey = "SomeFakeID";
+        ResourceGroupMembership rgmembership = null;
+        resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, kafkaKey);
+        resourceGroupMembershipConsumerService.processEntity(rgmembership, kafkaKey);
+        resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, kafkaKey);
+        resourceGroupMembershipConsumerService.processEntity(rgmembership, kafkaKey);
 
+        verify(azureClient, times(2)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(azureClient, times(2)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
     }*/
 }
