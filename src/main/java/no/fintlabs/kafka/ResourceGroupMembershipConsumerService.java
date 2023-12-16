@@ -26,14 +26,14 @@ public class ResourceGroupMembershipConsumerService {
     private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
-    private final FintCache<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
+    private final FintCache<String, Optional> resourceGroupMembershipCache;
     private final Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
     public ResourceGroupMembershipConsumerService(
             AzureClient azureClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
             Config config,
-            FintCache<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache) {
+            FintCache<String, Optional> resourceGroupMembershipCache) {
         this.azureClient = azureClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.config = config;
