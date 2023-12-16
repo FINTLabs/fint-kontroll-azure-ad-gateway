@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.stereotype.Service;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
@@ -34,7 +35,8 @@ class ResourceGroupMembershipConsumerServiceTest {
     @Mock
     private AzureClient azureClient;
     @Mock
-    private FintCache<String, ResourceGroupMembership> resourceGroupMembershipCache;
+    private FintCache<String, Optional> resourceGroupMembershipCache;
+
     @InjectMocks
     private ResourceGroupMembershipConsumerService resourceGroupMembershipConsumerService;
 
@@ -108,6 +110,13 @@ class ResourceGroupMembershipConsumerServiceTest {
         verify(azureClient, times(1)).deleteGroupMembership(null, "exampleID");
     }
 
+    @Test
+    void makeSureCacheIsWrittenTo() {
+        for (int i=0; i<10; i++) {
+            resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, RandomStringUtils.randomAlphanumeric(6) + "_" + RandomStringUtils.randomAlphanumeric(6));
+        }
+        verify(resourceGroupMembershipCache, times(10)).put(anyString(), any(Optional.class));
+    }
     /*@Test
     void checkCacheComparisonWorksAsExpected() {
         String kafkaKey = "123";

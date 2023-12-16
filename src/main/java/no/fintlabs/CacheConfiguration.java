@@ -5,12 +5,12 @@ import no.fintlabs.cache.FintCache;
 import no.fintlabs.cache.FintCacheManager;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
+
 @AllArgsConstructor
 @Configuration
 public class CacheConfiguration {
@@ -24,8 +24,13 @@ public class CacheConfiguration {
     }
 
     @Bean
-    FintCache<String, ResourceGroupMembership> resourceGroupMembershipCache() {
-        return createResourceCache(ResourceGroupMembership.class);
+    FintCache<String, Optional> resourceGroupMembershipCache() {
+        //return createResourceCache(ClassValue<Optional<ResourceGroupMembership>>);
+        return fintCacheManager.createCache(
+                ResourceGroupMembership.class.getName().toLowerCase(Locale.ROOT),
+                String.class,
+                Optional.class
+        );
     }
 
     @Bean
