@@ -1,14 +1,12 @@
 package no.fintlabs.kafka;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NonNull;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
 @Builder(toBuilder = true)
 @Getter
 @Slf4j
+@EqualsAndHashCode
 
 public class ResourceGroupMembership
 {
