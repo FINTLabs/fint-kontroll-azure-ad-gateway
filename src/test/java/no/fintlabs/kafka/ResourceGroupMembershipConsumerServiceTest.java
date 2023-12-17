@@ -142,6 +142,67 @@ class ResourceGroupMembershipConsumerServiceTest {
         verify(resourceGroupMembershipCache, times(0)).put(anyString(), any(Optional.class));
     }
 
+    @Test
+    void makeSureProcessingSameKafkaidGetsPutInCacheWhenMembershipIDIsChanged() {
+        String kafkaKey = "123";
+        ResourceGroupMembership copyOfExampleMembership = exampleGroupMembership.toBuilder()
+                .id(exampleGroupMembership.getId() + "1")
+                .build();
+
+        when(resourceGroupMembershipCache.containsKey(kafkaKey)).thenReturn(true);
+        when(resourceGroupMembershipCache.get(kafkaKey)).thenReturn(Optional.of(exampleGroupMembership));
+
+        resourceGroupMembershipConsumerService.processEntity(copyOfExampleMembership, kafkaKey);
+
+        verify(resourceGroupMembershipCache, times(1)).put(anyString(), any(Optional.class));
+    }
+
+    @Test
+    void makeSureProcessingSameKafkaidGetsPutInCacheWhenMembershipAzureGroupRefIsChanged() {
+        String kafkaKey = "123";
+        ResourceGroupMembership copyOfExampleMembership = exampleGroupMembership.toBuilder()
+                .azureGroupRef(exampleGroupMembership.getAzureGroupRef() + "1")
+                .build();
+
+        when(resourceGroupMembershipCache.containsKey(kafkaKey)).thenReturn(true);
+        when(resourceGroupMembershipCache.get(kafkaKey)).thenReturn(Optional.of(exampleGroupMembership));
+
+        resourceGroupMembershipConsumerService.processEntity(copyOfExampleMembership, kafkaKey);
+
+        verify(resourceGroupMembershipCache, times(1)).put(anyString(), any(Optional.class));
+    }
+
+    @Test
+    void makeSureProcessingSameKafkaidGetsPutInCacheWhenMembershipAzureUserRefIsChanged() {
+        String kafkaKey = "123";
+        ResourceGroupMembership copyOfExampleMembership = exampleGroupMembership.toBuilder()
+                .azureUserRef(exampleGroupMembership.getAzureUserRef() + "1")
+                .build();
+
+        when(resourceGroupMembershipCache.containsKey(kafkaKey)).thenReturn(true);
+        when(resourceGroupMembershipCache.get(kafkaKey)).thenReturn(Optional.of(exampleGroupMembership));
+
+        resourceGroupMembershipConsumerService.processEntity(copyOfExampleMembership, kafkaKey);
+
+        verify(resourceGroupMembershipCache, times(1)).put(anyString(), any(Optional.class));
+    }
+
+    @Test
+    void makeSureProcessingSameKafkaidGetsPutInCacheWhenMembershipRoleRefIsChanged() {
+        String kafkaKey = "123";
+        ResourceGroupMembership copyOfExampleMembership = exampleGroupMembership.toBuilder()
+                .roleRef(exampleGroupMembership.getRoleRef() + "1")
+                .build();
+
+        when(resourceGroupMembershipCache.containsKey(kafkaKey)).thenReturn(true);
+        when(resourceGroupMembershipCache.get(kafkaKey)).thenReturn(Optional.of(exampleGroupMembership));
+
+        resourceGroupMembershipConsumerService.processEntity(copyOfExampleMembership, kafkaKey);
+
+        verify(resourceGroupMembershipCache, times(1)).put(anyString(), any(Optional.class));
+    }
+
+
 /*    @Test
     void makeSureObjectIsCreatedAndDeleted() {
         //List<Optional<ResourceGroupMembership>> resourceGroupMembershipList = new ArrayList<>();
