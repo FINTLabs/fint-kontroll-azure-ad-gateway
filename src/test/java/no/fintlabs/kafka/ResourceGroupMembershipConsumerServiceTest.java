@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.stereotype.Service;
@@ -82,12 +83,13 @@ class ResourceGroupMembershipConsumerServiceTest {
         verify(azureClient, times(0)).deleteGroupMembership(null, rGroupKey);
     }
 
+    @Test
     void makeSureNullGroupMembershipIsDeletedWhenKeyIsDefined() {
 
         String rGroupKey = "exampleID";
         resourceGroupMembershipConsumerService.processEntity(null, rGroupKey);
 
-        verify(resourceGroupMembershipCache, times(1)).put(rGroupKey, null);
+        verify(resourceGroupMembershipCache, times(1)).put(rGroupKey, Optional.empty());
 
         verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
         verify(azureClient, times(1)).deleteGroupMembership(null, rGroupKey);
@@ -117,15 +119,28 @@ class ResourceGroupMembershipConsumerServiceTest {
         }
         verify(resourceGroupMembershipCache, times(10)).put(anyString(), any(Optional.class));
     }
-    /*@Test
-    void checkCacheComparisonWorksAsExpected() {
+    @Test
+    void makeSureProcessingNewKafkaidGetPutInCache() {
         String kafkaKey = "123";
-        when(resourceGroupMembershipCache.get(kafkaKey)).thenReturn(exampleGroupMembership);
+        when(resourceGroupMembershipCache.containsKey(kafkaKey)).thenReturn(false);
 
         resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, kafkaKey);
 
-        verify(exampleGroupMembership, times(1)).equals(any(ResourceGroupMembership.class));
-    }*/
+        verify(resourceGroupMembershipCache, times(1)).put(anyString(), any(Optional.class));
+    }
+
+    @Test
+    void makeSureProcessingSameKafkaidDoesntGetPutInCacheWhenMembershipIsSimilar() {
+        String kafkaKey = "123";
+        ResourceGroupMembership copyOfExampleMembership = exampleGroupMembership.toBuilder().build();
+
+        when(resourceGroupMembershipCache.containsKey(kafkaKey)).thenReturn(true);
+        when(resourceGroupMembershipCache.get(kafkaKey)).thenReturn(Optional.of(exampleGroupMembership));
+
+        resourceGroupMembershipConsumerService.processEntity(copyOfExampleMembership, kafkaKey);
+
+        verify(resourceGroupMembershipCache, times(0)).put(anyString(), any(Optional.class));
+    }
 
 /*    @Test
     void makeSureObjectIsCreatedAndDeleted() {
