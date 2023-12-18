@@ -185,7 +185,7 @@ public class AzureClient {
         return this.pageThroughGetGroups(
                 graphService.groups()
                         .buildRequest()
-                        .select(String.format("id,displayName,description,members,%s", config.configGroup().getFintkontrollidattribute()))
+                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                         .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                         .get()
         );
@@ -195,13 +195,13 @@ public class AzureClient {
             initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
-    private void pullAllGroups() {
+    public void pullAllGroups() {
         log.debug("*** Fetching all groups from AD >>> ***");
         this.pageThrough(
                 graphService.groups()
                         .buildRequest()
                         // TODO: Attributes should not be hard-coded [FKS-210]
-                        .select(String.format("id,displayName,description,members,%s", config.configGroup().getFintkontrollidattribute()))
+                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                         .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                         // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
                         //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
