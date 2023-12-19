@@ -1,6 +1,5 @@
 package no.fintlabs.azure;
 
-import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.User;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -1,32 +1,21 @@
 package no.fintlabs.kafka;
 
-import com.microsoft.graph.models.Group;
-import com.microsoft.graph.models.ResourceReference;
 import no.fintlabs.AzureClient;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.stereotype.Service;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @Service
