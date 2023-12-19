@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -405,7 +406,26 @@ class AzureClientTest {
         });
     }
 
-    /*public void handleUnexpectedErrorInPeriodicTask() {
-        TaskSchedulerBuilder taskSchedulerBuilder = new TaskSchedulerBuilder();
-    }*/
+    @Test
+    public void shouldHandleTimeoutException() {
+        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
+        when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
+        when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
+        when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
+
+        when(groupCollectionRequest.get()).thenThrow(new ClientException("Timeout", new InterruptedIOException("timeout")));
+
+        GroupCollectionRequestBuilder mockGroupCollectionRequestBuilder2 = Mockito.mock(GroupCollectionRequestBuilder.class);
+        GroupCollectionRequest mockGroupCollectionRequest2 = Mockito.mock(GroupCollectionRequest.class);
+        GroupCollectionPage mockCollPage2= Mockito.mock(GroupCollectionPage.class);
+
+        when(groupCollectionPage.getNextPage()).thenReturn(mockGroupCollectionRequestBuilder2);
+        when(mockGroupCollectionRequestBuilder2.buildRequest()).thenReturn(mockGroupCollectionRequest2);
+        when(mockGroupCollectionRequest2.get()).thenReturn(mockCollPage2);
+
+        azureClient.pullAllGroups();
+
+        verify(groupCollectionPage, times(2)).getNextPage();
+        verify(mockCollPage2, times(1)).getNextPage();
+    }
 }
