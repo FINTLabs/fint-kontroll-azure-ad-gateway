@@ -1,15 +1,9 @@
 package no.fintlabs.azure;
 
 import com.microsoft.graph.models.DirectoryObject;
-import com.microsoft.graph.models.Group;
-import com.microsoft.graph.models.GroupMembers;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.security.crypto.codec.Hex;
-import org.apache.commons.codec.digest.DigestUtils;
-
-import java.security.MessageDigest;
 
 @Getter
 @Setter

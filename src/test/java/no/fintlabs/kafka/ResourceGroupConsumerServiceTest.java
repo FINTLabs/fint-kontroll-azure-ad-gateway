@@ -1,33 +1,15 @@
 package no.fintlabs.kafka;
 
-import com.microsoft.graph.models.Group;
-import com.microsoft.graph.requests.GraphServiceClient;
-import com.microsoft.graph.requests.GroupCollectionPage;
-import com.microsoft.graph.requests.GroupCollectionRequest;
-import com.microsoft.graph.requests.GroupCollectionRequestBuilder;
 import no.fintlabs.AzureClient;
-import no.fintlabs.Config;
-import no.fintlabs.ConfigGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
-import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
-import okhttp3.Request;
-import org.apache.commons.lang3.Functions;
-import org.apache.kafka.clients.consumer.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.boot.test.mock.mockito.MockBean;
 
-import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 

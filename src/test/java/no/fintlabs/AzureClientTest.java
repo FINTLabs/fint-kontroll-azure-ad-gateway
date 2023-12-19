@@ -17,12 +17,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.task.TaskSchedulerBuilder;
-import org.springframework.scheduling.TaskScheduler;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TimerTask;
 
  @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
@@ -402,7 +399,6 @@ class AzureClientTest {
         when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
 
         when(groupCollectionRequest.get()).thenThrow(ClientException.class);
-
 
         assertThrows(ClientException.class, ()-> {
             azureClient.pullAllGroups();

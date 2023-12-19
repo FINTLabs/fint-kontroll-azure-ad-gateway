@@ -9,8 +9,8 @@ import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,7 +27,6 @@ public class AzureClient {
     protected final ConfigGroup configGroup;
     protected final ConfigUser configUser;
     protected final GraphServiceClient<Request> graphService;
-
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
@@ -164,7 +163,6 @@ public class AzureClient {
                         .get()
         );
         log.debug("--- finished pulling resources from Azure. ---");
-
     }
 
     private void pullAllExtUsers() {
@@ -196,7 +194,7 @@ public class AzureClient {
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
     public void pullAllGroups() {
-        log.debug("*** Fetching all groups from AD >>> ***");
+        log.info("*** Fetching all groups from AD >>> ***");
         this.pageThrough(
                 graphService.groups()
                         .buildRequest()
@@ -207,7 +205,7 @@ public class AzureClient {
                         //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
                         .get()
         );
-        log.debug("*** <<< Done fetching all groups from AD ***");
+        log.info("*** <<< Done fetching all groups from AD ***");
     }
 
     public boolean doesGroupExist(String resourceGroupId) {

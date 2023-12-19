@@ -3,7 +3,7 @@ logging:
     root: INFO
     com.azure: DEBUG
     com.microsoft: DEBUG
-    no.fintlabs: DEBUG
+    no.fintlabs.kontroll.aadgw: DEBUG
     okhttp3: DEBUG
     #org.apache: ERROR
 
@@ -12,8 +12,6 @@ fint:
     bootstrap-servers: localhost:9092
     consumer:
       group-id: ${fint.application-id}
-
-
 
 #server:
   #port: 8085
