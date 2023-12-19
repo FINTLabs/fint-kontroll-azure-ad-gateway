@@ -3,7 +3,7 @@ logging:
     root: INFO
     com.azure: DEBUG
     com.microsoft: DEBUG
-    no.fintlabs.kontroll.aadgw: DEBUG
+    no.fintlabs: DEBUG
     okhttp3: DEBUG
     #org.apache: ERROR
 
