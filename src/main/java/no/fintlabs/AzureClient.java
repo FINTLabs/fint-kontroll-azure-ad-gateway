@@ -1,6 +1,7 @@
 package no.fintlabs;
 
 import com.google.gson.JsonElement;
+import com.microsoft.graph.core.ClientException;
 import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
@@ -73,13 +74,17 @@ public class AzureClient {
                 }
 
                 // Put object into cache
-                pageThrough(
-                        newGroup,
-                        graphService.groups(group.id).members()
-                                .buildRequest()
-                                .select("id")
-                                .get()
-                );
+                try {
+                    pageThrough(
+                            newGroup,
+                            graphService.groups(group.id).members()
+                                    .buildRequest()
+                                    .select("id")
+                                    .get()
+                    );
+                } catch (ClientException e) {
+                    log.error("Error fetching page", e);
+                }
                 azureGroupProducerService.publish(newGroup);
             }
             if (page.getNextPage() == null) {
@@ -195,16 +200,20 @@ public class AzureClient {
     )
     public void pullAllGroups() {
         log.info("*** Fetching all groups from AD >>> ***");
-        this.pageThrough(
-                graphService.groups()
-                        .buildRequest()
-                        // TODO: Attributes should not be hard-coded [FKS-210]
-                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
-                        .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
-                        // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
-                        //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
-                        .get()
-        );
+        try {
+            this.pageThrough(
+                    graphService.groups()
+                            .buildRequest()
+                            // TODO: Attributes should not be hard-coded [FKS-210]
+                            .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+                            .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
+                            // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
+                            //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
+                            .get()
+            );
+        } catch (ClientException e) {
+            log.error("Failed when trying to get groups. ", e);
+        }
         log.info("*** <<< Done fetching all groups from AD ***");
     }
 
