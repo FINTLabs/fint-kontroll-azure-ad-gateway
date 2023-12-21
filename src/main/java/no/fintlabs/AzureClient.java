@@ -7,6 +7,7 @@ import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.requests.*;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
@@ -96,6 +97,7 @@ public class AzureClient {
         } while (page != null);
         log.debug("{} Group objects detected!", groups);
     }
+
 
     private List<AzureGroup> pageThroughGetGroups(GroupCollectionPage inPage) {
         int groups = 0;
