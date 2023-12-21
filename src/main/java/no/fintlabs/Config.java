@@ -79,7 +79,7 @@ public class Config {
 
 
         // Create a custom HTTP provider with adjusted timeout
-        okhttp3.OkHttpClient okHttpClient = new okhttp3.OkHttpClient.Builder()
+        /*okhttp3.OkHttpClient okHttpClient = new okhttp3.OkHttpClient.Builder()
                 .readTimeout(100, TimeUnit.MILLISECONDS)  // Set read timeout to 30 seconds
                 .authenticator(new Authenticator() {
                     @Nullable
@@ -88,20 +88,20 @@ public class Config {
                         return null;
                     }
                 })
-                .build();
+                .build();*/
 
-        ILogger httpLogger = new DefaultLogger();
+        /*ILogger httpLogger = new DefaultLogger();
         ISerializer httpSerializer = new DefaultSerializer(httpLogger);
 
-        this.httpProvider =  new CoreHttpProvider(httpSerializer, httpLogger, okHttpClient);
+        this.httpProvider =  new CoreHttpProvider(httpSerializer, httpLogger, okHttpClient);*/
 
         GraphServiceClient graphServiceClient = GraphServiceClient
                 .builder()
                 .authenticationProvider(tokenCredentialAuthProvider)
-                .httpProvider(this.httpProvider)
+                //.httpProvider(this.httpProvider)
                 .buildClient();
 
-        graphServiceClient.getHttpProvider().
+        //graphServiceClient.getHttpProvider().
 
         return graphServiceClient;
 
