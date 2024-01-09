@@ -22,10 +22,12 @@ public class AzureUserExternal  {
     private String userName;
     private String idpUserObjectId;
     private String userPrincipalName;
+    private Boolean accountEnabled;
 
     public AzureUserExternal(User user, ConfigUser configUser) {
         this.idpUserObjectId = user.id;
         this.userPrincipalName = user.userPrincipalName;
+        this.accountEnabled = user.accountEnabled;
         this.firstName = user.givenName;
         this.lastName = user.surname;
         this.mobilePhone = user.mobilePhone;

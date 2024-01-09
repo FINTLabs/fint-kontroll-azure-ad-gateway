@@ -20,10 +20,12 @@ public class AzureUser {
         private String employeeId;
         private String studentId;
         private String idpUserObjectId;
+        private Boolean accountEnabled;
 
         public AzureUser(User user, ConfigUser configUser) {
                 this.mail = user.mail;
                 this.id = user.id;
+                this.accountEnabled = user.accountEnabled;
                 this.userPrincipalName = user.userPrincipalName;
                 this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
                 this.studentId = getAttributeValue(user, configUser.getStudentidattribute());

@@ -18,6 +18,7 @@ public class ConfigUser {
 
     private static List<String> userAttributes = Arrays.asList (
             "id",
+            "accountEnabled",
             "mail",
             "mobilePhone",
             "onPremisesExtensionAttributes",
