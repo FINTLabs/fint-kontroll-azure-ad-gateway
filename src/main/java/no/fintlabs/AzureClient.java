@@ -95,7 +95,7 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
-        log.debug("{} Group objects detected!", groups);
+        log.info("{} Group objects detected in Microsoft Entra", groups);
     }
 
 
@@ -122,7 +122,7 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
-        log.debug("{} Group objects detected!", groups);
+        log.debug("{} Group objects detected in Microsoft Entra", groups);
         return retGroupList;
     }
 
@@ -202,7 +202,8 @@ public class AzureClient {
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
     public void pullAllGroups() {
-        log.info("*** Fetching all groups from AD >>> ***");
+        log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
+        long startTime = System.currentTimeMillis();
         try {
             this.pageThrough(
                     graphService.groups()
@@ -211,14 +212,17 @@ public class AzureClient {
                             .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                             .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                             .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
-                            // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
-                            //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
                             .get()
             );
         } catch (ClientException e) {
             log.error("Failed when trying to get groups. ", e);
         }
-        log.info("*** <<< Done fetching all groups from AD ***");
+        long endTime = System.currentTimeMillis();
+        long elapsedTimeInSeconds = (endTime - startTime) / 1000;
+        long minutes = elapsedTimeInSeconds / 60;
+        long seconds = elapsedTimeInSeconds % 60;
+
+        log.info("*** <<< Done fetching all groups from Microsoft Entra in {} minutes and {} seconds ***", minutes, seconds);
     }
 
     public boolean doesGroupExist(String resourceGroupId) {
