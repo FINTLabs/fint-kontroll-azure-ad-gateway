@@ -6,8 +6,9 @@ import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
+import com.microsoft.graph.options.HeaderOption;
+import com.microsoft.graph.options.Option;
 import com.microsoft.graph.requests.*;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
@@ -196,7 +197,7 @@ public class AzureClient {
         return this.pageThroughGetGroups(
                 graphService.groups()
                         .buildRequest()
-                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+                        .select(String.format("id,displayName,description,members,%s", configGroup.getResourceGroupIDattribute()))
                         .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                         .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                         .get()
@@ -210,14 +211,20 @@ public class AzureClient {
     public void pullAllGroups() {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
+        LinkedList<Option> requestOptions = new LinkedList<Option>();
+        requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
+
         try {
             this.pageThrough(
                     graphService.groups()
-                            .buildRequest()
+                            .buildRequest(requestOptions)
                             // TODO: Attributes should not be hard-coded [FKS-210]
-                            .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
-                            .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+                            .select(String.format("id,displayName,description,members,%s", configGroup.getResourceGroupIDattribute()))
+                            .filter(String.format("displayName ne null",configGroup.getResourceGroupIDattribute()))
+                            //.filter(String.format("%s/any(s:s ne null)",configGroup.getResourceGroupIDattribute()))
+                            //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                             .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
+                            .count(true)
                             .get()
             );
         } catch (ClientException e) {
@@ -235,7 +242,7 @@ public class AzureClient {
         // TODO: Should this be implemented as a simpler call to MS Graph? [FKS-200]
         // Form the selection criteria for the MS Graph request
         // TODO: Attributes should not be hard-coded [FKS-210]
-        String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute());
+        String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getResourceGroupIDattribute());
 
         GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
@@ -245,7 +252,7 @@ public class AzureClient {
 
         while (groupCollectionPage != null) {
             for (Group group : groupCollectionPage.getCurrentPage()) {
-                JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
+                JsonElement attributeValue = group.additionalDataManager().get(configGroup.getResourceGroupIDattribute());
 
                 if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
                     return true; // Group with the specified ResourceID found

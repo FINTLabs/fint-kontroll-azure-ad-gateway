@@ -32,7 +32,7 @@ public class MsGraphGroupMapper {
         }
         group.mailNickname = mailNickname;
 
-        group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.getId()));
+        group.additionalDataManager().put(configGroup.getResourceGroupIDattribute(), new JsonPrimitive(resourceGroup.getId()));
 
         String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
         var owners = new JsonArray();

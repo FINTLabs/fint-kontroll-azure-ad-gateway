@@ -48,7 +48,7 @@ fint:
         externaluserattribute: state
         externaluservalue: frid
       group:
-        fintkontrollidattribute: extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
+        resourceGroupIDattribute: extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
         prefix: "-pre-"
         suffix: "-suff-"
       group-scheduler:
