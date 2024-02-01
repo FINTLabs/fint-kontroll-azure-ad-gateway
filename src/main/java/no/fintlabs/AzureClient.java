@@ -191,6 +191,7 @@ public class AzureClient {
                 graphService.groups()
                         .buildRequest()
                         .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+                        .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                         .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                         .get()
         );
@@ -208,6 +209,7 @@ public class AzureClient {
                             .buildRequest()
                             // TODO: Attributes should not be hard-coded [FKS-210]
                             .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+                            .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                             .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                             // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
                             //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
@@ -228,6 +230,7 @@ public class AzureClient {
         GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
                 .select(selectionCriteria)
+                .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                 .get();
 
         while (groupCollectionPage != null) {
