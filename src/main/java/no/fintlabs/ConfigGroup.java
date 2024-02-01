@@ -9,7 +9,7 @@ import lombok.*;
 @NoArgsConstructor
 public class ConfigGroup {
 
-    private String fintkontrollidattribute;
+    private String resourceGroupIDattribute;
     private String prefix;
     private String suffix;
 }

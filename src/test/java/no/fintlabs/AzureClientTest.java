@@ -51,7 +51,7 @@ class AzureClientTest {
             Group group = new Group();
             group.id = "12" + (i + 2);
             group.displayName = "testgroup1";
-            group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive("123"));
+            group.additionalDataManager().put(configGroup.getResourceGroupIDattribute(), new JsonPrimitive("123"));
             retGroupList.add(group);
         }
 
