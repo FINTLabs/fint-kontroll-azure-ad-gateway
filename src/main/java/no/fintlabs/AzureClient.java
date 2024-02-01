@@ -151,7 +151,7 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
-        log.debug("{} User objects detected!", users);
+        log.info("{} User objects detected in Microsoft Entra", users);
     }
 
     // Fetch full user catalogue
@@ -161,7 +161,8 @@ public class AzureClient {
     )
 
     private void pullAllUsers() {
-        log.debug("--- Starting to pull users from Azure --- ");
+        log.debug("*** <<< Starting to pull users from Microsoft Entra >>> ***");
+        long startTime = System.currentTimeMillis();
         this.pageThrough(
                 graphService.users()
                         .buildRequest()
@@ -169,7 +170,12 @@ public class AzureClient {
                         .filter("usertype eq 'member'")
                         .get()
         );
-        log.debug("--- finished pulling resources from Azure. ---");
+        long endTime = System.currentTimeMillis();
+        long elapsedTimeInSeconds = (endTime - startTime) / 1000;
+        long minutes = elapsedTimeInSeconds / 60;
+        long seconds = elapsedTimeInSeconds % 60;
+
+        log.info("*** <<< Finished pulling users from Microsoft Entra in {} minutes and {} seconds >>> *** ", minutes, seconds);
     }
 
     private void pullAllExtUsers() {
@@ -222,7 +228,7 @@ public class AzureClient {
         long minutes = elapsedTimeInSeconds / 60;
         long seconds = elapsedTimeInSeconds % 60;
 
-        log.info("*** <<< Done fetching all groups from Microsoft Entra in {} minutes and {} seconds ***", minutes, seconds);
+        log.info("*** <<< Done fetching all groups from Microsoft Entra in {} minutes and {} seconds >>> ***", minutes, seconds);
     }
 
     public boolean doesGroupExist(String resourceGroupId) {
