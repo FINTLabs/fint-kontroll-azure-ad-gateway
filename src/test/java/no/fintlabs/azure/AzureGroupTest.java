@@ -27,7 +27,7 @@ class AzureGroupTest {
         Group testgroup = new Group();
         testgroup.id = RandomStringUtils.randomNumeric(8);
         testgroup.displayName = "-pre-app-microsoft.kabal-suff-";
-        testgroup.additionalDataManager().put(configGroup.getResourceGroupIDattribute(), new JsonPrimitive("kabal"));
+        testgroup.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive("kabal"));
 
         assertThrows(NumberFormatException.class, () -> {
             AzureGroup newTestgroup = new AzureGroup(testgroup, configGroup);
@@ -40,7 +40,7 @@ class AzureGroupTest {
         testgroup.displayName = "-pre-app-microsoft.kabal-suff-";
         String number = RandomStringUtils.randomNumeric(8);
 
-        testgroup.additionalDataManager().put(configGroup.getResourceGroupIDattribute(), new JsonPrimitive(number));
+        testgroup.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(number));
 
         AzureGroup newTestGroup = new AzureGroup(testgroup, configGroup);
 

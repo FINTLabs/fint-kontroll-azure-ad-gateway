@@ -197,7 +197,7 @@ public class AzureClient {
         return this.pageThroughGetGroups(
                 graphService.groups()
                         .buildRequest()
-                        .select(String.format("id,displayName,description,members,%s", configGroup.getResourceGroupIDattribute()))
+                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                         .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                         .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                         .get()
@@ -219,8 +219,8 @@ public class AzureClient {
                     graphService.groups()
                             .buildRequest(requestOptions)
                             // TODO: Attributes should not be hard-coded [FKS-210]
-                            .select(String.format("id,displayName,description,members,%s", configGroup.getResourceGroupIDattribute()))
-                            .filter(String.format("displayName ne null",configGroup.getResourceGroupIDattribute()))
+                            .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+                            .filter(String.format("displayName ne null",configGroup.getFintkontrollidattribute()))
                             //.filter(String.format("%s/any(s:s ne null)",configGroup.getResourceGroupIDattribute()))
                             //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                             .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
@@ -242,7 +242,7 @@ public class AzureClient {
         // TODO: Should this be implemented as a simpler call to MS Graph? [FKS-200]
         // Form the selection criteria for the MS Graph request
         // TODO: Attributes should not be hard-coded [FKS-210]
-        String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getResourceGroupIDattribute());
+        String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute());
 
         GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
@@ -252,7 +252,7 @@ public class AzureClient {
 
         while (groupCollectionPage != null) {
             for (Group group : groupCollectionPage.getCurrentPage()) {
-                JsonElement attributeValue = group.additionalDataManager().get(configGroup.getResourceGroupIDattribute());
+                JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
 
                 if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
                     return true; // Group with the specified ResourceID found
