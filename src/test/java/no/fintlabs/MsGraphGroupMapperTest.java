@@ -46,7 +46,7 @@ public class MsGraphGroupMapperTest {
 
         when(configGroup.getPrefix()).thenReturn("afk-");
         when(configGroup.getSuffix()).thenReturn("-agg-kon");
-        when(configGroup.getResourceGroupIDattribute()).thenReturn(fintKontrollIdAttribute);
+        when(configGroup.getFintkontrollidattribute()).thenReturn(fintKontrollIdAttribute);
 
         ResourceGroup group = ResourceGroup.builder()
                 .id(Id)

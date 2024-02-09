@@ -28,10 +28,10 @@ public class AzureGroup {
         this.members = new ArrayList<>();
 
         //TODO: Implement tests to verify ResourceID as LONG from kafka [FKS-216]
-        if (!group.additionalDataManager().isEmpty() && group.additionalDataManager().containsKey(configGroup.getResourceGroupIDattribute()))
+        if (!group.additionalDataManager().isEmpty() && group.additionalDataManager().containsKey(configGroup.getFintkontrollidattribute()))
         {
             try {
-                this.resourceGroupID = Long.valueOf(group.additionalDataManager().get(configGroup.getResourceGroupIDattribute()).getAsString());
+                this.resourceGroupID = Long.valueOf(group.additionalDataManager().get(configGroup.getFintkontrollidattribute()).getAsString());
             } catch (NumberFormatException e) {
                 log.warn("Error converting value {} to long", e.getMessage());
                 throw e;
