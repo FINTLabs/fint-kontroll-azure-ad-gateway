@@ -211,20 +211,21 @@ public class AzureClient {
     public void pullAllGroups() {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
-        LinkedList<Option> requestOptions = new LinkedList<Option>();
-        requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
-
+        /*LinkedList<Option> requestOptions = new LinkedList<Option>();
+        requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));*/
         try {
             this.pageThrough(
                     graphService.groups()
-                            .buildRequest(requestOptions)
+                            //.buildRequest(requestOptions)
+                            .buildRequest()
                             // TODO: Attributes should not be hard-coded [FKS-210]
                             .select(String.format("id,displayName,description,members,%s", configGroup.getResourceGroupIDattribute()))
-                            .filter(String.format("displayName ne null",configGroup.getResourceGroupIDattribute()))
+                            // TODO: Improve MS Graph filter [FKS-687]
+                            //.filter(String.format("displayName ne null",configGroup.getResourceGroupIDattribute()))
                             //.filter(String.format("%s/any(s:s ne null)",configGroup.getResourceGroupIDattribute()))
-                            //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+                            .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                             .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
-                            .count(true)
+                            //.count(true)
                             .get()
             );
         } catch (ClientException e) {
