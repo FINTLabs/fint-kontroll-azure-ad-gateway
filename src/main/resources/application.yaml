@@ -13,7 +13,7 @@ spring:
 logging:
   level:
     root: INFO
-    no.fintlabs: INFO
+    no.fintlabs: DEBUG
     com.azure: WARN
     com.microsoft: WARN
     org.apache: WARN
