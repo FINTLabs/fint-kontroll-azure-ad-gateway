@@ -6,6 +6,8 @@ import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
+import com.microsoft.graph.options.HeaderOption;
+import com.microsoft.graph.options.Option;
 import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -196,7 +198,7 @@ public class AzureClient {
                 graphService.groups()
                         .buildRequest()
                         .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
-                        .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+                        //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                         .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                         .get()
         );
@@ -209,21 +211,23 @@ public class AzureClient {
     public void pullAllGroups() {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
-        /*LinkedList<Option> requestOptions = new LinkedList<Option>();
-        requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));*/
+        LinkedList<Option> requestOptions = new LinkedList<Option>();
+        requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
         try {
             this.pageThrough(
                     graphService.groups()
-                            //.buildRequest(requestOptions)
-                            .buildRequest()
+                            .buildRequest(requestOptions)
+                            .count(true)
+                            //.buildRequest()
                             // TODO: Attributes should not be hard-coded [FKS-210]
                             .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                             // TODO: Improve MS Graph filter [FKS-687]
                             //.filter(String.format("displayName ne null",configGroup.getResourceGroupIDattribute()))
                             //.filter(String.format("%s/any(s:s ne null)",configGroup.getResourceGroupIDattribute()))
-                            .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+                            //.filter(String.format("endsWith(displayName,'%s')",configGroup.getSuffix()))
+                            //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+                            //.filter(String.format("displayName/any(i:i endsWith '{}')",configGroup.getSuffix()))
                             .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
-                            //.count(true)
                             .get()
             );
         } catch (ClientException e) {
@@ -246,7 +250,8 @@ public class AzureClient {
         GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
                 .select(selectionCriteria)
-                .filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+                //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+                //.filter(String.format("endsWith(displayName,'%s')",configGroup.getSuffix()))
                 .get();
 
         while (groupCollectionPage != null) {
