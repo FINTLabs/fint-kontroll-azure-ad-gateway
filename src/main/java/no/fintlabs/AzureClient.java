@@ -211,14 +211,14 @@ public class AzureClient {
     public void pullAllGroups() {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
-        LinkedList<Option> requestOptions = new LinkedList<Option>();
-        requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
+        //LinkedList<Option> requestOptions = new LinkedList<Option>();
+        //requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
         try {
             this.pageThrough(
                     graphService.groups()
-                            .buildRequest(requestOptions)
-                            .count(true)
-                            //.buildRequest()
+                            //.buildRequest(requestOptions)
+                            //.count(true)
+                            .buildRequest()
                             // TODO: Attributes should not be hard-coded [FKS-210]
                             .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
                             // TODO: Improve MS Graph filter [FKS-687]
