@@ -67,7 +67,7 @@ class AzureClientTest {
         when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().select(anyString())).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().get()).thenReturn(groupCollectionPage);
-        when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         List<Group> groupList = getTestGrouplist(3);
 
@@ -85,7 +85,7 @@ class AzureClientTest {
         when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().select(anyString())).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().get()).thenReturn(groupCollectionPage);
-        when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         List<Group> groupList = getTestGrouplist(3);
         when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
@@ -380,7 +380,7 @@ class AzureClientTest {
         when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         when(groupCollectionRequest.get()).thenReturn(groupCollectionPage);
 
@@ -403,7 +403,7 @@ class AzureClientTest {
         when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         when(groupCollectionRequest.get()).thenThrow(ClientException.class);
 
@@ -420,7 +420,7 @@ class AzureClientTest {
         when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         when(groupCollectionRequest.get()).thenThrow(new ClientException("Timeout", new InterruptedIOException("timeout")));
 
