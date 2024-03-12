@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - develop
 
   workflow_dispatch:
 
@@ -56,13 +57,17 @@ jobs:
     strategy:
       matrix:
         include:
-          - org: fintlabs-no
+          - if: github.ref == 'refs/heads/develop'
+            org: fintlabs-no
             cluster: aks-beta-fint-2021-11-23
-          - org: ofk-no
+          - if: github.ref == 'refs/heads/main'
+            org: ofk-no
             cluster: aks-api-fint-2022-02-08
-          - org: afk-no
+          - if: github.ref == 'refs/heads/main'
+            org: afk-no
             cluster: aks-api-fint-2022-02-08
-          - org: bfk-no
+          - if: github.ref == 'refs/heads/main'
+            org: bfk-no
             cluster: aks-api-fint-2022-02-08
     steps:
       - name: Checkout repository
