@@ -85,7 +85,7 @@ public class ResourceGroupMembershipConsumerService {
                     log.debug("Skipping processing of already cached delete group membership message: {}",kafkaKey);
                     return;
                 }
-                if (resourceGroupMembership.equals(fromCache.get())){
+                if (resourceGroupMembership != null && resourceGroupMembership.equals(fromCache.get())){
                     // New kafka message, but unchanged resourceGroupMembership from last time
                     log.debug("Skipping processing of group membership, as it is unchanged from before: userID: {} groupID {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef() );
                     return;
