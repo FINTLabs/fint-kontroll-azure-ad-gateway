@@ -35,10 +35,10 @@ patches:
             cpu: "500m"
             memory: "512Mi"
       - op: add
-        path: "/spec/env"
+        path: "/spec/env/0"
         value:
           name: "JAVA_TOOL_OPTIONS"
-          value: "-XX:+ExitOnOutOfMemoryError -Xmx896m -verbose:gc"
+          value: "-XX:+ExitOnOutOfMemoryError -Xmx960m -verbose:gc"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
