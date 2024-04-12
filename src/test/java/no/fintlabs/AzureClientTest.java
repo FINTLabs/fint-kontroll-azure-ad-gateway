@@ -133,7 +133,36 @@ class AzureClientTest {
     }
 
     @Test
-    void updateGroup() {
+    //void makeSureUpdateGroupIsSkippedWhenConfigparamterUpdateGroupNamesIsFalse() {
+    void makeSureUpdateGroupIsCalled() {
+/*        String delGroupID = "123";
+        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+        when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);*/
+
+        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+        when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
+
+        //when(configGroup.getUpdategroupnames()).thenReturn(false);
+
+        //when(groupCollectionRequest.
+        //when(config.getEntobjectid()).thenReturn("testentobjectid");
+
+        ResourceGroup resourceGroup = ResourceGroup.builder()
+                .id("12")
+                .resourceId("123")
+                .displayName("testdisplayname")
+                .identityProviderGroupObjectId("testidpgroup")
+                .resourceName("testresourcename")
+                .resourceType("testresourcetype")
+                .resourceLimit("1000")
+                .build();
+
+        azureClient.updateGroup(resourceGroup);
+
+        verify(groupRequest, times(1)).patch();
+        verify(groupRequest, times(0)).post();
+        verify(groupRequest, times(0)).delete();
+
         // TODO: Implement test [FKS-187]
     }
 

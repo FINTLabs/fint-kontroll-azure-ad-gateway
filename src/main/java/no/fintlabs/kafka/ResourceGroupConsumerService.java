@@ -65,6 +65,7 @@ public class ResourceGroupConsumerService {
     private synchronized void updateAzure(String kafkaKey, ResourceGroup resourceGroup) {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzure function {}.", randomUUID);
+        //azureService.handleChangedResource
         // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
         if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
             log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
@@ -73,8 +74,10 @@ public class ResourceGroupConsumerService {
             log.debug("Delete group from Azure, {}",resourceGroup.getResourceName());
             azureClient.deleteGroup(kafkaKey);
         } else {
-            log.debug("Group not created as it already exists: {}", resourceGroup.getResourceName());
             azureClient.updateGroup(resourceGroup);
+            if (configGroup.getAllowgroupupdate()) {
+                azureClient.updateGroup(resourceGroup);
+            }
         }
         log.debug("Stopping updateAzure function {}.", randomUUID);
     }
@@ -86,7 +89,7 @@ public class ResourceGroupConsumerService {
                 ResourceGroup fromCache = resourceGroupCache.get(kafkaKey);
                 if (resourceGroup.equals(fromCache)){
                     // New kafka message, but unchanged resourceGroup from last time
-                    log.debug("Skip element as it is unchanged: {}", resourceGroup.getResourceName());
+                    log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
                     return;
                 }
             }
