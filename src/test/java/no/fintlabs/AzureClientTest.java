@@ -135,17 +135,9 @@ class AzureClientTest {
     @Test
     //void makeSureUpdateGroupIsSkippedWhenConfigparamterUpdateGroupNamesIsFalse() {
     void makeSureUpdateGroupIsCalled() {
-/*        String delGroupID = "123";
-        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-        when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);*/
 
         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
         when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
-
-        //when(configGroup.getUpdategroupnames()).thenReturn(false);
-
-        //when(groupCollectionRequest.
-        //when(config.getEntobjectid()).thenReturn("testentobjectid");
 
         ResourceGroup resourceGroup = ResourceGroup.builder()
                 .id("12")
@@ -159,8 +151,8 @@ class AzureClientTest {
 
         azureClient.updateGroup(resourceGroup);
 
-        verify(groupRequest, times(1)).patch();
-        verify(groupRequest, times(0)).post();
+        verify(groupRequest, times(1)).patch(any(Group.class));
+        verify(groupRequest, times(0)).post(any());
         verify(groupRequest, times(0)).delete();
 
         // TODO: Implement test [FKS-187]

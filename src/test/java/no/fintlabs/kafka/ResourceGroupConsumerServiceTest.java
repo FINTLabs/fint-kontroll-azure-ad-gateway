@@ -87,4 +87,5 @@ public class ResourceGroupConsumerServiceTest {
         verify(azureClient, times(0)).deleteGroup(any());
         verify(resourceGroupCache, times(1)).put(anyString(), any());
     }
+
 }
