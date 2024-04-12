@@ -13,4 +13,5 @@ public class ConfigGroup {
     private String fintkontrollidattribute;
     private String prefix;
     private String suffix;
+    private Boolean allowgroupupdate;
 }

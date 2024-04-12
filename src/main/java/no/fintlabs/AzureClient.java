@@ -292,6 +292,12 @@ public class AzureClient {
     }
 
     public void updateGroup(ResourceGroup resourceGroup) {
+
+        Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
+
+        graphService.groups(resourceGroup.getIdentityProviderGroupObjectId())
+                .buildRequest()
+                .patch(group);
         // TODO: Implement actual functionality to update the group in Azure [FKS-199]
     }
 

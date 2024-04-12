@@ -51,6 +51,7 @@ fint:
         fintkontrollidattribute: extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
         prefix: "-pre-"
         suffix: "-suff-"
+        allowgroupupdate: true
       group-scheduler:
         pull:
           initial-delay-ms: 1000
