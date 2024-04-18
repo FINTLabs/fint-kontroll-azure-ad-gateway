@@ -319,7 +319,7 @@ public class AzureClient {
     public void deleteGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
         String[] splitString = resourceGroupMembershipKey.split     ("_");
         if (splitString.length != 2) {
-            log.error("Group index not formatted correctly. NOT deleting group");
+            log.error("Key on kafka object {} not formatted correctly. NOT deleting membership from group",resourceGroupMembershipKey);
             return;
         }
         String group = splitString[0];
@@ -331,11 +331,12 @@ public class AzureClient {
                     .reference()
                     .buildRequest()
                     .delete());
-            log.warn("User: {} removed from group: {}", user, group);
+            log.warn("UserId: {} removed from GroupId: {}", user, group);
+            azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
         }
         catch (GraphServiceException e)
         {
-            log.error("HTTP Error while removing user from group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage());
+            log.error("HTTP Error while trying to remove user from group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage());
         }
     }
 }

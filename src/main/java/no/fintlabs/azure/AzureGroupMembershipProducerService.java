@@ -37,4 +37,13 @@ public class AzureGroupMembershipProducerService
                         .build()
         );
     }
+    public void publishDeletedMembership(String membershipKey) {
+        entityProducer.send(
+                EntityProducerRecord.<AzureGroupMembership>builder()
+                        .topicNameParameters(entityTopicNameParameters)
+                        .key(membershipKey)
+                        .value(null)
+                        .build()
+        );
+    }
 }
