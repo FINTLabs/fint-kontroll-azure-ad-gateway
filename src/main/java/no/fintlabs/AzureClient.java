@@ -299,7 +299,6 @@ public class AzureClient {
         graphService.groups(resourceGroup.getIdentityProviderGroupObjectId())
                 .buildRequest()
                 .patch(group);
-        // TODO: Implement actual functionality to update the group in Azure [FKS-199]
     }
 
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
