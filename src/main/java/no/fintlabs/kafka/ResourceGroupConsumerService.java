@@ -74,9 +74,13 @@ public class ResourceGroupConsumerService {
             log.debug("Delete group from Azure, {}",resourceGroup.getResourceName());
             azureClient.deleteGroup(kafkaKey);
         } else {
-            azureClient.updateGroup(resourceGroup);
             if (configGroup.getAllowgroupupdate()) {
                 azureClient.updateGroup(resourceGroup);
+                log.info("Updated group with groupId {}",resourceGroup.getIdentityProviderGroupObjectId());
+            }
+            else
+            {
+                log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false",resourceGroup.getIdentityProviderGroupObjectId() );
             }
         }
         log.debug("Stopping updateAzure function {}.", randomUUID);

@@ -1,10 +1,12 @@
 logging:
   level:
     root: INFO
-    com.azure: DEBUG
-    com.microsoft: DEBUG
-    no.fintlabs: DEBUG
-    okhttp3: DEBUG
+    com.azure: WARN
+    com.microsoft: WARN
+    org.apache: WARN
+    no.fintlabs: INFO
+    no.fintlabs.cache.ehcache: WARN
+    okhttp3: WARN
     #org.apache: ERROR
 
 fint:

@@ -1,6 +1,7 @@
 package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.kafka.ResourceGroupMembership;
 import no.fintlabs.kafka.entity.EntityProducer;
 import no.fintlabs.kafka.entity.EntityProducerFactory;
 import no.fintlabs.kafka.entity.EntityProducerRecord;
@@ -28,21 +29,30 @@ public class AzureGroupMembershipProducerService
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
 
-    public void publish(AzureGroupMembership object) {
-        entityProducer.send(
-                        EntityProducerRecord.<AzureGroupMembership>builder()
-                        .topicNameParameters(entityTopicNameParameters)
-                        .key(object.id)
-                        .value(object)
-                        .build()
-        );
-    }
+//    public void publish(AzureGroupMembership object) {
+//        entityProducer.send(
+//                        EntityProducerRecord.<AzureGroupMembership>builder()
+//                        .topicNameParameters(entityTopicNameParameters)
+//                        .key(object.id)
+//                        .value(object)
+//                        .build()
+//        );
+//    }
     public void publishDeletedMembership(String membershipKey) {
         entityProducer.send(
                 EntityProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
                         .key(membershipKey)
                         .value(null)
+                        .build()
+        );
+    }
+    public void publishAddedMembership(AzureGroupMembership object) {
+        entityProducer.send(
+                EntityProducerRecord.<AzureGroupMembership>builder()
+                        .topicNameParameters(entityTopicNameParameters)
+                        .key(object.id)
+                        .value(object)
                         .build()
         );
     }
