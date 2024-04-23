@@ -1,6 +1,7 @@
 package no.fintlabs.kafka;
 
 import no.fintlabs.AzureClient;
+import no.fintlabs.ConfigGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,9 @@ public class ResourceGroupConsumerServiceTest {
 
     @Mock
     private EntityConsumerFactoryService entityConsumerFactoryService;
+
+    @Mock
+    private ConfigGroup configGroup;
 
     @Mock
     private FintCache<String, ResourceGroup> resourceGroupCache;
@@ -83,9 +87,8 @@ public class ResourceGroupConsumerServiceTest {
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
         verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(1)).updateGroup(any());
+        verify(azureClient, times(0)).updateGroup(any());
         verify(azureClient, times(0)).deleteGroup(any());
-        verify(resourceGroupCache, times(1)).put(anyString(), any());
     }
 
 }

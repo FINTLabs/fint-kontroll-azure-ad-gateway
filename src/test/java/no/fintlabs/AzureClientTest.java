@@ -6,6 +6,7 @@ import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.options.Option;
 import com.microsoft.graph.requests.*;
+import no.fintlabs.azure.AzureGroupMembershipProducerService;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import okhttp3.Request;
@@ -184,6 +185,9 @@ class AzureClientTest {
     @Mock
     private DirectoryObjectCollectionReferenceRequest directoryObjectCollectionReferenceRequest;
 
+     @Mock
+     private AzureGroupMembershipProducerService azureGroupMembershipProducerService;
+
     @Test
     public void makeSureEmptyReferencesIsHandledCorrectly () {
         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
@@ -345,6 +349,7 @@ class AzureClientTest {
     }
     @Test
     public void logAndSkipDeletionWhenKafkaIDIswithoutUnderscore () {
+
         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
         when(groupRequestBuilder.members(anyString())).thenReturn(directoryObjectWithReferenceRequestBuilder);
         when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
@@ -360,11 +365,11 @@ class AzureClientTest {
                 .build();
 
         String kafkaKey = "example";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        azureClient.deleteGroupMembership(null, kafkaKey);
         verify(directoryObjectReferenceRequest, times(0)).delete();
 
         kafkaKey = "exampleGroupID_exampleUserID";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        azureClient.deleteGroupMembership(null, kafkaKey);
         verify(directoryObjectReferenceRequest, times(1)).delete();
     }
 
