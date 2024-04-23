@@ -133,6 +133,24 @@ class AzureClientTest {
     }
 
     @Test
+     void updateGroup() {
+         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+         when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
+         ResourceGroup resourceGroup = ResourceGroup.builder()
+                 .id("12")
+                 .resourceId("123")
+                 .displayName("testdisplayname")
+                 .identityProviderGroupObjectId("testidpgroup")
+                 .resourceName("testresourcename")
+                 .resourceType("testresourcetype")
+                 .resourceLimit("1000")
+                 .build();
+         azureClient.updateGroup(resourceGroup);
+
+         verify(groupRequest, times(1)).patch(any(Group.class));
+     }
+
+    @Test
     //void makeSureUpdateGroupIsSkippedWhenConfigparamterUpdateGroupNamesIsFalse() {
     void makeSureUpdateGroupIsCalled() {
 

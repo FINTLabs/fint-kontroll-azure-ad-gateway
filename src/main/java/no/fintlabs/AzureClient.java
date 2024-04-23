@@ -46,7 +46,7 @@ public class AzureClient {
             members++;
             for (DirectoryObject member : page.getCurrentPage()) {
                 // New member detected
-                azureGroupMembershipProducerService.publish(new AzureGroupMembership(azureGroup.getId(), member));
+                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
                 azureGroup.getMembers().add(member.id);
             }
             if (page.getNextPage() == null) {
@@ -294,7 +294,8 @@ public class AzureClient {
     public void updateGroup(ResourceGroup resourceGroup) {
 
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
-
+        group.owners = null;
+        group.additionalDataManager().clear();
         graphService.groups(resourceGroup.getIdentityProviderGroupObjectId())
                 .buildRequest()
                 .patch(group);
@@ -309,7 +310,9 @@ public class AzureClient {
             Objects.requireNonNull(graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references())
                     .buildRequest()
                     .post(directoryObject);
-            log.info("User {} added to group {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+            log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+            azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+            log.debug("Produced message to kafka on added UserId {} to GroupId {}",resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
         } catch (GraphServiceException e) {
             // Handle the HTTP response exception here
             if (e.getResponseCode() == 400) {
@@ -339,6 +342,7 @@ public class AzureClient {
                     .delete());
             log.warn("UserId: {} removed from GroupId: {}", user, group);
             azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
+            log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}",user, group);
         }
         catch (GraphServiceException e)
         {
