@@ -27,10 +27,18 @@ public class AzureGroupMembershipProducerService
                 .build();
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
-
-    public void publish(AzureGroupMembership object) {
+    public void publishDeletedMembership(String membershipKey) {
         entityProducer.send(
-                        EntityProducerRecord.<AzureGroupMembership>builder()
+                EntityProducerRecord.<AzureGroupMembership>builder()
+                        .topicNameParameters(entityTopicNameParameters)
+                        .key(membershipKey)
+                        .value(null)
+                        .build()
+        );
+    }
+    public void publishAddedMembership(AzureGroupMembership object) {
+        entityProducer.send(
+                EntityProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
                         .key(object.id)
                         .value(object)

@@ -1,16 +1,19 @@
 package no.fintlabs;
 
 import com.google.gson.JsonElement;
+import com.microsoft.graph.core.ClientException;
 import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
+import com.microsoft.graph.options.HeaderOption;
+import com.microsoft.graph.options.Option;
 import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import okhttp3.Request;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,7 +30,6 @@ public class AzureClient {
     protected final ConfigGroup configGroup;
     protected final ConfigUser configUser;
     protected final GraphServiceClient<Request> graphService;
-
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
@@ -44,7 +46,7 @@ public class AzureClient {
             members++;
             for (DirectoryObject member : page.getCurrentPage()) {
                 // New member detected
-                azureGroupMembershipProducerService.publish(new AzureGroupMembership(azureGroup.getId(), member));
+                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
                 azureGroup.getMembers().add(member.id);
             }
             if (page.getNextPage() == null) {
@@ -74,13 +76,17 @@ public class AzureClient {
                 }
 
                 // Put object into cache
-                pageThrough(
-                        newGroup,
-                        graphService.groups(group.id).members()
-                                .buildRequest()
-                                .select("id")
-                                .get()
-                );
+                try {
+                    pageThrough(
+                            newGroup,
+                            graphService.groups(group.id).members()
+                                    .buildRequest()
+                                    .select("id")
+                                    .get()
+                    );
+                } catch (ClientException e) {
+                    log.error("Error fetching page", e);
+                }
                 azureGroupProducerService.publish(newGroup);
             }
             if (page.getNextPage() == null) {
@@ -90,8 +96,9 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
-        log.debug("{} Group objects detected!", groups);
+        log.info("{} Group objects detected in Microsoft Entra", groups);
     }
+
 
     private List<AzureGroup> pageThroughGetGroups(GroupCollectionPage inPage) {
         int groups = 0;
@@ -116,7 +123,7 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
-        log.debug("{} Group objects detected!", groups);
+        log.debug("{} Group objects detected in Microsoft Entra", groups);
         return retGroupList;
     }
 
@@ -145,7 +152,7 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
-        log.debug("{} User objects detected!", users);
+        log.info("{} User objects detected in Microsoft Entra", users);
     }
 
     // Fetch full user catalogue
@@ -155,7 +162,8 @@ public class AzureClient {
     )
 
     private void pullAllUsers() {
-        log.debug("--- Starting to pull users from Azure --- ");
+        log.debug("*** <<< Starting to pull users from Microsoft Entra >>> ***");
+        long startTime = System.currentTimeMillis();
         this.pageThrough(
                 graphService.users()
                         .buildRequest()
@@ -163,8 +171,12 @@ public class AzureClient {
                         .filter("usertype eq 'member'")
                         .get()
         );
-        log.debug("--- finished pulling resources from Azure. ---");
+        long endTime = System.currentTimeMillis();
+        long elapsedTimeInSeconds = (endTime - startTime) / 1000;
+        long minutes = elapsedTimeInSeconds / 60;
+        long seconds = elapsedTimeInSeconds % 60;
 
+        log.info("*** <<< Finished pulling users from Microsoft Entra in {} minutes and {} seconds >>> *** ", minutes, seconds);
     }
 
     private void pullAllExtUsers() {
@@ -186,6 +198,7 @@ public class AzureClient {
                 graphService.groups()
                         .buildRequest()
                         .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+                        //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                         .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                         .get()
         );
@@ -196,18 +209,36 @@ public class AzureClient {
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
     public void pullAllGroups() {
-        log.debug("*** Fetching all groups from AD >>> ***");
-        this.pageThrough(
-                graphService.groups()
-                        .buildRequest()
-                        // TODO: Attributes should not be hard-coded [FKS-210]
-                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
-                        .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
-                        // TODO: Filter to only get where FintKontrollIds is set [FKS-196]
-                        //.filter(String.format("%s ne null",configGroup.getFintkontrollidattribute()))
-                        .get()
-        );
-        log.debug("*** <<< Done fetching all groups from AD ***");
+        log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
+        long startTime = System.currentTimeMillis();
+        //LinkedList<Option> requestOptions = new LinkedList<Option>();
+        //requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
+        try {
+            this.pageThrough(
+                    graphService.groups()
+                            //.buildRequest(requestOptions)
+                            //.count(true)
+                            .buildRequest()
+                            // TODO: Attributes should not be hard-coded [FKS-210]
+                            .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+                            // TODO: Improve MS Graph filter [FKS-687]
+                            //.filter(String.format("displayName ne null",configGroup.getResourceGroupIDattribute()))
+                            //.filter(String.format("%s/any(s:s ne null)",configGroup.getResourceGroupIDattribute()))
+                            //.filter(String.format("endsWith(displayName,'%s')",configGroup.getSuffix()))
+                            //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+                            //.filter(String.format("displayName/any(i:i endsWith '{}')",configGroup.getSuffix()))
+                            .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
+                            .get()
+            );
+        } catch (ClientException e) {
+            log.error("Failed when trying to get groups. ", e);
+        }
+        long endTime = System.currentTimeMillis();
+        long elapsedTimeInSeconds = (endTime - startTime) / 1000;
+        long minutes = elapsedTimeInSeconds / 60;
+        long seconds = elapsedTimeInSeconds % 60;
+
+        log.info("*** <<< Done fetching all groups from Microsoft Entra in {} minutes and {} seconds >>> ***", minutes, seconds);
     }
 
     public boolean doesGroupExist(String resourceGroupId) {
@@ -219,6 +250,8 @@ public class AzureClient {
         GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
                 .select(selectionCriteria)
+                //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+                //.filter(String.format("endsWith(displayName,'%s')",configGroup.getSuffix()))
                 .get();
 
         while (groupCollectionPage != null) {
@@ -259,7 +292,13 @@ public class AzureClient {
     }
 
     public void updateGroup(ResourceGroup resourceGroup) {
-        // TODO: Implement actual functionality to update the group in Azure [FKS-199]
+
+        Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
+        group.owners = null;
+        group.additionalDataManager().clear();
+        graphService.groups(resourceGroup.getIdentityProviderGroupObjectId())
+                .buildRequest()
+                .patch(group);
     }
 
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
@@ -270,7 +309,9 @@ public class AzureClient {
             Objects.requireNonNull(graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references())
                     .buildRequest()
                     .post(directoryObject);
-            log.info("User {} added to group {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+            log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+            azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+            log.debug("Produced message to kafka on added UserId {} to GroupId {}",resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
         } catch (GraphServiceException e) {
             // Handle the HTTP response exception here
             if (e.getResponseCode() == 400) {
@@ -286,7 +327,7 @@ public class AzureClient {
     public void deleteGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
         String[] splitString = resourceGroupMembershipKey.split     ("_");
         if (splitString.length != 2) {
-            log.error("Group index not formatted correctly. NOT deleting group");
+            log.error("Key on kafka object {} not formatted correctly. NOT deleting membership from group",resourceGroupMembershipKey);
             return;
         }
         String group = splitString[0];
@@ -298,11 +339,13 @@ public class AzureClient {
                     .reference()
                     .buildRequest()
                     .delete());
-            log.warn("User: {} removed from group: {}", user, group);
+            log.warn("UserId: {} removed from GroupId: {}", user, group);
+            azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
+            log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}",user, group);
         }
         catch (GraphServiceException e)
         {
-            log.error("HTTP Error while removing user from group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage());
+            log.error("HTTP Error while trying to remove user from group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage());
         }
     }
 }

@@ -25,6 +25,20 @@ patches:
       - op: replace
         path: "/spec/kafka/acls/2/topic"
         value: "afk-no.kontroll.entity.resource-group*"
+      - op: add
+        path: "/spec/resources"
+        value: 
+          limits:
+            cpu: "1000m"
+            memory: "1024Mi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+      - op: add
+        path: "/spec/env/0"
+        value:
+          name: "JAVA_TOOL_OPTIONS"
+          value: "-XX:+ExitOnOutOfMemoryError -Xmx960m -verbose:gc"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway

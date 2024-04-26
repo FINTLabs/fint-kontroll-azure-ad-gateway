@@ -7,7 +7,7 @@ spec:
   orgId: fintlabs.no
   image: ghcr.io/fintlabs/fint-kontroll-azure-ad-gateway:latest
   imagePullPolicy: Always
-  env:
+  env: []
   envFrom:
     - secretRef:
         name: fint-kontroll-azure-ad-gateway
