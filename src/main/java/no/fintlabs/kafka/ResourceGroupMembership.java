@@ -11,10 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ResourceGroupMembership
 {
     private String id;
-    @NonNull
     private String azureGroupRef;
-    @NonNull
     private String azureUserRef;
-
     private String roleRef;
 }

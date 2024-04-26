@@ -302,24 +302,28 @@ public class AzureClient {
     }
 
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
-        DirectoryObject directoryObject = new DirectoryObject();
-        directoryObject.id = resourceGroupMembership.getAzureUserRef();
+        if(resourceGroupMembership.getAzureUserRef() != null && resourceGroupMembership.getAzureGroupRef() != null)
+        {
 
-        try {
-            Objects.requireNonNull(graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references())
-                    .buildRequest()
-                    .post(directoryObject);
-            log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-            azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-            log.debug("Produced message to kafka on added UserId {} to GroupId {}",resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-        } catch (GraphServiceException e) {
-            // Handle the HTTP response exception here
-            if (e.getResponseCode() == 400) {
-                // Handle the 400 Bad Request error
-                log.warn("User {} already exists in group {} or azureGroupRef is not correct: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-            } else {
-                // Handle other HTTP errors
-                log.error("HTTP Error while updating group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage(), resourceGroupMembership.getAzureGroupRef());
+            DirectoryObject directoryObject = new DirectoryObject();
+            directoryObject.id = resourceGroupMembership.getAzureUserRef();
+
+            try {
+                Objects.requireNonNull(graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references())
+                        .buildRequest()
+                        .post(directoryObject);
+                log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                log.debug("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+            } catch (GraphServiceException e) {
+                // Handle the HTTP response exception here
+                if (e.getResponseCode() == 400) {
+                    // Handle the 400 Bad Request error
+                    log.warn("User {} already exists in group {} or azureGroupRef is not correct: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                } else {
+                    // Handle other HTTP errors
+                    log.error("HTTP Error while updating group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage(), resourceGroupMembership.getAzureGroupRef());
+                }
             }
         }
     }
