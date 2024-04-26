@@ -1,7 +1,6 @@
 package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityProducer;
 import no.fintlabs.kafka.entity.EntityProducerFactory;
 import no.fintlabs.kafka.entity.EntityProducerRecord;

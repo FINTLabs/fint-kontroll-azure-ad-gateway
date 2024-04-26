@@ -4,7 +4,9 @@ import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.core.ClientException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
+import com.microsoft.graph.options.Option;
 import com.microsoft.graph.requests.*;
+import no.fintlabs.azure.AzureGroupMembershipProducerService;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import okhttp3.Request;
@@ -17,12 +19,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.task.TaskSchedulerBuilder;
-import org.springframework.scheduling.TaskScheduler;
 
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TimerTask;
+import java.util.LinkedList;
 
  @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
@@ -67,6 +68,7 @@ class AzureClientTest {
         when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().select(anyString())).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().get()).thenReturn(groupCollectionPage);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         List<Group> groupList = getTestGrouplist(3);
 
@@ -84,6 +86,7 @@ class AzureClientTest {
         when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().select(anyString())).thenReturn(groupCollectionRequest);
         when(graphServiceClient.groups().buildRequest().get()).thenReturn(groupCollectionPage);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         List<Group> groupList = getTestGrouplist(3);
         when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
@@ -131,7 +134,46 @@ class AzureClientTest {
     }
 
     @Test
-    void updateGroup() {
+     void updateGroup() {
+         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+         when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
+         ResourceGroup resourceGroup = ResourceGroup.builder()
+                 .id("12")
+                 .resourceId("123")
+                 .displayName("testdisplayname")
+                 .identityProviderGroupObjectId("testidpgroup")
+                 .resourceName("testresourcename")
+                 .resourceType("testresourcetype")
+                 .resourceLimit("1000")
+                 .build();
+         azureClient.updateGroup(resourceGroup);
+
+         verify(groupRequest, times(1)).patch(any(Group.class));
+     }
+
+    @Test
+    //void makeSureUpdateGroupIsSkippedWhenConfigparamterUpdateGroupNamesIsFalse() {
+    void makeSureUpdateGroupIsCalled() {
+
+        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+        when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
+
+        ResourceGroup resourceGroup = ResourceGroup.builder()
+                .id("12")
+                .resourceId("123")
+                .displayName("testdisplayname")
+                .identityProviderGroupObjectId("testidpgroup")
+                .resourceName("testresourcename")
+                .resourceType("testresourcetype")
+                .resourceLimit("1000")
+                .build();
+
+        azureClient.updateGroup(resourceGroup);
+
+        verify(groupRequest, times(1)).patch(any(Group.class));
+        verify(groupRequest, times(0)).post(any());
+        verify(groupRequest, times(0)).delete();
+
         // TODO: Implement test [FKS-187]
     }
 
@@ -142,6 +184,9 @@ class AzureClientTest {
     private DirectoryObjectCollectionReferenceRequestBuilder directoryObjectCollectionReferenceRequestBuilder;
     @Mock
     private DirectoryObjectCollectionReferenceRequest directoryObjectCollectionReferenceRequest;
+
+     @Mock
+     private AzureGroupMembershipProducerService azureGroupMembershipProducerService;
 
     @Test
     public void makeSureEmptyReferencesIsHandledCorrectly () {
@@ -304,6 +349,7 @@ class AzureClientTest {
     }
     @Test
     public void logAndSkipDeletionWhenKafkaIDIswithoutUnderscore () {
+
         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
         when(groupRequestBuilder.members(anyString())).thenReturn(directoryObjectWithReferenceRequestBuilder);
         when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
@@ -319,11 +365,11 @@ class AzureClientTest {
                 .build();
 
         String kafkaKey = "example";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        azureClient.deleteGroupMembership(null, kafkaKey);
         verify(directoryObjectReferenceRequest, times(0)).delete();
 
         kafkaKey = "exampleGroupID_exampleUserID";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        azureClient.deleteGroupMembership(null, kafkaKey);
         verify(directoryObjectReferenceRequest, times(1)).delete();
     }
 
@@ -378,6 +424,7 @@ class AzureClientTest {
         when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         when(groupCollectionRequest.get()).thenReturn(groupCollectionPage);
 
@@ -395,21 +442,47 @@ class AzureClientTest {
     }
 
     @Test
-    public void makeSureTrownErrorIsCaught() {
+    public void makeSureTrownErrorIsSwallowedAndNotThrown() {
         when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
         when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         when(groupCollectionRequest.get()).thenThrow(ClientException.class);
 
-
-        assertThrows(ClientException.class, ()-> {
+        //assertDoesNotThrow( );
+        assertDoesNotThrow(()-> {
             azureClient.pullAllGroups();
         });
     }
 
-    /*public void handleUnexpectedErrorInPeriodicTask() {
-        TaskSchedulerBuilder taskSchedulerBuilder = new TaskSchedulerBuilder();
-    }*/
+    @Test
+    public void shouldHandleTimeoutException() {
+        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
+        //when(groupCollectionRequestBuilder.buildRequest(any(LinkedList.class))).thenReturn(groupCollectionRequest);
+        when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
+        when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
+        when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+
+        when(groupCollectionRequest.get()).thenThrow(new ClientException("Timeout", new InterruptedIOException("timeout")));
+
+        /*GroupCollectionRequestBuilder mockGroupCollectionRequestBuilder2 = Mockito.mock(GroupCollectionRequestBuilder.class);
+        GroupCollectionRequest mockGroupCollectionRequest2 = Mockito.mock(GroupCollectionRequest.class);
+        GroupCollectionPage mockCollPage2= Mockito.mock(GroupCollectionPage.class);*/
+
+        /*when(groupCollectionPage.getNextPage()).thenReturn(mockGroupCollectionRequestBuilder2);
+        when(mockGroupCollectionRequestBuilder2.buildRequest()).thenReturn(mockGroupCollectionRequest2);
+        when(mockGroupCollectionRequest2.get()).thenReturn(mockCollPage2);*/
+
+        azureClient.pullAllGroups();
+
+/*        when(groupCollectionRequest.get()).thenAnswer();
+
+        azureClient.pullAllGroups();*/
+
+        /*verify(groupCollectionPage, times(2)).getNextPage();
+        verify(mockCollPage2, times(1)).getNextPage();*/
+    }
 }

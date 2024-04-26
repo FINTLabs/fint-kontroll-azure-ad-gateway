@@ -1,33 +1,19 @@
 package no.fintlabs.kafka;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import com.microsoft.graph.models.*;
-import com.microsoft.graph.requests.DirectoryObjectCollectionPage;
-import com.microsoft.graph.requests.ExtensionCollectionPage;
-import com.microsoft.graph.requests.GraphServiceClient;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
-import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
 import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
-import okhttp3.Request;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
-import javax.management.openmbean.OpenType;
 import java.util.*;
-import java.util.List;
 
 @Service
 @Slf4j
@@ -79,6 +65,7 @@ public class ResourceGroupConsumerService {
     private synchronized void updateAzure(String kafkaKey, ResourceGroup resourceGroup) {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzure function {}.", randomUUID);
+        //azureService.handleChangedResource
         // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
         if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
             log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
@@ -87,8 +74,14 @@ public class ResourceGroupConsumerService {
             log.debug("Delete group from Azure, {}",resourceGroup.getResourceName());
             azureClient.deleteGroup(kafkaKey);
         } else {
-            log.debug("Group not created as it already exists: {}", resourceGroup.getResourceName());
-            azureClient.updateGroup(resourceGroup);
+            if (configGroup.getAllowgroupupdate()) {
+                azureClient.updateGroup(resourceGroup);
+                log.info("Updated group with groupId {}",resourceGroup.getIdentityProviderGroupObjectId());
+            }
+            else
+            {
+                log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false",resourceGroup.getIdentityProviderGroupObjectId() );
+            }
         }
         log.debug("Stopping updateAzure function {}.", randomUUID);
     }
@@ -100,7 +93,7 @@ public class ResourceGroupConsumerService {
                 ResourceGroup fromCache = resourceGroupCache.get(kafkaKey);
                 if (resourceGroup.equals(fromCache)){
                     // New kafka message, but unchanged resourceGroup from last time
-                    log.debug("Skip element as it is unchanged: {}", resourceGroup.getResourceName());
+                    log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
                     return;
                 }
             }
