@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Slf4j
 @EqualsAndHashCode
-
+@ToString
 public class ResourceGroupMembership
 {
     private String id;
