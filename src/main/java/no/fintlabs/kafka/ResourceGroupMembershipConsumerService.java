@@ -72,7 +72,7 @@ public class ResourceGroupMembershipConsumerService {
     public void processEntity(ResourceGroupMembership resourceGroupMembership, String kafkaKey) {
 
         if (kafkaKey == null || (resourceGroupMembership != null && (resourceGroupMembership.getAzureGroupRef() == null || resourceGroupMembership.getAzureUserRef() == null))) {
-            log.error("Error when processing entity. Kafka key or values is null. Unsupported!");
+            log.error("Error when processing entity. Kafka key or values is null. Unsupported!. ResourceGroupMembership object: {}",resourceGroupMembership);
             return;
         }
         synchronized (resourceGroupMembershipCache) {
