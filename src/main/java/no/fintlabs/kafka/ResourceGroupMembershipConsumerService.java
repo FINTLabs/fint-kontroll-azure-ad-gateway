@@ -79,8 +79,14 @@ public class ResourceGroupMembershipConsumerService {
 
         synchronized (resourceGroupMembershipCache) {
             // Check resourceGroupCache if object is known from before
+            log.debug("Processing entity with key: {}", kafkaKey);
+
             if (resourceGroupMembershipCache.containsKey(kafkaKey)) {
+                log.debug("Found key in cache: {}", kafkaKey);
+
                 Optional<ResourceGroupMembership> fromCache = resourceGroupMembershipCache.get(kafkaKey);
+
+                log.debug("From cache: {}", fromCache);
 
                 if (fromCache.isEmpty() && resourceGroupMembership == null) {
                     // resourceGroupMembership is a delete message already in cache
@@ -88,7 +94,7 @@ public class ResourceGroupMembershipConsumerService {
                     return;
                 }
 
-                if (resourceGroupMembership != null && resourceGroupMembership.equals(fromCache.get())){
+                if (resourceGroupMembership != null && fromCache.isPresent() && resourceGroupMembership.equals(fromCache.get())){
                     // New kafka message, but unchanged resourceGroupMembership from last time
                     log.debug("Skipping processing of group membership, as it is unchanged from before: userID: {} groupID {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef() );
                     return;
