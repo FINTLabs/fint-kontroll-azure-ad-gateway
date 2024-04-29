@@ -72,9 +72,11 @@ public class ResourceGroupMembershipConsumerService {
     public void processEntity(ResourceGroupMembership resourceGroupMembership, String kafkaKey) {
 
         if (kafkaKey == null || (resourceGroupMembership != null && (resourceGroupMembership.getAzureGroupRef() == null || resourceGroupMembership.getAzureUserRef() == null))) {
-            log.error("Error when processing entity. Kafka key or values is null. Unsupported!. ResourceGroupMembership object: {}",resourceGroupMembership.toString());
+            log.error("Error when processing entity. Kafka key or values is null. Unsupported!. ResourceGroupMembership object: {}",
+                      (resourceGroupMembership != null ? resourceGroupMembership : "null"));
             return;
         }
+
         synchronized (resourceGroupMembershipCache) {
             // Check resourceGroupCache if object is known from before
             if (resourceGroupMembershipCache.containsKey(kafkaKey)) {
@@ -85,6 +87,7 @@ public class ResourceGroupMembershipConsumerService {
                     log.debug("Skipping processing of already cached delete group membership message: {}",kafkaKey);
                     return;
                 }
+
                 if (resourceGroupMembership != null && resourceGroupMembership.equals(fromCache.get())){
                     // New kafka message, but unchanged resourceGroupMembership from last time
                     log.debug("Skipping processing of group membership, as it is unchanged from before: userID: {} groupID {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef() );
