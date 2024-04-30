@@ -33,3 +33,10 @@ services:
       JVM_OPTS: "-Xms16M -Xmx48M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication"
     depends_on:
       - "broker"
+
+  devrestapi:
+    image: dotronglong/faker:stable
+    ports:
+      - 3030:3030
+    volumes:
+      - ./mocks:/app/mocks
