@@ -1,6 +1,6 @@
 package no.fintlabs.kafka;
 
-import no.fintlabs.AzureClient;
+import no.fintlabs.EntraClient;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -23,7 +23,7 @@ import java.util.Optional;
 class ResourceGroupMembershipConsumerServiceTest {
 
     @Mock
-    private AzureClient azureClient;
+    private EntraClient entraClient;
     @Mock
     private FintCache<String, Optional> resourceGroupMembershipCache;
 
@@ -68,8 +68,8 @@ class ResourceGroupMembershipConsumerServiceTest {
         String rGroupKey = "exampleID";
         resourceGroupMembershipConsumerService.processEntity(ResourceGroupMembership.builder().azureGroupRef("123").azureUserRef("234").build(), rGroupKey);
 
-        verify(azureClient, times(1)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        verify(azureClient, times(0)).deleteGroupMembership(null, rGroupKey);
+        verify(entraClient, times(1)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(entraClient, times(0)).deleteGroupMembership(null, rGroupKey);
     }
 
     @Test
@@ -80,8 +80,8 @@ class ResourceGroupMembershipConsumerServiceTest {
 
         verify(resourceGroupMembershipCache, times(1)).put(rGroupKey, Optional.empty());
 
-        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        verify(azureClient, times(1)).deleteGroupMembership(null, rGroupKey);
+        verify(entraClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(entraClient, times(1)).deleteGroupMembership(null, rGroupKey);
     }
 
     @Test
@@ -89,16 +89,16 @@ class ResourceGroupMembershipConsumerServiceTest {
 
         resourceGroupMembershipConsumerService.processEntity(null, null);
 
-        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        verify(azureClient, times(0)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(entraClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(entraClient, times(0)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
     }
 
     @Test
     void processEntityDeleteGroupmemberhip() {
         resourceGroupMembershipConsumerService.processEntity(null, "exampleID");
 
-        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        verify(azureClient, times(1)).deleteGroupMembership(null, "exampleID");
+        verify(entraClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(entraClient, times(1)).deleteGroupMembership(null, "exampleID");
     }
 
     @Test

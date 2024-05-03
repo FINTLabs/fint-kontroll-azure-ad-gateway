@@ -12,13 +12,13 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class AzureGroupProducerService {
 
-    private final EntityProducer<AzureGroup> entityProducer;
+    private final EntityProducer<EntraGroup> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
     public AzureGroupProducerService (
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {
 
-        entityProducer = entityProducerFactory.createProducer(AzureGroup.class);
+        entityProducer = entityProducerFactory.createProducer(EntraGroup.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
                 .resource("azuread-resource-group")
@@ -26,13 +26,13 @@ public class AzureGroupProducerService {
         entityTopicService.ensureTopic(entityTopicNameParameters,0);
     }
 
-    public void publish(AzureGroup azureGroup) {
-        if (azureGroup.resourceGroupID != null) {
+    public void publish(EntraGroup entraGroup) {
+        if (entraGroup.resourceGroupID != null) {
             entityProducer.send(
-                    EntityProducerRecord.<AzureGroup>builder()
+                    EntityProducerRecord.<EntraGroup>builder()
                             .topicNameParameters(entityTopicNameParameters)
-                            .key(azureGroup.getId())
-                            .value(azureGroup)
+                            .key(entraGroup.getId())
+                            .value(entraGroup)
                             .build()
             );
         }

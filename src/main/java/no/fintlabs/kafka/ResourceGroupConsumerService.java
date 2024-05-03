@@ -1,9 +1,9 @@
 package no.fintlabs.kafka;
 
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.AzureClient;
+import no.fintlabs.EntraClient;
 import no.fintlabs.ConfigGroup;
-import no.fintlabs.azure.AzureGroup;
+import no.fintlabs.azure.EntraGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
@@ -19,19 +19,19 @@ import java.util.*;
 @Slf4j
 
 public class ResourceGroupConsumerService {
-    private final AzureClient azureClient;
+    private final EntraClient entraClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final ConfigGroup configGroup;
     private final FintCache<String, ResourceGroup> resourceGroupCache;
-    private final FintCache<String, AzureGroup> azureGroupCache;
+    private final FintCache<String, EntraGroup> azureGroupCache;
     private final Sinks.Many<Tuple2<String, ResourceGroup>> resourceGroupSink;
     public ResourceGroupConsumerService(
-            AzureClient azureClient,
+            EntraClient entraClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
             ConfigGroup configGroup,
             FintCache<String, ResourceGroup> resourceGroupCache,
-            FintCache<String, AzureGroup> azureGroupCache) {
-        this.azureClient = azureClient;
+            FintCache<String, EntraGroup> azureGroupCache) {
+        this.entraClient = entraClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.configGroup = configGroup;
         this.resourceGroupCache = resourceGroupCache;
@@ -67,15 +67,15 @@ public class ResourceGroupConsumerService {
         log.debug("Starting updateAzure function {}.", randomUUID);
         //azureService.handleChangedResource
         // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
-        if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
+        if (resourceGroup.getResourceName() != null && !entraClient.doesGroupExist(resourceGroup.getId())) {
             log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
-            azureClient.addGroupToAzure(resourceGroup);
+            entraClient.addGroupToAzure(resourceGroup);
         } else if (resourceGroup.getResourceName() == null) {
             log.debug("Delete group from Azure, {}",resourceGroup.getResourceName());
-            azureClient.deleteGroup(kafkaKey);
+            entraClient.deleteGroup(kafkaKey);
         } else {
             if (configGroup.getAllowgroupupdate()) {
-                azureClient.updateGroup(resourceGroup);
+                entraClient.updateGroup(resourceGroup);
                 log.info("Updated group with groupId {}",resourceGroup.getIdentityProviderGroupObjectId());
             }
             else

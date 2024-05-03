@@ -1,6 +1,6 @@
 package no.fintlabs;
 import lombok.AllArgsConstructor;
-import no.fintlabs.azure.AzureGroup;
+import no.fintlabs.azure.EntraGroup;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.cache.FintCacheManager;
@@ -34,8 +34,8 @@ public class CacheConfiguration {
     }
 
     @Bean
-    FintCache<String, AzureGroup> azureGroupCache() {
-        return createResourceCache(AzureGroup.class);
+    FintCache<String, EntraGroup> azureGroupCache() {
+        return createResourceCache(EntraGroup.class);
         /*List<AzureGroup> allGroups = azureClient.getAllGroups();
 
         FintCache<String, AzureGroup> retCache = createResourceCache(AzureGroup.class);

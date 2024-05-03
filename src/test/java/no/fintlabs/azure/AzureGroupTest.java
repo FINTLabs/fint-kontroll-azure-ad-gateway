@@ -30,7 +30,7 @@ class AzureGroupTest {
         testgroup.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive("kabal"));
 
         assertThrows(NumberFormatException.class, () -> {
-            AzureGroup newTestgroup = new AzureGroup(testgroup, configGroup);
+            EntraGroup newTestgroup = new EntraGroup(testgroup, configGroup);
         });
     }
     @Test
@@ -42,7 +42,7 @@ class AzureGroupTest {
 
         testgroup.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(number));
 
-        AzureGroup newTestGroup = new AzureGroup(testgroup, configGroup);
+        EntraGroup newTestGroup = new EntraGroup(testgroup, configGroup);
 
         assertThat(newTestGroup.getResourceGroupID() == Long.valueOf(number));
     }
