@@ -13,7 +13,7 @@ import no.fintlabs.ConfigGroup;
 @Setter
 @Getter
 @Slf4j
-public class AzureGroup {
+public class EntraGroup {
 
     protected String id;
     protected String displayName;
@@ -21,7 +21,7 @@ public class AzureGroup {
     protected Long resourceGroupID;
 
     protected ExtensionCollectionPage extensions;
-    public AzureGroup(Group group, ConfigGroup configGroup) {
+    public EntraGroup(Group group, ConfigGroup configGroup) {
 
         this.id = group.id;
         this.displayName = group.displayName;

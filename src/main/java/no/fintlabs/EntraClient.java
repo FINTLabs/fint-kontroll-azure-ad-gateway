@@ -6,8 +6,6 @@ import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
-import com.microsoft.graph.options.HeaderOption;
-import com.microsoft.graph.options.Option;
 import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -24,7 +22,7 @@ import java.util.*;
 @Component
 @Log4j2
 @RequiredArgsConstructor
-public class AzureClient {
+public class EntraClient {
     protected final Config config;
 
     protected final ConfigGroup configGroup;
@@ -36,9 +34,9 @@ public class AzureClient {
 
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final FintCache<String, ResourceGroup> resourceGroupCache;
-    private final FintCache<String, AzureGroup> azureGroupCache;
+    private final FintCache<String, EntraGroup> azureGroupCache;
 
-    private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
+    private void pageThrough(EntraGroup entraGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
         int members = 0;
         log.debug("Fetching Azure Groups");
         DirectoryObjectCollectionWithReferencesPage page = inPage;
@@ -46,8 +44,9 @@ public class AzureClient {
             members++;
             for (DirectoryObject member : page.getCurrentPage()) {
                 // New member detected
-                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
-                azureGroup.getMembers().add(member.id);
+                azureGroupMembershipProducerService.publishAddedMembership(new EntraGroupMembership(entraGroup.getId(), member));
+                //TODO: Create a membershipcache
+                entraGroup.getMembers().add(member.id);
             }
             if (page.getNextPage() == null) {
                 break;
@@ -67,9 +66,9 @@ public class AzureClient {
             for (Group group : page.getCurrentPage()) {
                 groups++;
 
-                AzureGroup newGroup;
+                EntraGroup newGroup;
                 try {
-                    newGroup = new AzureGroup(group, configGroup);
+                    newGroup = new EntraGroup(group, configGroup);
                 } catch (NumberFormatException e) {
                     log.warn("Problems converting resourceID to LONG! {}. Skipping creation of group", e);
                     continue;
@@ -100,16 +99,16 @@ public class AzureClient {
     }
 
 
-    private List<AzureGroup> pageThroughGetGroups(GroupCollectionPage inPage) {
+    private List<EntraGroup> pageThroughGetGroups(GroupCollectionPage inPage) {
         int groups = 0;
         GroupCollectionPage page = inPage;
-        List<AzureGroup> retGroupList = new ArrayList<AzureGroup>();
+        List<EntraGroup> retGroupList = new ArrayList<EntraGroup>();
         do {
             for (Group group : page.getCurrentPage()) {
 
-                AzureGroup newGroup;
+                EntraGroup newGroup;
                 try {
-                    newGroup = new AzureGroup(group, configGroup);
+                    newGroup = new EntraGroup(group, configGroup);
                 } catch (NumberFormatException e) {
                     log.warn("Problems converting resourceID to LONG! {}. Skipping creation of group", e);
                     continue;
@@ -193,7 +192,7 @@ public class AzureClient {
 
     }
 
-    public List<AzureGroup> getAllGroups() {
+    public List<EntraGroup> getAllGroups() {
         return this.pageThroughGetGroups(
                 graphService.groups()
                         .buildRequest()
@@ -313,7 +312,7 @@ public class AzureClient {
                         .buildRequest()
                         .post(directoryObject);
                 log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                azureGroupMembershipProducerService.publishAddedMembership(new EntraGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
                 log.debug("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
             } catch (GraphServiceException e) {
                 // Handle the HTTP response exception here

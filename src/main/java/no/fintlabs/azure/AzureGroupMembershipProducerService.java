@@ -13,14 +13,14 @@ import org.springframework.stereotype.Service;
 
 public class AzureGroupMembershipProducerService
 {
-    private final EntityProducer<AzureGroupMembership> entityProducer;
+    private final EntityProducer<EntraGroupMembership> entityProducer;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
     public AzureGroupMembershipProducerService(
             EntityTopicService entityTopicService,
             EntityProducerFactory entityProducerFactory) {
 
-        entityProducer = entityProducerFactory.createProducer(AzureGroupMembership.class);
+        entityProducer = entityProducerFactory.createProducer(EntraGroupMembership.class);
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
                 .resource("azuread-resource-group-membership")
@@ -29,16 +29,16 @@ public class AzureGroupMembershipProducerService
     }
     public void publishDeletedMembership(String membershipKey) {
         entityProducer.send(
-                EntityProducerRecord.<AzureGroupMembership>builder()
+                EntityProducerRecord.<EntraGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
                         .key(membershipKey)
                         .value(null)
                         .build()
         );
     }
-    public void publishAddedMembership(AzureGroupMembership object) {
+    public void publishAddedMembership(EntraGroupMembership object) {
         entityProducer.send(
-                EntityProducerRecord.<AzureGroupMembership>builder()
+                EntityProducerRecord.<EntraGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
                         .key(object.id)
                         .value(object)

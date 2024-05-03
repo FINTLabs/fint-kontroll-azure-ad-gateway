@@ -3,7 +3,7 @@ package no.fintlabs.kafka;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.AzureClient;
+import no.fintlabs.EntraClient;
 import no.fintlabs.Config;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
@@ -22,18 +22,18 @@ import java.util.UUID;
 
 public class ResourceGroupMembershipConsumerService {
     @Autowired
-    private final AzureClient azureClient;
+    private final EntraClient entraClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
     private final FintCache<String, Optional> resourceGroupMembershipCache;
     private final Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
     public ResourceGroupMembershipConsumerService(
-            AzureClient azureClient,
+            EntraClient entraClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
             Config config,
             FintCache<String, Optional> resourceGroupMembershipCache) {
-        this.azureClient = azureClient;
+        this.entraClient = entraClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.config = config;
         this.resourceGroupMembershipCache = resourceGroupMembershipCache;
@@ -60,11 +60,11 @@ public class ResourceGroupMembershipConsumerService {
         log.debug("Starting updateAzureWithMembership function {}.", randomUUID);
 
         if (resourceGroupMembership.isEmpty()) {
-            azureClient.deleteGroupMembership(null, kafkakKey);
+            entraClient.deleteGroupMembership(null, kafkakKey);
         }
         else
         {
-            azureClient.addGroupMembership(resourceGroupMembership.get(), kafkakKey);
+            entraClient.addGroupMembership(resourceGroupMembership.get(), kafkakKey);
         }
         log.debug("Stopping updateAzureWithMembership function {}.", randomUUID);
     }

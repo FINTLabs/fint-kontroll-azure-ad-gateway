@@ -4,7 +4,6 @@ import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.core.ClientException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
-import com.microsoft.graph.options.Option;
 import com.microsoft.graph.requests.*;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
 import no.fintlabs.kafka.ResourceGroup;
@@ -23,10 +22,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.LinkedList;
 
  @ExtendWith(MockitoExtension.class)
-class AzureClientTest {
+class EntraClientTest {
     @Mock
     private GraphServiceClient<Request> graphServiceClient;
     @Mock
@@ -45,7 +43,7 @@ class AzureClientTest {
     private Config config;
 
     @InjectMocks
-    private AzureClient azureClient;
+    private EntraClient entraClient;
 
     private List<Group> getTestGrouplist(int numberOfGroups) {
         ConfigGroup configGroup = new ConfigGroup();
@@ -74,7 +72,7 @@ class AzureClientTest {
 
         when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
 
-        boolean checkvar = azureClient.doesGroupExist(resourceGroupID);
+        boolean checkvar = entraClient.doesGroupExist(resourceGroupID);
 
         assertTrue(checkvar);
     }
@@ -92,7 +90,7 @@ class AzureClientTest {
         when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
 
 
-        assertFalse(azureClient.doesGroupExist(resourceGroupID));
+        assertFalse(entraClient.doesGroupExist(resourceGroupID));
 
     }
 
@@ -112,7 +110,7 @@ class AzureClientTest {
                 .resourceLimit("1000")
                 .build();
 
-                azureClient.addGroupToAzure(resourceGroup);
+                entraClient.addGroupToAzure(resourceGroup);
 
         verify(groupCollectionRequest, times(1)).post(any(Group.class));
     }
@@ -128,7 +126,7 @@ class AzureClientTest {
         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
         when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
 
-        azureClient.deleteGroup(delGroupID);
+        entraClient.deleteGroup(delGroupID);
 
         verify(groupRequest, times(1)).delete();
     }
@@ -146,7 +144,7 @@ class AzureClientTest {
                  .resourceType("testresourcetype")
                  .resourceLimit("1000")
                  .build();
-         azureClient.updateGroup(resourceGroup);
+         entraClient.updateGroup(resourceGroup);
 
          verify(groupRequest, times(1)).patch(any(Group.class));
      }
@@ -168,7 +166,7 @@ class AzureClientTest {
                 .resourceLimit("1000")
                 .build();
 
-        azureClient.updateGroup(resourceGroup);
+        entraClient.updateGroup(resourceGroup);
 
         verify(groupRequest, times(1)).patch(any(Group.class));
         verify(groupRequest, times(0)).post(any());
@@ -204,7 +202,7 @@ class AzureClientTest {
                 .build();
 
         assertThrows(   NullPointerException.class,
-                        () -> azureClient.addGroupMembership(resourceGroupMembership, kafkaKey)
+                        () -> entraClient.addGroupMembership(resourceGroupMembership, kafkaKey)
         );
     }
 
@@ -224,7 +222,7 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
         verify(directoryObjectCollectionReferenceRequest, times(1)).post(any(DirectoryObject.class));
 
@@ -335,7 +333,7 @@ class AzureClientTest {
 
         String kafkaKey = "exampleGroupID_exampleUserID";
 
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
 
         verify(directoryObjectReferenceRequest, times(1) ).delete();
     }
@@ -365,11 +363,11 @@ class AzureClientTest {
                 .build();
 
         String kafkaKey = "example";
-        azureClient.deleteGroupMembership(null, kafkaKey);
+        entraClient.deleteGroupMembership(null, kafkaKey);
         verify(directoryObjectReferenceRequest, times(0)).delete();
 
         kafkaKey = "exampleGroupID_exampleUserID";
-        azureClient.deleteGroupMembership(null, kafkaKey);
+        entraClient.deleteGroupMembership(null, kafkaKey);
         verify(directoryObjectReferenceRequest, times(1)).delete();
     }
 
@@ -383,7 +381,7 @@ class AzureClientTest {
         when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
 
         String membershipkey = "someid_1234";
-        azureClient.deleteGroupMembership(null, membershipkey);
+        entraClient.deleteGroupMembership(null, membershipkey);
 
         verify(directoryObjectReferenceRequest, times(1)).delete();
     }
@@ -404,15 +402,15 @@ class AzureClientTest {
                 .build();
 
         String kafkaKey = "example_with_multiple_underscores";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
         verify(directoryObjectReferenceRequest, times(0)).delete();
 
         kafkaKey = "exampleGroupID_exampleUserID";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
         verify(directoryObjectReferenceRequest, times(1)).delete();
 
         kafkaKey = "exampleGroupID_exampleUserID2";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
         verify(directoryObjectReferenceRequest, times(2)).delete();
     }
 
@@ -435,7 +433,7 @@ class AzureClientTest {
         GroupCollectionPage mockCollPage2= Mockito.mock(GroupCollectionPage.class);
         when(mockGroupCollectionRequest2.get()).thenReturn(mockCollPage2);
 
-        azureClient.pullAllGroups();
+        entraClient.pullAllGroups();
 
         verify(groupCollectionPage, times(2)).getNextPage();
         verify(mockCollPage2, times(1)).getNextPage();
@@ -453,7 +451,7 @@ class AzureClientTest {
 
         //assertDoesNotThrow( );
         assertDoesNotThrow(()-> {
-            azureClient.pullAllGroups();
+            entraClient.pullAllGroups();
         });
     }
 
@@ -476,7 +474,7 @@ class AzureClientTest {
         when(mockGroupCollectionRequestBuilder2.buildRequest()).thenReturn(mockGroupCollectionRequest2);
         when(mockGroupCollectionRequest2.get()).thenReturn(mockCollPage2);*/
 
-        azureClient.pullAllGroups();
+        entraClient.pullAllGroups();
 
 /*        when(groupCollectionRequest.get()).thenAnswer();
 

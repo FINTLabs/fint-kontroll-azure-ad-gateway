@@ -1,6 +1,6 @@
 package no.fintlabs.kafka;
 
-import no.fintlabs.AzureClient;
+import no.fintlabs.EntraClient;
 import no.fintlabs.ConfigGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
 //@RunWith(SpringRunner.class)
 public class ResourceGroupConsumerServiceTest {
     @Mock
-    private AzureClient azureClient;
+    private EntraClient entraClient;
 
     @Mock
     private EntityConsumerFactoryService entityConsumerFactoryService;
@@ -66,14 +66,14 @@ public class ResourceGroupConsumerServiceTest {
 
         String kafkaKeyID = "TestKafkaKeyID";
 
-        when(azureClient.doesGroupExist(anyString())).thenReturn(false);
+        when(entraClient.doesGroupExist(anyString())).thenReturn(false);
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
-        verify(azureClient, times(1)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
-        verify(azureClient, times(0)).deleteGroup(any());
+        verify(entraClient, times(1)).addGroupToAzure(any());
+        verify(entraClient, times(0)).updateGroup(any());
+        verify(entraClient, times(0)).deleteGroup(any());
         verify(resourceGroupCache, times(1)).put(anyString(), any());
     }
 
@@ -81,14 +81,14 @@ public class ResourceGroupConsumerServiceTest {
     void processEntityUpdatedGroupGetsCallsAzureCreate() {
         // Setup updated group
         String kafkaKeyID = "TestKafkaKeyID";
-        when(azureClient.doesGroupExist(anyString())).thenReturn(true);
+        when(entraClient.doesGroupExist(anyString())).thenReturn(true);
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
-        verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
-        verify(azureClient, times(0)).deleteGroup(any());
+        verify(entraClient, times(0)).addGroupToAzure(any());
+        verify(entraClient, times(0)).updateGroup(any());
+        verify(entraClient, times(0)).deleteGroup(any());
     }
 
 }
