@@ -317,11 +317,22 @@ public class EntraClient {
             } catch (GraphServiceException e) {
                 // Handle the HTTP response exception here
                 if (e.getResponseCode() == 400) {
+                    if(e.getError().error.message.contains("object references already exist")) {
+                        azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                        log.info("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                        return;
+                    }
+                    if(e.getError().error.code.contains("Request_ResourceNotFound")){
+                        log.warn("AzureGroupRef is not correct: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                        return;
+                    }
+
                     // Handle the 400 Bad Request error
-                    log.warn("User {} already exists in group {} or azureGroupRef is not correct: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                    log.warn("Bad request: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                    log.info(e.getError().error.message);
                 } else {
                     // Handle other HTTP errors
-                    log.error("HTTP Error while updating group {}: " + e.getResponseCode() + " \r" + e.getResponseMessage(), resourceGroupMembership.getAzureGroupRef());
+                    log.error("HTTP Error while updating group {}: " + e.getError().error.message + " \r", resourceGroupMembership.getAzureGroupRef());
                 }
             }
         }
@@ -352,7 +363,7 @@ public class EntraClient {
             log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
         } catch (GraphServiceException e) {
             log.error("HTTP Error while trying to remove user {} from group {}. Exception: " + e.getResponseCode() + " \r" +
-                      e.getResponseMessage(), user, group);
+                    e.getError().error.message, user, group);
         } catch (Exception e) {
             log.error("Failed to delete group membership from Graph", e);
         }
