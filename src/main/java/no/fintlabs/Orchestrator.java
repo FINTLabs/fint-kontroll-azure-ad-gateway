@@ -46,14 +46,14 @@ public class Orchestrator {
             resourceGroupMembershipDownloader.GetFullMembershipFromKafka();
             resourceGroupMembershipDownloader.resourceGroupMembershipsFullCache.getAll();
             entraGroupList = entraClient.getAllGroups();
-            for (EntraGroup entraGroupMembership : entraGroupList) {
+            for (EntraGroup entraGroup : entraGroupList) {
                 // Maybe change to a members cache and not a for each member of group
-                for (String member : entraGroupMembership.getMembers())
+                for (String member : entraGroup.getMembers())
                 {
-                    if (resourceGroupMembershipDownloader.resourceGroupMembershipsFullCache.containsKey(entraGroupMembership.getId()))
+                    if (resourceGroupMembershipDownloader.resourceGroupMembershipsFullCache.containsKey(member))
                     {
                         //TODO: Compare Cache from Kafka with Entra Cache.
-                         resourceGroupMembershipDownloader.resourceGroupMembershipsFullCache.get(entraGroupMembership.getId()).
+                         //resourceGroupMembershipDownloader.resourceGroupMembershipsFullCache.get(entraGroupMembership.getId()).
                     }
 
 //                keyAndResourceGroupMembership -> updateAzureWithMembership(keyAndResourceGroupMembership.getT1(), keyAndResourceGroupMembership.getT2())

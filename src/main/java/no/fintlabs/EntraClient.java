@@ -318,7 +318,7 @@ public class EntraClient {
                 // Handle the HTTP response exception here
                 if (e.getResponseCode() == 400) {
                     if(e.getError().error.message.contains("object references already exist")) {
-                        azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                        azureGroupMembershipProducerService.publishAddedMembership(new EntraGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
                         log.info("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }
