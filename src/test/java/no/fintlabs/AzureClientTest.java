@@ -2,6 +2,9 @@
 
 import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.core.ClientException;
+import com.microsoft.graph.http.GraphError;
+import com.microsoft.graph.http.GraphErrorResponse;
+import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.options.Option;
@@ -19,11 +22,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.LinkedList;
+import java.util.*;
 
  @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
@@ -485,4 +487,55 @@ class AzureClientTest {
         /*verify(groupCollectionPage, times(2)).getNextPage();
         verify(mockCollPage2, times(1)).getNextPage();*/
     }
+
+    @Test
+     public void republishAlreadyExistingMembershipToKafka()
+         {
+             DirectoryObject directoryObject = new DirectoryObject();
+             directoryObject.id = "exampleGroupRefNumberID";
+
+
+             GraphErrorResponse errorResponse = new GraphErrorResponse();
+             errorResponse.error = new GraphError();
+             errorResponse.error.message = "this is a error message 123";
+
+             GraphServiceException graphServiceException = GraphServiceException.createFromResponse(
+                     "ExampleMSGraphURL",
+                     "POST",
+                     Arrays.asList("exampleRequestHeaders"),
+                     "exampleRequestBody",
+                     Map.of("exampleHeader", "exampleHeaderValue"),
+                     "exampleResponseMessage",
+                     400,
+                     errorResponse,
+                     true
+             );
+
+             // Set up mocks
+             when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+             when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
+             when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
+             when(directoryObjectCollectionWithReferencesRequestBuilder.references().buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
+             when(directoryObjectCollectionReferenceRequest.post(any(DirectoryObject.class))).thenReturn(directoryObject);
+
+             String kafkaKey = "somekey";
+             ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
+                     .id("testid")
+                     .azureGroupRef("exampleGroupRef")
+                     .azureUserRef("someUserRef")
+                     .roleRef("exampleRoleRef")
+                     .build();
+
+             // Call the method under test
+             try {
+                 azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+             } catch (GraphServiceException e) {
+                 // Handle exception as needed or rethrow it
+                 System.out.println("Caught GraphServiceException: " + e.getMessage());
+             }
+
+             // Verify that the post method was called once and threw the exception
+             verify(directoryObjectCollectionReferenceRequest, times(1)).post(any(DirectoryObject.class));
+
+         }
 }
