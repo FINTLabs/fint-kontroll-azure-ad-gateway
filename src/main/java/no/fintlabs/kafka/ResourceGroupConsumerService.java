@@ -62,7 +62,7 @@ public class ResourceGroupConsumerService {
         );
     }
 
-    private synchronized void updateAzure(String kafkaKey, ResourceGroup resourceGroup) {
+    private void updateAzure(String kafkaKey, ResourceGroup resourceGroup) {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzure function {}.", randomUUID);
         //azureService.handleChangedResource
@@ -87,7 +87,6 @@ public class ResourceGroupConsumerService {
     }
 
     public void processEntity(ResourceGroup resourceGroup, String kafkaKey) {
-        synchronized (resourceGroupCache) {
             // Check resourceGroupCache if object is known from before
             if (resourceGroupCache.containsKey(kafkaKey)) {
                 ResourceGroup fromCache = resourceGroupCache.get(kafkaKey);
@@ -96,7 +95,7 @@ public class ResourceGroupConsumerService {
                     log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
                     return;
                 }
-            }
+
             resourceGroupCache.put(kafkaKey, resourceGroup);
             resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, resourceGroup));
         }
