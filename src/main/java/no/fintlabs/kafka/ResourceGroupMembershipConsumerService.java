@@ -55,7 +55,7 @@ public class ResourceGroupMembershipConsumerService {
         );
     }
 
-    private synchronized void updateAzureWithMembership(String kafkakKey, Optional<ResourceGroupMembership> resourceGroupMembership) {
+    private void updateAzureWithMembership(String kafkakKey, Optional<ResourceGroupMembership> resourceGroupMembership) {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzureWithMembership function {}.", randomUUID);
 
@@ -77,7 +77,7 @@ public class ResourceGroupMembershipConsumerService {
             return;
         }
 
-        synchronized (resourceGroupMembershipCache) {
+
             // Check resourceGroupCache if object is known from before
             log.debug("Processing entity with key: {}", kafkaKey);
 
@@ -102,7 +102,7 @@ public class ResourceGroupMembershipConsumerService {
             }
             resourceGroupMembershipCache.put(kafkaKey, Optional.ofNullable(resourceGroupMembership));
             resourceGroupMembershipSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroupMembership)));
-        }
+
 
     }
 }
