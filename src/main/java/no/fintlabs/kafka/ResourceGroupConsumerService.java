@@ -90,14 +90,13 @@ public class ResourceGroupConsumerService {
             // Check resourceGroupCache if object is known from before
             if (resourceGroupCache.containsKey(kafkaKey)) {
                 ResourceGroup fromCache = resourceGroupCache.get(kafkaKey);
-                if (resourceGroup.equals(fromCache)){
+                if (resourceGroup.equals(fromCache)) {
                     // New kafka message, but unchanged resourceGroup from last time
                     log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
                     return;
                 }
-
+            }
             resourceGroupCache.put(kafkaKey, resourceGroup);
             resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, resourceGroup));
-        }
     }
  }
