@@ -79,15 +79,15 @@ public class ResourceGroupConsumerServiceTest {
 
     @Test
     void processEntityUpdatedGroupGetsCallsAzureCreate() {
-        // Setup updated group
         String kafkaKeyID = "TestKafkaKeyID";
+
         when(azureClient.doesGroupExist(anyString())).thenReturn(true);
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
         verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
+        verify(azureClient, times(1)).updateGroup(any());
         verify(azureClient, times(0)).deleteGroup(any());
     }
 

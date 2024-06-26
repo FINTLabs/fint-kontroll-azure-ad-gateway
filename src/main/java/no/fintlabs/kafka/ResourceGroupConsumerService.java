@@ -9,7 +9,9 @@ import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
@@ -25,6 +27,7 @@ public class ResourceGroupConsumerService {
     private final FintCache<String, ResourceGroup> resourceGroupCache;
     private final FintCache<String, AzureGroup> azureGroupCache;
     private final Sinks.Many<Tuple2<String, ResourceGroup>> resourceGroupSink;
+
     public ResourceGroupConsumerService(
             AzureClient azureClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
@@ -38,9 +41,12 @@ public class ResourceGroupConsumerService {
         this.azureGroupCache = azureGroupCache;
 
         resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
-        resourceGroupSink.asFlux().subscribe(
-                keyAndResourceGroup -> updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
-        );
+        resourceGroupSink.asFlux()
+                //.parallel(20) // Parallelism with up to 20 threads
+                //.runOn(Schedulers.parallel())
+                .subscribe(keyAndResourceGroup ->
+                        updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
+                );
     }
 
     @PostConstruct
@@ -55,7 +61,7 @@ public class ResourceGroupConsumerService {
                         consumerRecord.value(), consumerRecord.key()
                 )
         ).createContainer(
-             EntityTopicNameParameters
+                EntityTopicNameParameters
                         .builder()
                         .resource("resource-group")
                         .build()
@@ -71,26 +77,27 @@ public class ResourceGroupConsumerService {
             log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
             azureClient.addGroupToAzure(resourceGroup);
         } else if (resourceGroup.getResourceName() == null) {
-            log.debug("Delete group from Azure, {}",resourceGroup.getResourceName());
+            log.debug("Delete group from Azure, {}", resourceGroup.getResourceName());
             azureClient.deleteGroup(kafkaKey);
         } else {
             if (configGroup.getAllowgroupupdate()) {
                 azureClient.updateGroup(resourceGroup);
-                log.info("Updated group with groupId {}",resourceGroup.getIdentityProviderGroupObjectId());
+                log.info("Updated group with groupId {}", resourceGroup.getIdentityProviderGroupObjectId());
             }
             else
             {
-                log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false",resourceGroup.getIdentityProviderGroupObjectId() );
+                log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false", resourceGroup.getIdentityProviderGroupObjectId());
             }
         }
         log.debug("Stopping updateAzure function {}.", randomUUID);
     }
 
     public void processEntity(ResourceGroup resourceGroup, String kafkaKey) {
+        synchronized (resourceGroupCache) {
             // Check resourceGroupCache if object is known from before
             if (resourceGroupCache.containsKey(kafkaKey)) {
                 ResourceGroup fromCache = resourceGroupCache.get(kafkaKey);
-                if (resourceGroup.equals(fromCache)) {
+                if (resourceGroup.equals(fromCache)){
                     // New kafka message, but unchanged resourceGroup from last time
                     log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
                     return;
@@ -98,5 +105,6 @@ public class ResourceGroupConsumerService {
             }
             resourceGroupCache.put(kafkaKey, resourceGroup);
             resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, resourceGroup));
+        }
     }
- }
+}
