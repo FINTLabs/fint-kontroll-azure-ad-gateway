@@ -10,6 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.apache.commons.lang3.RandomStringUtils;
+import reactor.core.publisher.Sinks;
+import reactor.util.function.Tuple2;
 
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
@@ -29,6 +31,9 @@ public class ResourceGroupConsumerServiceTest {
 
     @Mock
     private FintCache<String, ResourceGroup> resourceGroupCache;
+
+    @Mock
+    private Sinks.Many<Tuple2<String, ResourceGroup>> resourceGroupSink;
 
     @InjectMocks
     private ResourceGroupConsumerService resourceGroupConsumerService;
@@ -62,7 +67,32 @@ public class ResourceGroupConsumerServiceTest {
     }
 
     @Test
-    void processEntityNewGroupGetsCallsAzureCreate() {
+    void processEntityGroupIsNewAndCacheIsUpdated() {
+        String kafkaKeyID = "TestKafkaKeyID";
+
+        ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
+        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+
+        verify(resourceGroupCache, times(1)).put(anyString(),any());
+        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+    }
+    @Test
+    void processEntityEntryAlreadyInCacheGeneratesNothing() {
+        String kafkaKeyID = "TestKafkaKeyID";
+
+        ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
+
+        when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
+        when(resourceGroupCache.get(anyString())).thenReturn(resourceGroup);
+
+        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+
+        verify(resourceGroupCache, times(0)).put(anyString(),any());
+        verify(resourceGroupSink, times(0)).tryEmitNext(any());
+    }
+
+    @Test
+    void updateAzure_NewGroupCallsAzureCreate() {
 
         String kafkaKeyID = "TestKafkaKeyID";
 
@@ -76,9 +106,8 @@ public class ResourceGroupConsumerServiceTest {
         verify(azureClient, times(0)).deleteGroup(any());
         verify(resourceGroupCache, times(1)).put(anyString(), any());
     }
-
     @Test
-    void processEntityUpdatedGroupGetsCallsAzureCreate() {
+    void updateAzure_UpdatedGroupCallsAzureUpdate() {
         String kafkaKeyID = "TestKafkaKeyID";
 
         when(azureClient.doesGroupExist(anyString())).thenReturn(true);
