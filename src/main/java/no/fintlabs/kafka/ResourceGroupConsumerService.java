@@ -9,6 +9,7 @@ import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
@@ -36,8 +37,8 @@ public class ResourceGroupConsumerService {
 
         resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
         resourceGroupSink.asFlux()
-                //.parallel(20) // Parallelism with up to 20 threads
-                //.runOn(Schedulers.parallel())
+                .parallel(20) // Parallelism with up to 20 threads
+                .runOn(Schedulers.parallel())
                 .subscribe(keyAndResourceGroup ->
                         updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
                 );

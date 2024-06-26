@@ -29,7 +29,7 @@ public class ResourceGroupMembershipConsumerService {
     private final Config config;
     private final FintCache<String, Optional> resourceGroupMembershipCache;
     //private final FintCache<UUID, Optional> resourceGroupMembersCache;
-    private final Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
+    private Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
     public ResourceGroupMembershipConsumerService(
             AzureClient azureClient,
@@ -52,6 +52,10 @@ public class ResourceGroupMembershipConsumerService {
                 );
     }
 
+    protected void setResourceGroupMembershipSink(Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink) {
+        this.resourceGroupMembershipSink = resourceGroupMembershipSink;
+    }
+
     @PostConstruct
     public void init() {
         //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails [FKS-214]
@@ -65,7 +69,7 @@ public class ResourceGroupMembershipConsumerService {
 
     }
 
-    private void updateAzureWithMembership(String kafkakKey, Optional<ResourceGroupMembership> resourceGroupMembership) {
+    void updateAzureWithMembership(String kafkakKey, Optional<ResourceGroupMembership> resourceGroupMembership) {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzureWithMembership function {}.", randomUUID);
 
