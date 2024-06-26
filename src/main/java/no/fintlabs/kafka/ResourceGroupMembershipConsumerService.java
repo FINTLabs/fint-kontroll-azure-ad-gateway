@@ -10,9 +10,7 @@ import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import reactor.core.scheduler.Schedulers;
 import reactor.core.publisher.Sinks;
-import reactor.core.publisher.Flux;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
@@ -28,15 +26,13 @@ public class ResourceGroupMembershipConsumerService {
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
     private final FintCache<String, Optional> resourceGroupMembershipCache;
-    //private final FintCache<UUID, Optional> resourceGroupMembersCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
     public ResourceGroupMembershipConsumerService(
             AzureClient azureClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
             Config config,
-            FintCache<String, Optional> resourceGroupMembershipCache,
-            FintCache<UUID, Optional> resourceGroupMembersCache) {
+            FintCache<String, Optional> resourceGroupMembershipCache) {
         this.azureClient = azureClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.config = config;
