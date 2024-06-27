@@ -331,7 +331,12 @@ public class AzureClient {
                     // Handle the 400 Bad Request error
                     log.warn("Bad request: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                     log.info(e.getError().error.message);
-                } else {
+                }
+                if (e.getResponseCode() == 429) {
+                    log.warn("Throttling limit. Error: {}", e.getError().error.message);
+                }
+                else {
+
                     // Handle other HTTP errors
                     log.error("HTTP Error while updating group {}: " + e.getError().error.message + " \r", resourceGroupMembership.getAzureGroupRef());
                 }

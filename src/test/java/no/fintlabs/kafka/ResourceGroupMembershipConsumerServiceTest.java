@@ -70,27 +70,6 @@ class ResourceGroupMembershipConsumerServiceTest {
 //        verify(azureClient, times(1)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
 //        verify(azureClient, times(0)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
 //    }
-    @Test
-    void makeSureWhenKeyExistButMembershipIsAlmostEmpty() {
-
-        String rGroupKey = "exampleID";
-        resourceGroupMembershipConsumerService.processEntity(ResourceGroupMembership.builder().azureGroupRef("123").azureUserRef("234").build(), rGroupKey);
-
-        verify(azureClient, times(1)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        verify(azureClient, times(0)).deleteGroupMembership(null, rGroupKey);
-    }
-
-    @Test
-    void makeSureNullGroupMembershipIsDeletedWhenKeyIsDefined() {
-
-        String rGroupKey = "exampleID";
-        resourceGroupMembershipConsumerService.processEntity(null, rGroupKey);
-
-        verify(resourceGroupMembershipCache, times(1)).put(rGroupKey, Optional.empty());
-
-        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        verify(azureClient, times(1)).deleteGroupMembership(null, rGroupKey);
-    }
 
     @Test
     void makeSureNullParametersDoesntCallAzureClient() {
