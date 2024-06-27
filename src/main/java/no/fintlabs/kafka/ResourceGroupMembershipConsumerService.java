@@ -41,7 +41,7 @@ public class ResourceGroupMembershipConsumerService {
         //this.resourceGroupMembersCache = resourceGroupMembersCache;
         this.resourceGroupMembershipSink = Sinks.many().unicast().onBackpressureBuffer();
         this.resourceGroupMembershipSink.asFlux()
-                .parallel(20) // Parallelism with up to 20 threads
+                .parallel(200) // Parallelism with up to 20 threads
                 .runOn(Schedulers.parallel())
                 .subscribe
                         (keyAndResourceGroupMembership ->

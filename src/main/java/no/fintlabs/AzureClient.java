@@ -363,15 +363,23 @@ public class AzureClient {
                                            .delete());
 
             log.warn("UserId: {} removed from GroupId: {} in Graph", user, group);
-
             azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
-
             log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
         } catch (GraphServiceException e) {
-            log.error("HTTP Error while trying to remove user {} from group {}. Exception: " + e.getResponseCode() + " \r" +
-                    e.getError().error.message, user, group);
-        } catch (Exception e) {
-            log.error("Failed to delete group membership from Graph", e);
+            if(e.getResponseCode() == 404)
+            {
+                log.warn("User {} not found in group {}", user, group);
+                azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
+                log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
+            }
+            else {
+                log.error("HTTP Error while trying to remove user {} from group {}. Exception: " +
+                        e.getResponseCode() + " \r" +
+                        e.getError().error.message, user, group);
+            }
+        }
+        catch (Exception e) {
+            log.error("Failed to process function deleteGroupMembership, Error: ", e);
         }
     }
 }
