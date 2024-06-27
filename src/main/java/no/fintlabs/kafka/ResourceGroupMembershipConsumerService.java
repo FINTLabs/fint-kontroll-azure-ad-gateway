@@ -10,6 +10,7 @@ import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.scheduler.Schedulers;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
@@ -40,8 +41,8 @@ public class ResourceGroupMembershipConsumerService {
         //this.resourceGroupMembersCache = resourceGroupMembersCache;
         this.resourceGroupMembershipSink = Sinks.many().unicast().onBackpressureBuffer();
         this.resourceGroupMembershipSink.asFlux()
-                //.parallel(20) // Parallelism with up to 20 threads
-                //.runOn(Schedulers.parallel())
+                .parallel(20) // Parallelism with up to 20 threads
+                .runOn(Schedulers.parallel())
                 .subscribe
                         (keyAndResourceGroupMembership ->
                                 updateAzureWithMembership(keyAndResourceGroupMembership.getT1(), keyAndResourceGroupMembership.getT2())
