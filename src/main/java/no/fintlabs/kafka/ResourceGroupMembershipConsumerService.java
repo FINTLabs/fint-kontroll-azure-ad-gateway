@@ -86,7 +86,7 @@ public class ResourceGroupMembershipConsumerService {
                 return;
             }
 
-        //synchronized (resourceGroupMembershipCache) {
+        synchronized (resourceGroupMembershipCache) {
             // Check resourceGroupCache if object is known from before
             log.debug("Processing entity with key: {}", kafkaKey);
 
@@ -111,7 +111,7 @@ public class ResourceGroupMembershipConsumerService {
             }
             resourceGroupMembershipCache.put(kafkaKey, Optional.ofNullable(resourceGroupMembership));
             resourceGroupMembershipSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroupMembership)));
-        //}
+        }
     }
 }
 
