@@ -37,7 +37,7 @@ public class ResourceGroupConsumerService {
 
         resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
         resourceGroupSink.asFlux()
-                .parallel(20) // Parallelism with up to 20 threads
+                .parallel(200) // Parallelism with up to 20 threads
                 .runOn(Schedulers.parallel())
                 .subscribe(keyAndResourceGroup ->
                         updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
