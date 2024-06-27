@@ -41,8 +41,8 @@ public class ResourceGroupMembershipConsumerService {
         //this.resourceGroupMembersCache = resourceGroupMembersCache;
         this.resourceGroupMembershipSink = Sinks.many().unicast().onBackpressureBuffer();
         this.resourceGroupMembershipSink.asFlux()
-                .parallel(200) // Parallelism with up to 20 threads
-                .runOn(Schedulers.parallel())
+                .parallel(20) // Parallelism with up to 20 threads
+                .runOn(Schedulers.boundedElastic())
                 .subscribe
                         (keyAndResourceGroupMembership ->
                                 updateAzureWithMembership(keyAndResourceGroupMembership.getT1(), keyAndResourceGroupMembership.getT2())
