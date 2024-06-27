@@ -117,7 +117,7 @@ class AzureClientTest {
 
                 azureClient.addGroupToAzure(resourceGroup);
 
-        verify(groupCollectionRequest, times(1)).post(any(Group.class));
+        verify(groupCollectionRequest, times(1)).postAsync(any(Group.class));
     }
 
     @Mock
@@ -229,7 +229,7 @@ class AzureClientTest {
 
         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
-        verify(directoryObjectCollectionReferenceRequest, times(1)).post(any(DirectoryObject.class));
+        verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
 
     }
 
@@ -520,7 +520,7 @@ class AzureClientTest {
              when(directoryObjectCollectionWithReferencesRequestBuilder.references().buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
 
              //when(directoryObjectCollectionReferenceRequest.post(any(DirectoryObject.class))).thenReturn(directoryObject);
-             when(directoryObjectCollectionReferenceRequest.post(any(DirectoryObject.class))).thenThrow(graphServiceException);
+             when(directoryObjectCollectionReferenceRequest.postAsync(any(DirectoryObject.class))).thenThrow(graphServiceException);
              //when(azureGroupMembershipProducerService).publishAddedMembership();
 
              String kafkaKey = "somekey";
@@ -540,7 +540,7 @@ class AzureClientTest {
              //}
 
              // Verify that the post method was called once and threw the exception
-             verify(directoryObjectCollectionReferenceRequest, times(1)).post(any(DirectoryObject.class));
+             verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
              verify(azureGroupMembershipProducerService, times(1)).publishAddedMembership(any(AzureGroupMembership.class));
 
          }
@@ -575,7 +575,7 @@ class AzureClientTest {
          when(directoryObjectCollectionWithReferencesRequestBuilder.references().buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
 
          //when(directoryObjectCollectionReferenceRequest.post(any(DirectoryObject.class))).thenReturn(directoryObject);
-         when(directoryObjectCollectionReferenceRequest.post(any(DirectoryObject.class))).thenThrow(graphServiceException);
+         when(directoryObjectCollectionReferenceRequest.postAsync(any(DirectoryObject.class))).thenThrow(graphServiceException);
          //when(azureGroupMembershipProducerService).publishAddedMembership();
 
          String kafkaKey = "somekey";
@@ -589,7 +589,7 @@ class AzureClientTest {
          azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
          // Verify that the post method was called once and threw the exception
-         verify(directoryObjectCollectionReferenceRequest, times(1)).post(any(DirectoryObject.class));
+         verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
          verify(azureGroupMembershipProducerService, times(0)).publishAddedMembership(any(AzureGroupMembership.class));
          //verify(log, times(1))
 

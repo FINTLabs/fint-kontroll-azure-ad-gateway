@@ -280,7 +280,7 @@ public class AzureClient {
 
         graphService.groups()
                 .buildRequest()
-                .post(group);
+                .postAsync(group);
 
     }
 
@@ -311,7 +311,7 @@ public class AzureClient {
             try {
                 Objects.requireNonNull(graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references())
                         .buildRequest()
-                        .post(directoryObject);
+                        .postAsync(directoryObject);
                 log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                 azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
                 log.debug("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());

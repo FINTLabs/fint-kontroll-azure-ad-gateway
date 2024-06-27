@@ -91,7 +91,7 @@ public class ResourceGroupConsumerService {
     }
 
     public void processEntity(ResourceGroup resourceGroup, String kafkaKey) {
-        //synchronized (resourceGroupCache) {
+        synchronized (resourceGroupCache) {
             // Check resourceGroupCache if object is known from before
             if (resourceGroupCache.containsKey(kafkaKey)) {
                 ResourceGroup fromCache = resourceGroupCache.get(kafkaKey);
@@ -103,6 +103,6 @@ public class ResourceGroupConsumerService {
             }
             resourceGroupCache.put(kafkaKey, resourceGroup);
             resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, resourceGroup));
-        //}
+        }
     }
 }
