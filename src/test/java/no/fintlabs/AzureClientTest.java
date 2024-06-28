@@ -151,7 +151,7 @@ class AzureClientTest {
                  .build();
          azureClient.updateGroup(resourceGroup);
 
-         verify(groupRequest, times(1)).patch(any(Group.class));
+         verify(groupRequest, times(1)).patchAsync(any(Group.class));
      }
 
     @Test
@@ -173,9 +173,9 @@ class AzureClientTest {
 
         azureClient.updateGroup(resourceGroup);
 
-        verify(groupRequest, times(1)).patch(any(Group.class));
-        verify(groupRequest, times(0)).post(any());
-        verify(groupRequest, times(0)).delete();
+        verify(groupRequest, times(1)).patchAsync(any(Group.class));
+        verify(groupRequest, times(0)).postAsync(any());
+        verify(groupRequest, times(0)).deleteAsync();
 
         // TODO: Implement test [FKS-187]
     }
@@ -327,7 +327,7 @@ class AzureClientTest {
         when(directoryObjectReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectReferenceRequest);
 
         DirectoryObject directoryObject = new DirectoryObject();
-        when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
+        //when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
 
         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                 .id("testid")
@@ -340,7 +340,7 @@ class AzureClientTest {
 
         azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
 
-        verify(directoryObjectReferenceRequest, times(1) ).delete();
+        verify(directoryObjectReferenceRequest, times(1) ).deleteAsync();
     }
 
     /*@Test
@@ -358,7 +358,7 @@ class AzureClientTest {
         when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
         when(directoryObjectReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectReferenceRequest);
 
-        when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
+        //when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
 
         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                 .id("testid")
@@ -369,11 +369,11 @@ class AzureClientTest {
 
         String kafkaKey = "example";
         azureClient.deleteGroupMembership(null, kafkaKey);
-        verify(directoryObjectReferenceRequest, times(0)).delete();
+        verify(directoryObjectReferenceRequest, times(0)).deleteAsync();
 
         kafkaKey = "exampleGroupID_exampleUserID";
         azureClient.deleteGroupMembership(null, kafkaKey);
-        verify(directoryObjectReferenceRequest, times(1)).delete();
+        verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
     }
 
     @Test
@@ -383,12 +383,12 @@ class AzureClientTest {
         when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
         when(directoryObjectReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectReferenceRequest);
 
-        when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
+        //when(directoryObjectReferenceRequest.deleteAsync()).thenReturn(new DirectoryObject());
 
         String membershipkey = "someid_1234";
         azureClient.deleteGroupMembership(null, membershipkey);
 
-        verify(directoryObjectReferenceRequest, times(1)).delete();
+        verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
     }
     @Test
     public void logAndSkipDeletionWhenKafkaIDhaveMultipleUnderscores () {
@@ -397,7 +397,7 @@ class AzureClientTest {
         when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
         when(directoryObjectReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectReferenceRequest);
 
-        when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
+        //when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
 
         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                 .id("testid")
@@ -408,15 +408,15 @@ class AzureClientTest {
 
         String kafkaKey = "example_with_multiple_underscores";
         azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
-        verify(directoryObjectReferenceRequest, times(0)).delete();
+        verify(directoryObjectReferenceRequest, times(0)).deleteAsync();
 
         kafkaKey = "exampleGroupID_exampleUserID";
         azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
-        verify(directoryObjectReferenceRequest, times(1)).delete();
+        verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
 
         kafkaKey = "exampleGroupID_exampleUserID2";
         azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
-        verify(directoryObjectReferenceRequest, times(2)).delete();
+        verify(directoryObjectReferenceRequest, times(2)).deleteAsync();
     }
 
     //@MockBean
