@@ -20,6 +20,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 @Log4j2
@@ -38,67 +39,73 @@ public class AzureClient {
     private final FintCache<String, ResourceGroup> resourceGroupCache;
     private final FintCache<String, AzureGroup> azureGroupCache;
 
-    private void pageThroughAzureGroup(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
-        int members = 0;
-        log.debug("Fetching Azure Groups");
-        DirectoryObjectCollectionWithReferencesPage page = inPage;
-        do {
-            members++;
-            for (DirectoryObject member : page.getCurrentPage()) {
-                // New member detected
-                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
-                azureGroup.getMembers().add(member.id);
-            }
-            if (page.getNextPage() == null) {
-                break;
-            } else {
-                log.debug("Processing membership page");
-                page = page.getNextPage().buildRequest().get();
-            }
-        } while (page != null);
+    private void pageThroughAzureGroup(AzureGroup azureGroup, CompletableFuture<DirectoryObjectCollectionWithReferencesPage> inPageFuture) {
+        inPageFuture.thenAccept(inPage -> {
+            int members = 0;
+            log.debug("Fetching Azure Groups");
+            DirectoryObjectCollectionWithReferencesPage page = inPage;
+            do {
+                for (DirectoryObject member : page.getCurrentPage()) {
+                    // New member detected
+                    members++;
+                    azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
+                    azureGroup.getMembers().add(member.id);
+                }
+                if (page.getNextPage() == null) {
+                    break;
+                } else {
+                    log.debug("Processing membership page");
+                    page = page.getNextPage().buildRequest().get();
+                }
+            } while (page != null);
 
-        log.debug("{} memberships detected", members);
+            log.debug("{} memberships detected in groupName {} with groupId {}", members, azureGroup.getDisplayName(), azureGroup.getId());
+        } );
     }
 
-    private void pageThroughGroups(GroupCollectionPage inPage) {
-        int groups = 0;
-        GroupCollectionPage page = inPage;
-        do {
-            for (Group group : page.getCurrentPage()) {
+    private void pageThroughGroups(CompletableFuture<GroupCollectionPage> inPageFuture) {
+        inPageFuture.thenAccept(inPage -> {
+            int groups = 0;
+            GroupCollectionPage page = inPage;
+            do {
+                for (Group group : page.getCurrentPage()) {
 
-                if (group.displayName != null && group.displayName.endsWith(configGroup.getSuffix())) {
-                    groups++;
-                    AzureGroup newGroup;
-                    try {
-                        newGroup = new AzureGroup(group, configGroup);
-                    } catch (NumberFormatException e) {
-                        log.warn("Problems converting resourceID to LONG! {}. Skipping creation of group", e);
-                        continue;
-                    }
+                    if (group.displayName != null && group.displayName.endsWith(configGroup.getSuffix())) {
+                        groups++;
+                        AzureGroup newGroup;
+                        try {
+                            newGroup = new AzureGroup(group, configGroup);
+                        } catch (NumberFormatException e) {
+                            log.warn("Problems converting resourceID to LONG! {}. Skipping creation of group", e);
+                            continue;
+                        }
 
-                    // Put object into cache
-                    try {
-                        pageThroughAzureGroup(
-                                newGroup,
-                                graphService.groups(group.id).members()
-                                        .buildRequest()
-                                        .select("id")
-                                        .get()
-                        );
-                    } catch (ClientException e) {
-                        log.error("Error fetching page", e);
+                        // Put object into cache
+                        try {
+                            pageThroughAzureGroup(
+                                    newGroup,
+                                    graphService.groups(group.id).members()
+                                            .buildRequest()
+                                            .select("id")
+                                            .getAsync()
+                            );
+                        } catch (ClientException e) {
+                            log.error("Error fetching page", e);
+                        }
+                        azureGroupProducerService.publish(newGroup);
                     }
-                    azureGroupProducerService.publish(newGroup);
                 }
-            }
-            if (page.getNextPage() == null) {
-                break;
-            } else {
-                log.debug("Processing group page");
-                page = page.getNextPage().buildRequest().get();
-            }
-        } while (page != null);
-        log.info("{} Group objects detected in Microsoft Entra", groups);
+                if (page.getNextPage() == null) {
+                    break;
+                } else {
+                    log.debug("Processing group page");
+                    page = page.getNextPage().buildRequest().get();
+                }
+            } while (page != null);
+            log.info("{} Group objects detected in Microsoft Entra", groups);
+
+        } );
+
     }
 
 
@@ -129,32 +136,32 @@ public class AzureClient {
         return retGroupList;
     }
 
-    private void pageThroughUsers(UserCollectionPage inPage) {
-        int users = 0;
-        UserCollectionPage page = inPage;
-        do {
-            for (User user : page.getCurrentPage()) {
-                users++;
-                if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()) != null
-                        && (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).equalsIgnoreCase(configUser.getExternaluservalue())))
-                {
-                    log.debug("Adding external user to Kafka, {}",user.userPrincipalName);
-                    azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+    private void pageThroughUsers(CompletableFuture<UserCollectionPage> inPageFuture) {
+        inPageFuture.thenAccept(inPage -> {
+            int users = 0;
+
+            UserCollectionPage page = inPage;
+            do {
+                for (User user : page.getCurrentPage()) {
+                    users++;
+                    if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()) != null
+                            && (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).equalsIgnoreCase(configUser.getExternaluservalue()))) {
+                        log.debug("Adding external user to Kafka, {}", user.userPrincipalName);
+                        azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+                    } else {
+                        log.debug("Adding user to Kafka, {}", user.userPrincipalName);
+                        azureUserProducerService.publish(new AzureUser(user, configUser));
+                    }
                 }
-                else
-                {
-                    log.debug("Adding user to Kafka, {}",user.userPrincipalName);
-                    azureUserProducerService.publish(new AzureUser(user, configUser));
+                if (page.getNextPage() == null) {
+                    break;
+                } else {
+                    //log.info("Processing user page");
+                    page = page.getNextPage().buildRequest().get();
                 }
-            }
-            if (page.getNextPage() == null) {
-                break;
-            } else {
-                //log.info("Processing user page");
-                page = page.getNextPage().buildRequest().get();
-            }
-        } while (page != null);
-        log.info("{} User objects detected in Microsoft Entra", users);
+            } while (page != null);
+            log.info("{} User objects detected in Microsoft Entra", users);
+        });
     }
 
     // Fetch full user catalogue
@@ -171,7 +178,7 @@ public class AzureClient {
                         .buildRequest()
                         .select(String.join(",", configUser.AllAttributes()))
                         .filter("usertype eq 'member'")
-                        .get()
+                        .getAsync()
         );
         long endTime = System.currentTimeMillis();
         long elapsedTimeInSeconds = (endTime - startTime) / 1000;
@@ -218,19 +225,14 @@ public class AzureClient {
         try {
             this.pageThroughGroups(
                     graphService.groups()
-                            //.buildRequest(requestOptions)
-                            //.count(true)
                             .buildRequest()
                             // TODO: Attributes should not be hard-coded [FKS-210]
                             .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
-                            // TODO: Improve MS Graph filter [FKS-687]
+                            // TODO: Improve MS Graph filter ? [FKS-687]
                             //.filter(String.format("displayName ne null",configGroup.getResourceGroupIDattribute()))
-                            //.filter(String.format("%s/any(s:s ne null)",configGroup.getResourceGroupIDattribute()))
-                            //.filter(String.format("endsWith(displayName,'%s')",configGroup.getSuffix()))
                             //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
-                            //.filter(String.format("displayName/any(i:i endsWith '{}')",configGroup.getSuffix()))
                             //.expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
-                            .get()
+                            .getAsync()
             );
         } catch (ClientException e) {
             log.error("Failed when trying to get groups. ", e);
