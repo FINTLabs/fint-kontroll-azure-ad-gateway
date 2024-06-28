@@ -38,7 +38,7 @@ public class AzureClient {
     private final FintCache<String, ResourceGroup> resourceGroupCache;
     private final FintCache<String, AzureGroup> azureGroupCache;
 
-    private void pageThrough(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
+    private void pageThroughAzureGroup(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
         int members = 0;
         log.debug("Fetching Azure Groups");
         DirectoryObjectCollectionWithReferencesPage page = inPage;
@@ -60,7 +60,7 @@ public class AzureClient {
         log.debug("{} memberships detected", members);
     }
 
-    private void pageThrough(GroupCollectionPage inPage) {
+    private void pageThroughGroups(GroupCollectionPage inPage) {
         int groups = 0;
         GroupCollectionPage page = inPage;
         do {
@@ -77,7 +77,7 @@ public class AzureClient {
 
                 // Put object into cache
                 try {
-                    pageThrough(
+                    pageThroughAzureGroup(
                             newGroup,
                             graphService.groups(group.id).members()
                                     .buildRequest()
@@ -127,7 +127,7 @@ public class AzureClient {
         return retGroupList;
     }
 
-    private void pageThrough(UserCollectionPage inPage) {
+    private void pageThroughUsers(UserCollectionPage inPage) {
         int users = 0;
         UserCollectionPage page = inPage;
         do {
@@ -164,7 +164,7 @@ public class AzureClient {
     private void pullAllUsers() {
         log.debug("*** <<< Starting to pull users from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
-        this.pageThrough(
+        this.pageThroughUsers(
                 graphService.users()
                         .buildRequest()
                         .select(String.join(",", configUser.AllAttributes()))
@@ -179,30 +179,30 @@ public class AzureClient {
         log.info("*** <<< Finished pulling users from Microsoft Entra in {} minutes and {} seconds >>> *** ", minutes, seconds);
     }
 
-    private void pullAllExtUsers() {
-        log.debug("--- Starting to pull users with external flag from Azure --- ");
-        this.pageThrough(
-                graphService.users()
-                        .buildRequest()
-                        .select(String.join(",", configUser.AllAttributes()))
-                        .filter("usertype eq 'member'")
-                        //.top(10)
-                        .get()
-        );
-        log.debug("--- finished pulling resources from Azure. ---");
-
-    }
-
-    public List<AzureGroup> getAllGroups() {
-        return this.pageThroughGetGroups(
-                graphService.groups()
-                        .buildRequest()
-                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
-                        //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
-                        .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
-                        .get()
-        );
-    }
+//    private void pullAllExtUsers() {
+//        log.debug("--- Starting to pull users with external flag from Azure --- ");
+//        this.pageThrough(
+//                graphService.users()
+//                        .buildRequest()
+//                        .select(String.join(",", configUser.AllAttributes()))
+//                        .filter("usertype eq 'member'")
+//                        //.top(10)
+//                        .get()
+//        );
+//        log.debug("--- finished pulling resources from Azure. ---");
+//
+//    }
+//
+//    public List<AzureGroup> getAllGroups() {
+//        return this.pageThroughGetGroups(
+//                graphService.groups()
+//                        .buildRequest()
+//                        .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+//                        //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
+//                        .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
+//                        .get()
+//        );
+//    }
 
     @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
@@ -214,7 +214,7 @@ public class AzureClient {
         //LinkedList<Option> requestOptions = new LinkedList<Option>();
         //requestOptions.add(new HeaderOption("ConsistencyLevel", "eventual"));
         try {
-            this.pageThrough(
+            this.pageThroughGroups(
                     graphService.groups()
                             //.buildRequest(requestOptions)
                             //.count(true)
@@ -298,7 +298,7 @@ public class AzureClient {
         group.additionalDataManager().clear();
         graphService.groups(resourceGroup.getIdentityProviderGroupObjectId())
                 .buildRequest()
-                .patch(group);
+                .patchAsync(group);
     }
 
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
@@ -360,7 +360,7 @@ public class AzureClient {
                                            .members(user)
                                            .reference()
                                            .buildRequest()
-                                           .delete());
+                                           .deleteAsync());
 
             log.warn("UserId: {} removed from GroupId: {} in Graph", user, group);
             azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
