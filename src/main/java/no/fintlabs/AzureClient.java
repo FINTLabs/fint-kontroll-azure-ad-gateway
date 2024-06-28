@@ -229,7 +229,7 @@ public class AzureClient {
                             //.filter(String.format("endsWith(displayName,'%s')",configGroup.getSuffix()))
                             //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
                             //.filter(String.format("displayName/any(i:i endsWith '{}')",configGroup.getSuffix()))
-                            .expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
+                            //.expand(String.format("members($select=%s)", String.join(",", configUser.AllAttributes())))
                             .get()
             );
         } catch (ClientException e) {
