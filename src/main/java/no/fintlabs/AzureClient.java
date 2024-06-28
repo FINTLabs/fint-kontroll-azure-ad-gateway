@@ -65,29 +65,31 @@ public class AzureClient {
         GroupCollectionPage page = inPage;
         do {
             for (Group group : page.getCurrentPage()) {
-                groups++;
 
-                AzureGroup newGroup;
-                try {
-                    newGroup = new AzureGroup(group, configGroup);
-                } catch (NumberFormatException e) {
-                    log.warn("Problems converting resourceID to LONG! {}. Skipping creation of group", e);
-                    continue;
-                }
+                if (group.displayName != null && group.displayName.endsWith(configGroup.getSuffix())) {
+                    groups++;
+                    AzureGroup newGroup;
+                    try {
+                        newGroup = new AzureGroup(group, configGroup);
+                    } catch (NumberFormatException e) {
+                        log.warn("Problems converting resourceID to LONG! {}. Skipping creation of group", e);
+                        continue;
+                    }
 
-                // Put object into cache
-                try {
-                    pageThroughAzureGroup(
-                            newGroup,
-                            graphService.groups(group.id).members()
-                                    .buildRequest()
-                                    .select("id")
-                                    .get()
-                    );
-                } catch (ClientException e) {
-                    log.error("Error fetching page", e);
+                    // Put object into cache
+                    try {
+                        pageThroughAzureGroup(
+                                newGroup,
+                                graphService.groups(group.id).members()
+                                        .buildRequest()
+                                        .select("id")
+                                        .get()
+                        );
+                    } catch (ClientException e) {
+                        log.error("Error fetching page", e);
+                    }
+                    azureGroupProducerService.publish(newGroup);
                 }
-                azureGroupProducerService.publish(newGroup);
             }
             if (page.getNextPage() == null) {
                 break;
