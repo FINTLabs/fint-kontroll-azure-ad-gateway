@@ -426,7 +426,7 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
         when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
         //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         when(groupCollectionRequest.get()).thenReturn(groupCollectionPage);
@@ -449,7 +449,7 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
         when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
+        //when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
         //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         when(groupCollectionRequest.get()).thenThrow(ClientException.class);
@@ -466,7 +466,7 @@ class AzureClientTest {
         //when(groupCollectionRequestBuilder.buildRequest(any(LinkedList.class))).thenReturn(groupCollectionRequest);
         when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
+       // when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
         //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
 
         when(groupCollectionRequest.get()).thenThrow(new ClientException("Timeout", new InterruptedIOException("timeout")));
