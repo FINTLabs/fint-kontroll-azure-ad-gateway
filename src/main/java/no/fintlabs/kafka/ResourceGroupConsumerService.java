@@ -71,8 +71,9 @@ public class ResourceGroupConsumerService {
         log.debug("Starting updateAzure function {}.", randomUUID);
         //azureService.handleChangedResource
         // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
-        if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
-            log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
+        //if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
+        if (resourceGroup.getResourceName() != null && resourceGroup.getIdentityProviderGroupObjectId() == null) {
+            log.debug("Calling addGroupToAzure with groupName: {} and Id: {}", resourceGroup.getResourceName(), resourceGroup.getId());
             azureClient.addGroupToAzure(resourceGroup);
         } else if (resourceGroup.getResourceName() == null) {
             log.debug("Deleting group from Azure with id '{}'", kafkaKey);
@@ -87,6 +88,7 @@ public class ResourceGroupConsumerService {
                 log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false", resourceGroup.getIdentityProviderGroupObjectId());
             }
         }
+
         log.debug("Stopping updateAzure function {}.", randomUUID);
     }
 
