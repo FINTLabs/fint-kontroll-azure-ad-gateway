@@ -3,13 +3,13 @@ package no.fintlabs.kafka;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
 import no.fintlabs.ConfigGroup;
-import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
@@ -23,24 +23,28 @@ public class ResourceGroupConsumerService {
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final ConfigGroup configGroup;
     private final FintCache<String, ResourceGroup> resourceGroupCache;
-    private final FintCache<String, AzureGroup> azureGroupCache;
-    private final Sinks.Many<Tuple2<String, ResourceGroup>> resourceGroupSink;
+    private Sinks.Many<Tuple2<String, ResourceGroup>> resourceGroupSink;
+
     public ResourceGroupConsumerService(
             AzureClient azureClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
             ConfigGroup configGroup,
-            FintCache<String, ResourceGroup> resourceGroupCache,
-            FintCache<String, AzureGroup> azureGroupCache) {
+            FintCache<String, ResourceGroup> resourceGroupCache) {
         this.azureClient = azureClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.configGroup = configGroup;
         this.resourceGroupCache = resourceGroupCache;
-        this.azureGroupCache = azureGroupCache;
 
         resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
-        resourceGroupSink.asFlux().subscribe(
-                keyAndResourceGroup -> updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
-        );
+        resourceGroupSink.asFlux()
+                .parallel(20) // Parallelism with up to 20 threads
+                .runOn(Schedulers.boundedElastic())
+                .subscribe(keyAndResourceGroup ->
+                        updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
+                );
+    }
+    protected void setResourceGroupSink(Sinks.Many<Tuple2<String, ResourceGroup>> resourceGroupSink) {
+        this.resourceGroupSink = resourceGroupSink;
     }
 
     @PostConstruct
@@ -55,14 +59,14 @@ public class ResourceGroupConsumerService {
                         consumerRecord.value(), consumerRecord.key()
                 )
         ).createContainer(
-             EntityTopicNameParameters
+                EntityTopicNameParameters
                         .builder()
                         .resource("resource-group")
                         .build()
         );
     }
 
-    private synchronized void updateAzure(String kafkaKey, ResourceGroup resourceGroup) {
+    void updateAzure(String kafkaKey, ResourceGroup resourceGroup) {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzure function {}.", randomUUID);
         //azureService.handleChangedResource
@@ -71,16 +75,16 @@ public class ResourceGroupConsumerService {
             log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
             azureClient.addGroupToAzure(resourceGroup);
         } else if (resourceGroup.getResourceName() == null) {
-            log.debug("Delete group from Azure, {}",resourceGroup.getResourceName());
+            log.debug("Deleting group from Azure with id '{}'", kafkaKey);
             azureClient.deleteGroup(kafkaKey);
         } else {
             if (configGroup.getAllowgroupupdate()) {
                 azureClient.updateGroup(resourceGroup);
-                log.info("Updated group with groupId {}",resourceGroup.getIdentityProviderGroupObjectId());
+                log.info("Updated group with groupId {}", resourceGroup.getIdentityProviderGroupObjectId());
             }
             else
             {
-                log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false",resourceGroup.getIdentityProviderGroupObjectId() );
+                log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false", resourceGroup.getIdentityProviderGroupObjectId());
             }
         }
         log.debug("Stopping updateAzure function {}.", randomUUID);
@@ -101,4 +105,4 @@ public class ResourceGroupConsumerService {
             resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, resourceGroup));
         }
     }
- }
+}
