@@ -1,5 +1,6 @@
 package no.fintlabs;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.microsoft.graph.core.ClientException;
 import com.microsoft.graph.http.GraphServiceException;
@@ -8,6 +9,7 @@ import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.options.HeaderOption;
 import com.microsoft.graph.options.Option;
+import java.util.concurrent.CompletableFuture;
 import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 @Component
 @Log4j2
@@ -231,7 +234,7 @@ public class AzureClient {
         try {
             CompletableFuture<GroupCollectionPage> initialPageFuture = graphService.groups()
                     .buildRequest()
-                    .select(String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute()))
+                    .select(String.format("id,displayName,description,uniqueName,members,%s", configGroup.getFintkontrollidattribute()))
                     .getAsync();
 
             CompletableFuture<Integer> resultFuture = pageThroughGroups(initialPageFuture);
@@ -347,8 +350,7 @@ public class AzureClient {
         GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
                 .select(selectionCriteria)
-                //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
-                //.filter(String.format("endsWith(displayName,'%s')",configGroup.getSuffix()))
+                .filter(String.format("uniqueName", resourceGroupId))
                 .get();
 
         while (groupCollectionPage != null) {
@@ -373,26 +375,58 @@ public class AzureClient {
     public void addGroupToAzure(ResourceGroup resourceGroup) {
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
 
-        log.info("Adding Group to Azure: {}", resourceGroup.getResourceName());
+        //TODO: Remember to change from additionalDataManager to new function on Change of Graph to 6.*.* [FKS-883]
+        String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
+        var owners = new JsonArray();
+        owners.add(owner);
+        group.additionalDataManager().put("owners@odata.bind", owners);
 
         graphService.groups()
                 .buildRequest()
-                .postAsync(group);
-
+                .postAsync(group)
+                .thenAccept(createdGroup -> {
+                    log.info("Added Group to Azure: {}", resourceGroup.getResourceName());
+                }).exceptionally(ex -> {
+                    handleGraphApiError(ex);
+                    return null;
+                });
+        //log.info("Added Group to Azure: {}", resourceGroup.getResourceName());
     }
 
     public void deleteGroup(String groupID) {
         graphService.groups(groupID)
                 .buildRequest()
-                .delete();
-        log.info("Group with kafkaId {} deleted ", groupID);
+                .deleteAsync()
+                .thenAccept(deletedGroup -> log.info("Group with kafkaId {} deleted ", groupID))
+                .exceptionally(ex -> {
+                    handleGraphApiError(ex);
+                    return null;
+                });
+        //log.info("Group with kafkaId {} deleted ", groupID);
     }
 
-    public void updateGroup(ResourceGroup resourceGroup) {
+    public void updateGroup (ResourceGroup resourceGroup) {
+        Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
+
+        LinkedList<Option> requestOptions = new LinkedList<>();
+        requestOptions.add(new HeaderOption("Prefer", "create-if-missing"));
+
+        graphService.groups(resourceGroup.getIdentityProviderGroupObjectId())
+                .buildRequest(requestOptions)
+                .patchAsync(group)
+                .thenAccept(updatedGroup -> {
+                    System.out.println("Group successfully updated with ID: " + updatedGroup.id);
+                })
+                .exceptionally(ex -> {
+                    handleGraphApiError(ex);
+                    return null;
+                });
+    }
+
+    public void updateGroup_Old(ResourceGroup resourceGroup) {
 
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
         group.owners = null;
-        group.additionalDataManager().clear();
         graphService.groups(resourceGroup.getIdentityProviderGroupObjectId())
                 .buildRequest()
                 .patchAsync(group);
@@ -477,6 +511,42 @@ public class AzureClient {
         }
         catch (Exception e) {
             log.error("Failed to process function deleteGroupMembership, Error: ", e);
+        }
+    }
+
+    private void handleGraphApiError(Throwable ex) {
+        if (ex instanceof CompletionException) {
+            Throwable cause = ex.getCause();
+            if (cause instanceof GraphServiceException) {
+                GraphServiceException gse = (GraphServiceException) cause;
+                int statusCode = gse.getResponseCode();
+                switch (statusCode) {
+//                    case 204:
+//                        log.info("No content response received.");
+//                        break;
+                    case 400:
+                        log.debug("Group not created, as another object with the same value for property uniqueName already exists");
+                        break;
+                    case 401:
+                        log.error("Unauthorized. Check your authentication credentials");
+                        break;
+                    case 403:
+                        log.error("Forbidden. You do not have permission to perform this action");
+                        break;
+                    case 404:
+                        log.debug("Not found on updating group. The resource does not exist. Creating group as it is missing");
+                        break;
+                    case 500:
+                        log.error("Internal server error. Try again later");
+                        break;
+                    default:
+                        log.error("Unexpected error: {}", gse.getMessage());
+                }
+            } else {
+                log.error("An unexpected error occurred: {}", cause.getMessage());
+            }
+        } else {
+            log.error("An unexpected error occurred: {}", ex.getMessage());
         }
     }
 }
