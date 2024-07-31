@@ -34,7 +34,7 @@ public class MsGraphGroupMapper {
         group.mailNickname = mailNickname;
 
         group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.getId()));
-        group.additionalDataManager().put("uniqueName", new JsonPrimitive(resourceGroup.getId()));
+        //group.additionalDataManager().put("uniqueName", new JsonPrimitive(resourceGroup.getId()));
 
         // Removed from general converter, and moved to function "addGroupToAzure"
 

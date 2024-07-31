@@ -2,6 +2,7 @@ package no.fintlabs;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.core.ClientException;
 import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
@@ -350,7 +351,7 @@ public class AzureClient {
         GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
                 .select(selectionCriteria)
-                .filter(String.format("uniqueName", resourceGroupId))
+                .filter(String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId))
                 .get();
 
         while (groupCollectionPage != null) {
@@ -380,6 +381,7 @@ public class AzureClient {
         var owners = new JsonArray();
         owners.add(owner);
         group.additionalDataManager().put("owners@odata.bind", owners);
+        group.additionalDataManager().put("uniqueName", new JsonPrimitive(configGroup.getUniquenameprefix() + resourceGroup.getId()));
 
         graphService.groups()
                 .buildRequest()
@@ -408,15 +410,14 @@ public class AzureClient {
     public void updateGroup (ResourceGroup resourceGroup) {
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
 
-        LinkedList<Option> requestOptions = new LinkedList<>();
-        requestOptions.add(new HeaderOption("Prefer", "create-if-missing"));
+        //LinkedList<Option> requestOptions = new LinkedList<>();
+        //requestOptions.add(new HeaderOption("Prefer", "create-if-missing"));
 
         graphService.groups(resourceGroup.getIdentityProviderGroupObjectId())
-                .buildRequest(requestOptions)
+                //.buildRequest(requestOptions)
+                .buildRequest()
                 .patchAsync(group)
-                .thenAccept(updatedGroup -> {
-                    System.out.println("Group successfully updated with ID: " + updatedGroup.id);
-                })
+                .thenAccept(updatedGroup -> log.info("Group successfully updated with ID: " + updatedGroup.id))
                 .exceptionally(ex -> {
                     handleGraphApiError(ex);
                     return null;
