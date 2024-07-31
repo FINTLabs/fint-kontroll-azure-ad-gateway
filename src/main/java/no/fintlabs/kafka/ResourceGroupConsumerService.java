@@ -71,8 +71,8 @@ public class ResourceGroupConsumerService {
         log.debug("Starting updateAzure function {}.", randomUUID);
         //azureService.handleChangedResource
         // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
-        //if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
-        if (resourceGroup.getResourceName() != null && resourceGroup.getIdentityProviderGroupObjectId() == null) {
+        if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
+        //if (resourceGroup.getResourceName() != null && resourceGroup.getIdentityProviderGroupObjectId() == null) {
             log.debug("Calling addGroupToAzure with groupName: {} and Id: {}", resourceGroup.getResourceName(), resourceGroup.getId());
             azureClient.addGroupToAzure(resourceGroup);
         } else if (resourceGroup.getResourceName() == null) {
