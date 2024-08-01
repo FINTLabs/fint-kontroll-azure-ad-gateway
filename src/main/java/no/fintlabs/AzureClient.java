@@ -265,6 +265,7 @@ public class AzureClient {
                         AzureGroup newGroup;
                         try {
                             newGroup = new AzureGroup(group, configGroup);
+
                         } catch (NumberFormatException e) {
                             log.warn("Problems converting resourceID to LONG! {}. Skipping creation of group", e);
                             continue;
@@ -388,6 +389,7 @@ public class AzureClient {
                 .postAsync(group)
                 .thenAccept(createdGroup -> {
                     log.info("Added Group to Azure: {}", resourceGroup.getResourceName());
+                    azureGroupProducerService.publish(new AzureGroup(createdGroup, configGroup));
                 }).exceptionally(ex -> {
                     handleGraphApiError(ex);
                     return null;
@@ -399,7 +401,8 @@ public class AzureClient {
         graphService.groups(groupID)
                 .buildRequest()
                 .deleteAsync()
-                .thenAccept(deletedGroup -> log.info("Group with kafkaId {} deleted ", groupID))
+                .thenAccept(deletedGroup ->
+                        log.info("Group with kafkaId {} deleted ", groupID))
                 .exceptionally(ex -> {
                     handleGraphApiError(ex);
                     return null;
@@ -417,7 +420,8 @@ public class AzureClient {
                 //.buildRequest(requestOptions)
                 .buildRequest()
                 .patchAsync(group)
-                .thenAccept(updatedGroup -> log.info("Group with GroupObjectId '{}' successfully updated", resourceGroup.getIdentityProviderGroupObjectId()))
+                .thenAccept(updatedGroup ->
+                        log.info("Group with GroupObjectId '{}' successfully updated", resourceGroup.getIdentityProviderGroupObjectId()))
                 .exceptionally(ex -> {
                     handleGraphApiError(ex);
                     return null;
