@@ -417,7 +417,7 @@ public class AzureClient {
                 //.buildRequest(requestOptions)
                 .buildRequest()
                 .patchAsync(group)
-                .thenAccept(updatedGroup -> log.info("Group successfully updated with ID: " + updatedGroup.id))
+                .thenAccept(updatedGroup -> log.info("Group with GroupObjectId '{}' successfully updated", resourceGroup.getIdentityProviderGroupObjectId()))
                 .exceptionally(ex -> {
                     handleGraphApiError(ex);
                     return null;

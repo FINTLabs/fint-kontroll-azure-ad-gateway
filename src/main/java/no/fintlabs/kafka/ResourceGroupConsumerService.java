@@ -79,13 +79,21 @@ public class ResourceGroupConsumerService {
             log.debug("Deleting group from Azure with id '{}'", kafkaKey);
             azureClient.deleteGroup(kafkaKey);
         } else {
-            if (configGroup.getAllowgroupupdate()) {
+            if (configGroup.getAllowgroupupdate() && resourceGroup.getIdentityProviderGroupObjectId() != null) {
                 azureClient.updateGroup(resourceGroup);
-                log.info("Updated group with groupId {}", resourceGroup.getIdentityProviderGroupObjectId());
+                log.debug("updateGroup completed on groupId {}", resourceGroup.getIdentityProviderGroupObjectId());
             }
             else
             {
-                log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false", resourceGroup.getIdentityProviderGroupObjectId());
+                if (!configGroup.getAllowgroupupdate()){
+                    log.debug("Group with ResourceGroupID '{}' is NOT updated, as environmentparameter allowgroupupdate is set to false", resourceGroup.getId());
+                    return;
+                }
+
+                if(resourceGroup.getIdentityProviderGroupObjectId() == null ){
+                    log.debug("Group is NOT updated, as 'IdentityProviderGroupObjectId' attribute is not present on ResourceGroupID {}", resourceGroup.getId());
+                    return;
+                }
             }
         }
 
