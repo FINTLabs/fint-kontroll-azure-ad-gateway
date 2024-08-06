@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 @Data
 public class ResourceGroup
 {
-    @NonNull
     private final String id;
     private final String resourceId;
     private final String displayName;

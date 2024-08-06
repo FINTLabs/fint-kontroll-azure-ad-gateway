@@ -58,6 +58,7 @@ fint:
         prefix: "-pre-"
         suffix: "-suff-"
         allowgroupupdate: false
+        allowgroupdelete: false
       group-scheduler:
         pull:
           initial-delay-ms: 1000

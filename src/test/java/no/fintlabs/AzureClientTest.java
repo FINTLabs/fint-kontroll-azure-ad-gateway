@@ -129,15 +129,32 @@ class AzureClientTest {
     @Mock
     private GroupRequest groupRequest;
 
+
     @Test
     void deleteGroup() {
         String delGroupID = "123";
-        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+
+        Group group = new Group();
+        group.id = "777e619a-8705-4f68-9dab-b777776c097b";
+        group.displayName = "testgroup1";
+        group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive("123"));
+
+        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
+        when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
+        when(groupCollectionRequest.select("id")).thenReturn(groupCollectionRequest);
+        when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+        when(groupCollectionRequest.get()).thenReturn(groupCollectionPage);
+        when(groupCollectionPage.getCurrentPage()).thenReturn(List.of(group));
+        when(graphServiceClient.groups(group.id)).thenReturn(groupRequestBuilder);
         when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
 
+        // Call the method under test
         azureClient.deleteGroup(delGroupID);
 
+        // Verify that the group deletion was called
         verify(groupRequest, times(1)).delete();
+
+        //verify(groupRequest, times(1)).delete();
     }
 
     @Test
