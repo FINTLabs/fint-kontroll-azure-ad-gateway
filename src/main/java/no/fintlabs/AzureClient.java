@@ -381,11 +381,25 @@ public class AzureClient {
 
     }
 
-    public void deleteGroup(String groupID) {
-        graphService.groups(groupID)
+    public void deleteGroup(String resourceGroupId) {
+        GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
-                .delete();
-        log.info("Group with kafkaId {} deleted ", groupID);
+                .select("id")
+                .filter(String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId))
+                .get();
+
+        if (groupCollectionPage != null) {
+            for (Group group : groupCollectionPage.getCurrentPage()) {
+                JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
+
+                if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
+                    graphService.groups(group.id)
+                            .buildRequest()
+                            .delete();
+                    log.info("Group objectId {} and resourceGroupId {} deleted ", group.id, resourceGroupId);
+                }
+            }
+        }
     }
 
     public void updateGroup(ResourceGroup resourceGroup) {
