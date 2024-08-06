@@ -102,7 +102,13 @@ public class ResourceGroupConsumerService {
             // Check resourceGroupCache if object is known from before
             if (resourceGroupCache.containsKey(kafkaKey)) {
                 Optional<ResourceGroup> fromCache = resourceGroupCache.get(kafkaKey);
-                if (fromCache.isPresent() && resourceGroup.equals(fromCache.get())){
+                // Detect if cache contains deletion of resourceGroup from before
+                if (fromCache.isEmpty() && resourceGroup == null) {
+                    log.debug("Skip processing of already cached delete group membership message: {}", kafkaKey);
+                    return;
+                }
+                // Detect if last entry in cache is identical to new entity
+                if (resourceGroup != null && fromCache.isPresent() && resourceGroup.equals(fromCache.get())){
                     // New kafka message, but unchanged resourceGroup from last time
                     log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
                     return;
