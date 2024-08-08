@@ -79,11 +79,11 @@ public class ResourceGroupConsumerService {
                 log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
                 azureClient.addGroupToAzure(resourceGroup);
             } else {
-                if (configGroup.getAllowgroupupdate()) {
+                if (configGroup.getAllowgroupupdate() && resourceGroup.getIdentityProviderGroupObjectId() != null) {
                     azureClient.updateGroup(resourceGroup);
-                    log.info("Updated group with groupId {}", resourceGroup.getIdentityProviderGroupObjectId());
+                    log.info("Updated group with ResourceGroupId {}", resourceGroup.getId());
                 } else {
-                    log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false", resourceGroup.getIdentityProviderGroupObjectId());
+                    log.warn("ResourceGroupId {} was NOT updated, as environmentparameter allowgroupupdate is set to false or IdentityProviderGroupObjectId is not set", resourceGroup.getId());
                 }
             }
         } else {
@@ -91,7 +91,7 @@ public class ResourceGroupConsumerService {
                 log.debug("Deleting group from Azure with id '{}'", kafkaKey);
                 azureClient.deleteGroup(kafkaKey);
             } else {
-                log.debug("ResourceGroupId {} is NOT deleted, as environment parameter allowgroupdelete is set to false", kafkaKey);
+                log.warn("ResourceGroupId {} is NOT deleted, as environment parameter allowgroupdelete is set to false", kafkaKey);
             }
         }
         log.debug("Stopping updateAzure function {}.", randomUUID);

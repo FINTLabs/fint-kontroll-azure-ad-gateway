@@ -1,5 +1,6 @@
 package no.fintlabs;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.microsoft.graph.core.ClientException;
 import com.microsoft.graph.http.GraphServiceException;
@@ -8,6 +9,7 @@ import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.options.HeaderOption;
 import com.microsoft.graph.options.Option;
+import java.util.concurrent.CompletableFuture;
 import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 @Component
 @Log4j2
@@ -372,33 +375,61 @@ public class AzureClient {
     public void addGroupToAzure(ResourceGroup resourceGroup) {
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
 
-        log.info("Adding Group to Azure: {}", resourceGroup.getResourceName());
+        //TODO: Remember to change from additionalDataManager to new function on Change of Graph to 6.*.* [FKS-883]
+        String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
+        var owners = new JsonArray();
+        owners.add(owner);
+        group.additionalDataManager().put("owners@odata.bind", owners);
+
+        //TODO: Consider if uniqueName chould be set upon creation of group
+        //group.additionalDataManager().put("uniqueName", new JsonPrimitive(resourceGroup.getId()));
 
         graphService.groups()
                 .buildRequest()
-                .postAsync(group);
-
+                .postAsync(group)
+                .thenAccept(createdGroup -> {
+                    log.info("Added Group to Azure: {}", resourceGroup.getResourceName());
+                    azureGroupProducerService.publish(new AzureGroup(createdGroup, configGroup));
+                }).exceptionally(ex -> {
+                    handleGraphApiError(ex);
+                    return null;
+                });
+        //log.info("Added Group to Azure: {}", resourceGroup.getResourceName());
     }
 
     public void deleteGroup(String resourceGroupId) {
-        GroupCollectionPage groupCollectionPage = graphService.groups()
-                .buildRequest()
-                .select(String.format("id, %s", configGroup.getFintkontrollidattribute()))
-                .filter(String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId))
-                .get();
+        try {
+            GroupCollectionPage groupCollectionPage = graphService.groups()
+                    .buildRequest()
+                    .select(String.format("id, %s", configGroup.getFintkontrollidattribute()))
+                    .filter(String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId))
+                    .get();
 
-        while (groupCollectionPage != null) {
-            for (Group group : groupCollectionPage.getCurrentPage()) {
-                JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
+            while (groupCollectionPage != null) {
+                for (Group group : groupCollectionPage.getCurrentPage()) {
+                    JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
 
-                if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
-                    graphService.groups(group.id)
-                            .buildRequest()
-                            .delete();
-                    log.info("Group objectId {} and resourceGroupId {} deleted ", group.id, resourceGroupId);
-                    return;
+                    if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
+                        try {
+                            graphService.groups(group.id)
+                                    .buildRequest()
+                                    .delete();
+                            log.info("Group objectId {} and resourceGroupId {} deleted ", group.id, resourceGroupId);
+                            return;
+                        } catch (Exception e) {
+                            log.error("Failed to delete group with objectId {} and resourceGroupId {}: {}", group.id, resourceGroupId, e.getMessage());
+                            throw e; // Re-throw or handle it as needed
+                        }
+                    }
                 }
+
+                groupCollectionPage = groupCollectionPage.getNextPage() != null
+                        ? groupCollectionPage.getNextPage().buildRequest().get()
+                        : null;
             }
+        } catch (Exception e) {
+            log.error("Failed to process deleteGroup for resourceGroupId {}: {}", resourceGroupId, e.getMessage());
+            // Handle the exception as necessary, such as throwing it up the stack or logging it.
         }
     }
 
@@ -407,9 +438,19 @@ public class AzureClient {
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
         group.owners = null;
         group.additionalDataManager().clear();
+
+        //LinkedList<Option> requestOptions = new LinkedList<>();
+        //requestOptions.add(new HeaderOption("Prefer", "create-if-missing"));
+
         graphService.groups(resourceGroup.getIdentityProviderGroupObjectId())
+                //.buildRequest(requestOptions)
                 .buildRequest()
-                .patchAsync(group);
+                .patchAsync(group)
+                .thenAccept(updatedGroup -> log.info("Group with GroupObjectId '{}' successfully updated", resourceGroup.getIdentityProviderGroupObjectId()))
+                .exceptionally(ex -> {
+                    handleGraphApiError(ex);
+                    return null;
+                });
     }
 
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
@@ -420,7 +461,7 @@ public class AzureClient {
             directoryObject.id = resourceGroupMembership.getAzureUserRef();
 
             try {
-                Objects.requireNonNull(graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references())
+                graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references()
                         .buildRequest()
                         .postAsync(directoryObject);
                 log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
@@ -467,11 +508,11 @@ public class AzureClient {
         try {
             log.info("Removing UserId: {} from GroupId: {} in Graph", user, group);
 
-            Objects.requireNonNull(graphService.groups(group)
-                                           .members(user)
-                                           .reference()
-                                           .buildRequest()
-                                           .deleteAsync());
+            graphService.groups(group)
+                    .members(user)
+                    .reference()
+                    .buildRequest()
+                    .deleteAsync();
 
             log.warn("UserId: {} removed from GroupId: {} in Graph", user, group);
             azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
@@ -491,6 +532,42 @@ public class AzureClient {
         }
         catch (Exception e) {
             log.error("Failed to process function deleteGroupMembership, Error: ", e);
+        }
+    }
+
+    private void handleGraphApiError(Throwable ex) {
+        if (ex instanceof CompletionException) {
+            Throwable cause = ex.getCause();
+            if (cause instanceof GraphServiceException) {
+                GraphServiceException gse = (GraphServiceException) cause;
+                int statusCode = gse.getResponseCode();
+                switch (statusCode) {
+//                    case 204:
+//                        log.info("No content response received.");
+//                        break;
+                    case 400:
+                        log.debug("Group not created or updated. Failed with error 400");
+                        break;
+                    case 401:
+                        log.error("Unauthorized. Check your authentication credentials");
+                        break;
+                    case 403:
+                        log.error("Forbidden. You do not have permission to perform this action");
+                        break;
+                    case 404:
+                        log.debug("Not found on updating group. The resource does not exist. Creating group as it is missing");
+                        break;
+                    case 500:
+                        log.error("Internal server error. Try again later");
+                        break;
+                    default:
+                        log.error("Unexpected error: {}", gse.getMessage());
+                }
+            } else {
+                log.error("An unexpected error occurred: {}", cause.getMessage());
+            }
+        } else {
+            log.error("An unexpected error occurred: {}", ex.getMessage());
         }
     }
 }

@@ -12,6 +12,7 @@ public class MsGraphGroupMapper {
 
         int groupMailEnabledMaxLen = 64;
 
+        //TODO: Change to new functions on Change of Graph to 6.*.* [FKS-883]
         group.displayName = (configGroup.getPrefix() +
                              resourceGroup.getResourceType().substring(0, 3) +
                              "-" +
@@ -31,13 +32,7 @@ public class MsGraphGroupMapper {
             mailNickname = mailNickname.substring(0, groupMailEnabledMaxLen);
         }
         group.mailNickname = mailNickname;
-
         group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.getId()));
-
-        String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
-        var owners = new JsonArray();
-        owners.add(owner);
-        group.additionalDataManager().put("owners@odata.bind",  owners);
 
         return group;
     }
