@@ -347,8 +347,7 @@ public class AzureClient {
         GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
                 .select(selectionCriteria)
-                //.filter(String.format("startsWith(displayName,'%s')",configGroup.getPrefix()))
-                //.filter(String.format("endsWith(displayName,'%s')",configGroup.getSuffix()))
+                .filter(String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId))
                 .get();
 
         while (groupCollectionPage != null) {
@@ -384,11 +383,11 @@ public class AzureClient {
     public void deleteGroup(String resourceGroupId) {
         GroupCollectionPage groupCollectionPage = graphService.groups()
                 .buildRequest()
-                .select("id")
+                .select(String.format("id, %s", configGroup.getFintkontrollidattribute()))
                 .filter(String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId))
                 .get();
 
-        if (groupCollectionPage != null) {
+        while (groupCollectionPage != null) {
             for (Group group : groupCollectionPage.getCurrentPage()) {
                 JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
 
@@ -397,6 +396,7 @@ public class AzureClient {
                             .buildRequest()
                             .delete();
                     log.info("Group objectId {} and resourceGroupId {} deleted ", group.id, resourceGroupId);
+                    return;
                 }
             }
         }

@@ -107,7 +107,7 @@ public class ResourceGroupConsumerServiceTest {
     }
 
     @Test
-    void processEntityEmptyResourceGroupFromKafka_triggers_deleteGroup() {
+    void processEntity_That_Is_Empty_And_Already_In_Cache_Generates_Nothing() {
         String kafkaKeyID = "TestKafkaKeyID";
 
         ResourceGroup resourceGroup = null;
@@ -116,11 +116,26 @@ public class ResourceGroupConsumerServiceTest {
         when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
         when(resourceGroupCache.get(anyString())).thenReturn(Optional.ofNullable(resourceGroup));
 
-        resourceGroupConsumerService.processEntity(null, kafkaKeyID);
+        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
         verify(resourceGroupCache, times(0)).put(anyString(),any());
         verify(resourceGroupSink, times(0)).tryEmitNext(any());
     }
+
+    @Test
+    void processEntity_That_Is_Empty_ResourceGroup_But_Not_In_Cache_Continues_Operation() {
+        String kafkaKeyID = "TestKafkaKeyID";
+
+        resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
+
+        when(resourceGroupCache.containsKey(anyString())).thenReturn(false);
+
+        resourceGroupConsumerService.processEntity(null, kafkaKeyID);
+
+        verify(resourceGroupCache, times(1)).put(anyString(),any());
+        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+    }
+
     @Test
     void updateAzure_NewGroupCallsAzureCreate() {
 
@@ -136,7 +151,7 @@ public class ResourceGroupConsumerServiceTest {
         verify(azureClient, times(0)).deleteGroup(any());
     }
     @Test
-    void updateAzure_UpdatedGroup_CallsAzureUpdate() {
+    void updateAzure_UpdatedGroup_if_allowed() {
         String kafkaKeyID = "TestKafkaKeyID";
 
         when(azureClient.doesGroupExist(anyString())).thenReturn(true);
@@ -150,22 +165,23 @@ public class ResourceGroupConsumerServiceTest {
         verify(azureClient, times(0)).deleteGroup(any());
     }
 
-//    @Test
-//    void updateAzure_UpdatedGroup_CallsAzureUpdate_IsIgnoredIfConfigured() {
-//        String kafkaKeyID = "TestKafkaKeyID";
-//        ResourceGroup resourceGroup = newResourceGroupFromResourceNameStatic();
-//        when(azureClient.doesGroupExist(anyString())).thenReturn(true);
-//        when(configGroup.getAllowgroupupdate()).thenReturn(false);
-//
-//        resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
-//
-//        verify(azureClient, times(0)).addGroupToAzure(any());
-//        verify(azureClient, times(0)).updateGroup(any());
-//        verify(azureClient, times(0)).deleteGroup(any());
-//    }
+    @Test
+    void updateAzure_UpdatedGroup_if_not_allowed() {
+        String kafkaKeyID = "TestKafkaKeyID";
+
+        when(azureClient.doesGroupExist(anyString())).thenReturn(true);
+        when(configGroup.getAllowgroupupdate()).thenReturn(false);
+
+        ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
+        resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
+
+        verify(azureClient, times(0)).addGroupToAzure(any());
+        verify(azureClient, times(0)).updateGroup(any());
+        verify(azureClient, times(0)).deleteGroup(any());
+    }
 
     @Test
-    void updateAzure_DeletedGroup_CallsAzureDelete() {
+    void updateAzure_DeletedGroup_If_Allowed_Calls_deleteGroup() {
         String kafkaKeyID = "TestKafkaKeyID";
 
         when(configGroup.getAllowgroupdelete()).thenReturn(true);
@@ -174,5 +190,17 @@ public class ResourceGroupConsumerServiceTest {
         verify(azureClient, times(0)).addGroupToAzure(any());
         verify(azureClient, times(0)).updateGroup(any());
         verify(azureClient, times(1)).deleteGroup(any());
+    }
+
+    @Test
+    void updateAzure_DeletedGroup_If_Not_Allowed_Do_Not_Calls_deleteGroup() {
+        String kafkaKeyID = "TestKafkaKeyID";
+
+        when(configGroup.getAllowgroupdelete()).thenReturn(false);
+        resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.empty());
+
+        verify(azureClient, times(0)).addGroupToAzure(any());
+        verify(azureClient, times(0)).updateGroup(any());
+        verify(azureClient, times(0)).deleteGroup(any());
     }
 }
