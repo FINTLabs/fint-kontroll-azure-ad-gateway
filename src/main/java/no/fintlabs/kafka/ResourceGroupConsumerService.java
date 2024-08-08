@@ -104,7 +104,7 @@ public class ResourceGroupConsumerService {
                 Optional<ResourceGroup> fromCache = resourceGroupCache.get(kafkaKey);
                 // Detect if cache contains deletion of resourceGroup from before
                 if (fromCache.isEmpty() && resourceGroup == null) {
-                    log.debug("Skip processing of already cached delete group membership message: {}", kafkaKey);
+                    log.debug("Skip processing of entity as cache already contains deleted group on resourceGroupId: {}", kafkaKey);
                     return;
                 }
                 // Detect if last entry in cache is identical to new entity
