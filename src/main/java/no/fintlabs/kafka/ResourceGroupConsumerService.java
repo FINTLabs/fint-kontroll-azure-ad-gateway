@@ -72,7 +72,6 @@ public class ResourceGroupConsumerService {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzure function {}.", randomUUID);
         ResourceGroup resourceGroup;
-        // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
         if (resourceGroupOptional.isPresent()) {
             resourceGroup = resourceGroupOptional.get();
             if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
