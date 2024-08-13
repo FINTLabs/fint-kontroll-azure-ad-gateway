@@ -1,6 +1,5 @@
 package no.fintlabs;
 
-import com.sun.jna.platform.win32.Guid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.EntraGroupMembership;

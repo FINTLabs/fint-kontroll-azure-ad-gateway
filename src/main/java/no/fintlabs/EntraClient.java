@@ -7,8 +7,7 @@ import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
-import com.microsoft.graph.options.HeaderOption;
-import com.microsoft.graph.options.Option;
+
 import java.util.concurrent.CompletableFuture;
 import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,7 @@ import java.util.concurrent.CompletionException;
 @Component
 @Log4j2
 @RequiredArgsConstructor
-public class AzureClient {
+public class EntraClient {
     protected final Config config;
     protected final ConfigGroup configGroup;
     protected final ConfigUser configUser;
@@ -132,9 +131,9 @@ public class AzureClient {
                 for (Group group : page.getCurrentPage()) {
                     if (group.displayName != null && group.displayName.endsWith(configGroup.getSuffix())) {
                         groups[0]++;
-                        AzureGroup newGroup;
+                        EntraGroup newGroup;
                         try {
-                            newGroup = new AzureGroup(group, configGroup);
+                            newGroup = new EntraGroup(group, configGroup);
                         } catch (NumberFormatException e) {
                             log.warn("Problems converting resourceID to LONG! %s. Skipping creation of group", e);
                             continue;
@@ -168,14 +167,14 @@ public class AzureClient {
         });
     }
 
-    private void pageThroughAzureGroup(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
+    private void pageThroughAzureGroup(EntraGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
         int members = 0;
         log.debug("Fetching Azure Groups");
         DirectoryObjectCollectionWithReferencesPage page = inPage;
         do {
             for (DirectoryObject member : page.getCurrentPage()) {
                 members++;
-                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
+                azureGroupMembershipProducerService.publishAddedMembership(new EntraGroupMembership(azureGroup.getId(), member));
                 azureGroup.getMembers().add(member.id);
             }
             page = (page.getNextPage() != null) ? page.getNextPage().buildRequest().get() : null;
@@ -230,7 +229,7 @@ public class AzureClient {
                 .postAsync(group)
                 .thenAccept(createdGroup -> {
                     log.info("Added Group to Azure: {}", resourceGroup.getResourceName());
-                    azureGroupProducerService.publish(new AzureGroup(createdGroup, configGroup));
+                    azureGroupProducerService.publish(new EntraGroup(createdGroup, configGroup));
                 }).exceptionally(ex -> {
                     handleGraphApiError(ex);
                     return null;
@@ -305,13 +304,13 @@ public class AzureClient {
                         .buildRequest()
                         .postAsync(directoryObject);
                 log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                azureGroupMembershipProducerService.publishAddedMembership(new EntraGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
                 log.debug("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
             } catch (GraphServiceException e) {
                 // Handle the HTTP response exception here
                 if (e.getResponseCode() == 400) {
                     if(e.getError().error.message.contains("object references already exist")) {
-                        azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                        azureGroupMembershipProducerService.publishAddedMembership(new EntraGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
                         log.info("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }

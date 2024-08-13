@@ -8,8 +8,6 @@ import com.microsoft.graph.http.GraphErrorResponse;
 import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
-import com.microsoft.graph.options.Option;
-import com.microsoft.graph.options.QueryOption;
 import com.microsoft.graph.requests.*;
 import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
@@ -19,20 +17,18 @@ import okhttp3.Request;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.InterruptedIOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
  @ExtendWith(MockitoExtension.class)
-class AzureClientTest {
+class EntraClientTest {
     @Mock
     private GraphServiceClient<Request> graphServiceClient;
     @Mock
@@ -54,7 +50,7 @@ class AzureClientTest {
     private Config config;
 
     @InjectMocks
-    private AzureClient azureClient;
+    private EntraClient entraClient;
 
     private Group azureGroupObject()
     {
@@ -93,7 +89,7 @@ class AzureClientTest {
 
         when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
 
-        assertTrue(azureClient.doesGroupExist(resourceGroupID));
+        assertTrue(entraClient.doesGroupExist(resourceGroupID));
     }
     @Test
     void doesGroupExist_notfound() {
@@ -108,7 +104,7 @@ class AzureClientTest {
         List<Group> groupList = getTestGrouplist(3);
         when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
 
-        assertFalse(azureClient.doesGroupExist(resourceGroupID));
+        assertFalse(entraClient.doesGroupExist(resourceGroupID));
     }
 
     @Test
@@ -138,7 +134,7 @@ class AzureClientTest {
         when(groupCollectionRequest.postAsync(any(Group.class))).thenReturn(future);
 
         // Call the method under test
-        azureClient.addGroupToAzure(resourceGroup);
+        entraClient.addGroupToAzure(resourceGroup);
 
         // Verify that postAsync was called with the correct parameters
         verify(groupCollectionRequest, times(1)).postAsync(any(Group.class));
@@ -181,7 +177,7 @@ class AzureClientTest {
          when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
 
          // Call the method under test
-         azureClient.deleteGroup(delGroupID);
+         entraClient.deleteGroup(delGroupID);
 
          // Verify that delete() was called once on the groupRequest
          verify(groupRequest, times(1)).delete();
@@ -217,7 +213,7 @@ class AzureClientTest {
          when(groupRequest.patchAsync(any(Group.class))).thenReturn(future);
 
          // Call the method under test
-         azureClient.updateGroup(resourceGroup);
+         entraClient.updateGroup(resourceGroup);
 
          // Verify that patchAsync was called once with any Group object
          verify(groupRequest, times(1)).patchAsync(any(Group.class));
@@ -246,7 +242,7 @@ class AzureClientTest {
          when(groupRequest.patchAsync(any(Group.class))).thenReturn(future);
 
          // Call the method under test
-         azureClient.updateGroup(resourceGroup);
+         entraClient.updateGroup(resourceGroup);
 
          // Verify that patchAsync is called exactly once with any Group object
          verify(groupRequest, times(1)).patchAsync(any(Group.class));
@@ -286,7 +282,7 @@ class AzureClientTest {
                 .build();
 
         assertThrows(NullPointerException.class,
-                () -> azureClient.addGroupMembership(resourceGroupMembership, kafkaKey)
+                () -> entraClient.addGroupMembership(resourceGroupMembership, kafkaKey)
         );
     }
 
@@ -306,7 +302,7 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
         verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
 
@@ -417,7 +413,7 @@ class AzureClientTest {
 
         String kafkaKey = "exampleGroupID_exampleUserID";
 
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
 
         verify(directoryObjectReferenceRequest, times(1) ).deleteAsync();
     }
@@ -447,11 +443,11 @@ class AzureClientTest {
                 .build();
 
         String kafkaKey = "example";
-        azureClient.deleteGroupMembership(null, kafkaKey);
+        entraClient.deleteGroupMembership(null, kafkaKey);
         verify(directoryObjectReferenceRequest, times(0)).deleteAsync();
 
         kafkaKey = "exampleGroupID_exampleUserID";
-        azureClient.deleteGroupMembership(null, kafkaKey);
+        entraClient.deleteGroupMembership(null, kafkaKey);
         verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
     }
 
@@ -465,7 +461,7 @@ class AzureClientTest {
         //when(directoryObjectReferenceRequest.deleteAsync()).thenReturn(new DirectoryObject());
 
         String membershipkey = "someid_1234";
-        azureClient.deleteGroupMembership(null, membershipkey);
+        entraClient.deleteGroupMembership(null, membershipkey);
 
         verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
     }
@@ -486,15 +482,15 @@ class AzureClientTest {
                 .build();
 
         String kafkaKey = "example_with_multiple_underscores";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
         verify(directoryObjectReferenceRequest, times(0)).deleteAsync();
 
         kafkaKey = "exampleGroupID_exampleUserID";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
         verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
 
         kafkaKey = "exampleGroupID_exampleUserID2";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        entraClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
         verify(directoryObjectReferenceRequest, times(2)).deleteAsync();
     }
 
@@ -563,7 +559,7 @@ class AzureClientTest {
 
         //assertDoesNotThrow( );
         assertDoesNotThrow(()-> {
-            azureClient.pullAllGroups();
+            entraClient.pullAllGroups();
         });
     }
 
@@ -586,7 +582,7 @@ class AzureClientTest {
         when(mockGroupCollectionRequestBuilder2.buildRequest()).thenReturn(mockGroupCollectionRequest2);
         when(mockGroupCollectionRequest2.get()).thenReturn(mockCollPage2);*/
 
-        azureClient.pullAllGroups();
+        entraClient.pullAllGroups();
 
 /*        when(groupCollectionRequest.get()).thenAnswer();
 
@@ -640,7 +636,7 @@ class AzureClientTest {
 
              // Call the method under test
              //try {
-             azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+             entraClient.addGroupMembership(resourceGroupMembership, kafkaKey);
              //} catch (GraphServiceException e) {
                  // Handle exception as needed or rethrow it
              //    System.out.println("Caught GraphServiceException: " + e.getMessage());
@@ -693,7 +689,7 @@ class AzureClientTest {
                  .roleRef("exampleRoleRef")
                  .build();
 
-         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+         entraClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
          // Verify that the post method was called once and threw the exception
          verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));

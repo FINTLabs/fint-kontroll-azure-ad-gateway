@@ -1,7 +1,7 @@
 package no.fintlabs.kafka;
 
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.AzureClient;
+import no.fintlabs.EntraClient;
 import no.fintlabs.ConfigGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
@@ -20,18 +20,18 @@ import java.util.UUID;
 @Slf4j
 
 public class ResourceGroupConsumerService {
-    private final AzureClient azureClient;
+    private final EntraClient entraClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final ConfigGroup configGroup;
     private final FintCache<String, Optional> resourceGroupCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
 
     public ResourceGroupConsumerService(
-            AzureClient azureClient,
+            EntraClient entraClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
             ConfigGroup configGroup,
             FintCache<String, Optional> resourceGroupCache) {
-        this.azureClient = azureClient;
+        this.entraClient = entraClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.configGroup = configGroup;
         this.resourceGroupCache = resourceGroupCache;
@@ -74,12 +74,12 @@ public class ResourceGroupConsumerService {
         ResourceGroup resourceGroup;
         if (resourceGroupOptional.isPresent()) {
             resourceGroup = resourceGroupOptional.get();
-            if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
+            if (resourceGroup.getResourceName() != null && !entraClient.doesGroupExist(resourceGroup.getId())) {
                 log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
-                azureClient.addGroupToAzure(resourceGroup);
+                entraClient.addGroupToAzure(resourceGroup);
             } else {
                 if (configGroup.getAllowgroupupdate() && resourceGroup.getIdentityProviderGroupObjectId() != null) {
-                    azureClient.updateGroup(resourceGroup);
+                    entraClient.updateGroup(resourceGroup);
                     log.info("Updated group with ResourceGroupId {}", resourceGroup.getId());
                 } else {
                     log.warn("ResourceGroupId {} was NOT updated, as environmentparameter allowgroupupdate is set to false or IdentityProviderGroupObjectId is not set", resourceGroup.getId());
@@ -88,7 +88,7 @@ public class ResourceGroupConsumerService {
         } else {
             if (configGroup.getAllowgroupdelete()) {
                 log.debug("Deleting group from Azure with id '{}'", kafkaKey);
-                azureClient.deleteGroup(kafkaKey);
+                entraClient.deleteGroup(kafkaKey);
             } else {
                 log.warn("ResourceGroupId {} is NOT deleted, as environment parameter allowgroupdelete is set to false", kafkaKey);
             }
