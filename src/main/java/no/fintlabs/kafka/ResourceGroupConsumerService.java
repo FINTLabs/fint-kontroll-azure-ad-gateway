@@ -1,46 +1,52 @@
 package no.fintlabs.kafka;
 
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.EntraClient;
+import no.fintlabs.AzureClient;
 import no.fintlabs.ConfigGroup;
-import no.fintlabs.azure.EntraGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
-import java.util.*;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Slf4j
 
 public class ResourceGroupConsumerService {
-    private final EntraClient entraClient;
+    private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final ConfigGroup configGroup;
-    private final FintCache<String, ResourceGroup> resourceGroupCache;
-    private final FintCache<String, EntraGroup> azureGroupCache;
-    private final Sinks.Many<Tuple2<String, ResourceGroup>> resourceGroupSink;
+    private final FintCache<String, Optional> resourceGroupCache;
+    private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
+
     public ResourceGroupConsumerService(
-            EntraClient entraClient,
+            AzureClient azureClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
             ConfigGroup configGroup,
-            FintCache<String, ResourceGroup> resourceGroupCache,
-            FintCache<String, EntraGroup> azureGroupCache) {
-        this.entraClient = entraClient;
+            FintCache<String, Optional> resourceGroupCache) {
+        this.azureClient = azureClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.configGroup = configGroup;
         this.resourceGroupCache = resourceGroupCache;
-        this.azureGroupCache = azureGroupCache;
 
         resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
-        resourceGroupSink.asFlux().subscribe(
-                keyAndResourceGroup -> updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
-        );
+        resourceGroupSink.asFlux()
+                .parallel(20) // Parallelism with up to 20 threads
+                .runOn(Schedulers.boundedElastic())
+                .subscribe
+                        (keyAndResourceGroup ->
+                                updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
+                );
+    }
+    protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink) {
+        this.resourceGroupSink = resourceGroupSink;
     }
 
     @PostConstruct
@@ -55,32 +61,36 @@ public class ResourceGroupConsumerService {
                         consumerRecord.value(), consumerRecord.key()
                 )
         ).createContainer(
-             EntityTopicNameParameters
+                EntityTopicNameParameters
                         .builder()
                         .resource("resource-group")
                         .build()
         );
     }
 
-    private synchronized void updateAzure(String kafkaKey, ResourceGroup resourceGroup) {
+    void updateAzure(String kafkaKey, Optional<ResourceGroup> resourceGroupOptional) {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzure function {}.", randomUUID);
-        //azureService.handleChangedResource
-        // TODO: Split doesGroupExist to POST or PUT. Relates to [FKS-200] and [FKS-202]
-        if (resourceGroup.getResourceName() != null && !entraClient.doesGroupExist(resourceGroup.getId())) {
-            log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
-            entraClient.addGroupToAzure(resourceGroup);
-        } else if (resourceGroup.getResourceName() == null) {
-            log.debug("Delete group from Azure, {}",resourceGroup.getResourceName());
-            entraClient.deleteGroup(kafkaKey);
-        } else {
-            if (configGroup.getAllowgroupupdate()) {
-                entraClient.updateGroup(resourceGroup);
-                log.info("Updated group with groupId {}",resourceGroup.getIdentityProviderGroupObjectId());
+        ResourceGroup resourceGroup;
+        if (resourceGroupOptional.isPresent()) {
+            resourceGroup = resourceGroupOptional.get();
+            if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
+                log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
+                azureClient.addGroupToAzure(resourceGroup);
+            } else {
+                if (configGroup.getAllowgroupupdate() && resourceGroup.getIdentityProviderGroupObjectId() != null) {
+                    azureClient.updateGroup(resourceGroup);
+                    log.info("Updated group with ResourceGroupId {}", resourceGroup.getId());
+                } else {
+                    log.warn("ResourceGroupId {} was NOT updated, as environmentparameter allowgroupupdate is set to false or IdentityProviderGroupObjectId is not set", resourceGroup.getId());
+                }
             }
-            else
-            {
-                log.debug("GroupId {} is NOT updated, as environmentparameter allowgroupupdate is set to false",resourceGroup.getIdentityProviderGroupObjectId() );
+        } else {
+            if (configGroup.getAllowgroupdelete()) {
+                log.debug("Deleting group from Azure with id '{}'", kafkaKey);
+                azureClient.deleteGroup(kafkaKey);
+            } else {
+                log.warn("ResourceGroupId {} is NOT deleted, as environment parameter allowgroupdelete is set to false", kafkaKey);
             }
         }
         log.debug("Stopping updateAzure function {}.", randomUUID);
@@ -90,15 +100,21 @@ public class ResourceGroupConsumerService {
         synchronized (resourceGroupCache) {
             // Check resourceGroupCache if object is known from before
             if (resourceGroupCache.containsKey(kafkaKey)) {
-                ResourceGroup fromCache = resourceGroupCache.get(kafkaKey);
-                if (resourceGroup.equals(fromCache)){
+                Optional<ResourceGroup> fromCache = resourceGroupCache.get(kafkaKey);
+                // Detect if cache contains deletion of resourceGroup from before
+                if (fromCache.isEmpty() && resourceGroup == null) {
+                    log.debug("Skip processing of entity as cache already contains deleted group on resourceGroupId: {}", kafkaKey);
+                    return;
+                }
+                // Detect if last entry in cache is identical to new entity
+                if (resourceGroup != null && fromCache.isPresent() && resourceGroup.equals(fromCache.get())){
                     // New kafka message, but unchanged resourceGroup from last time
                     log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
                     return;
                 }
             }
-            resourceGroupCache.put(kafkaKey, resourceGroup);
-            resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, resourceGroup));
+            resourceGroupCache.put(kafkaKey, Optional.ofNullable(resourceGroup));
+            resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroup)));
         }
     }
- }
+}

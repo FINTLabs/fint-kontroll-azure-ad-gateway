@@ -14,4 +14,5 @@ public class ConfigGroup {
     private String prefix;
     private String suffix;
     private Boolean allowgroupupdate;
+    private Boolean allowgroupdelete;
 }
