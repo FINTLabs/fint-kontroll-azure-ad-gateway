@@ -58,6 +58,8 @@ fint:
         prefix: "-pre-"
         suffix: "-suff-"
         allowgroupupdate: false
+        allowgroupdelete: false
+        uniquenameprefix: "FKRID"
       group-scheduler:
         pull:
           initial-delay-ms: 1000
