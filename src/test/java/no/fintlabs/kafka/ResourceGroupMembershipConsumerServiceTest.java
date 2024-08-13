@@ -1,6 +1,6 @@
 package no.fintlabs.kafka;
 
-import no.fintlabs.AzureClient;
+import no.fintlabs.EntraClient;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -14,8 +14,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
 
-import javax.swing.text.html.Option;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -27,7 +25,7 @@ import java.util.Optional;
 class ResourceGroupMembershipConsumerServiceTest {
 
     @Mock
-    private AzureClient azureClient;
+    private EntraClient entraClient;
     @Mock
     private FintCache<String, Optional> resourceGroupMembershipCache;
     @Mock
@@ -76,8 +74,8 @@ class ResourceGroupMembershipConsumerServiceTest {
 
         resourceGroupMembershipConsumerService.processEntity(null, null);
 
-        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        verify(azureClient, times(0)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(entraClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(entraClient, times(0)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
     }
 
     @Test
@@ -224,16 +222,16 @@ class ResourceGroupMembershipConsumerServiceTest {
     void updateAzureWithMembership_NewMembershipCallsAzureAddGroupMembership() {
         resourceGroupMembershipConsumerService.updateAzureWithMembership(exampleKafkaKey, Optional.of(exampleGroupMembership));
 
-        verify(azureClient, times(1)).addGroupMembership(any(),anyString());
-        verify(azureClient, times(0)).deleteGroupMembership(any(), anyString());
+        verify(entraClient, times(1)).addGroupMembership(any(),anyString());
+        verify(entraClient, times(0)).deleteGroupMembership(any(), anyString());
     }
 
     @Test
     void updateAzureWithMembership_DeletedMembershipCallsAzureDeleteGroupMembership() {
         resourceGroupMembershipConsumerService.updateAzureWithMembership(exampleKafkaKey,Optional.empty());
 
-        verify(azureClient, times(0)).addGroupMembership(any(),anyString());
-        verify(azureClient, times(1)).deleteGroupMembership(any(), anyString());
+        verify(entraClient, times(0)).addGroupMembership(any(),anyString());
+        verify(entraClient, times(1)).deleteGroupMembership(any(), anyString());
     }
 }
 
