@@ -13,6 +13,8 @@ import org.apache.commons.lang3.RandomStringUtils;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
 
+import java.util.Optional;
+
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 
@@ -30,10 +32,10 @@ public class ResourceGroupConsumerServiceTest {
     private ConfigGroup configGroup;
 
     @Mock
-    private FintCache<String, ResourceGroup> resourceGroupCache;
+    private FintCache<String, Optional> resourceGroupCache;
 
     @Mock
-    private Sinks.Many<Tuple2<String, ResourceGroup>> resourceGroupSink;
+    private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
 
     @InjectMocks
     private ResourceGroupConsumerService resourceGroupConsumerService;
@@ -61,6 +63,16 @@ public class ResourceGroupConsumerServiceTest {
                 .build();
     }
 
+    private static ResourceGroup newResourceGroupFromResourceNameStatic() {
+        return ResourceGroup.builder()
+                .id("1234")
+                .resourceId("TestKafkaKeyID")
+                .displayName("TestDisplayName 12")
+                .resourceName("")
+                .identityProviderGroupObjectId("737e77a-8989-4444-9999-b999976c097b")
+                .build();
+    }
+
     @Test
     void makeSureEmptyQueueIsHandledOK() {
         // TODO: Implement test that can handle that a topic is empty [FKS-258]
@@ -82,16 +94,46 @@ public class ResourceGroupConsumerServiceTest {
     void processEntityEntryAlreadyInCacheGeneratesNothing() {
         String kafkaKeyID = "TestKafkaKeyID";
 
-        ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
+        ResourceGroup resourceGroup = newResourceGroupFromResourceNameStatic();
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
 
         when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
-        when(resourceGroupCache.get(anyString())).thenReturn(resourceGroup);
+        when(resourceGroupCache.get(anyString())).thenReturn(Optional.ofNullable(resourceGroup));
 
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
         verify(resourceGroupCache, times(0)).put(anyString(),any());
         verify(resourceGroupSink, times(0)).tryEmitNext(any());
+    }
+
+    @Test
+    void processEntity_That_Is_Empty_And_Already_In_Cache_Generates_Nothing() {
+        String kafkaKeyID = "TestKafkaKeyID";
+
+        ResourceGroup resourceGroup = null;
+        resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
+
+        when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
+        when(resourceGroupCache.get(anyString())).thenReturn(Optional.ofNullable(resourceGroup));
+
+        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+
+        verify(resourceGroupCache, times(0)).put(anyString(),any());
+        verify(resourceGroupSink, times(0)).tryEmitNext(any());
+    }
+
+    @Test
+    void processEntity_That_Is_Empty_ResourceGroup_But_Not_In_Cache_Continues_Operation() {
+        String kafkaKeyID = "TestKafkaKeyID";
+
+        resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
+
+        when(resourceGroupCache.containsKey(anyString())).thenReturn(false);
+
+        resourceGroupConsumerService.processEntity(null, kafkaKeyID);
+
+        verify(resourceGroupCache, times(1)).put(anyString(),any());
+        verify(resourceGroupSink, times(1)).tryEmitNext(any());
     }
 
     @Test
@@ -102,21 +144,21 @@ public class ResourceGroupConsumerServiceTest {
         when(azureClient.doesGroupExist(anyString())).thenReturn(false);
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
-        resourceGroupConsumerService.updateAzure(kafkaKeyID, resourceGroup);
+        resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
 
         verify(azureClient, times(1)).addGroupToAzure(any());
         verify(azureClient, times(0)).updateGroup(any());
         verify(azureClient, times(0)).deleteGroup(any());
     }
     @Test
-    void updateAzure_UpdatedGroup_CallsAzureUpdate() {
+    void updateAzure_UpdatedGroup_if_allowed() {
         String kafkaKeyID = "TestKafkaKeyID";
 
         when(azureClient.doesGroupExist(anyString())).thenReturn(true);
         when(configGroup.getAllowgroupupdate()).thenReturn(true);
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
-        resourceGroupConsumerService.updateAzure(kafkaKeyID, resourceGroup);
+        resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
 
         verify(azureClient, times(0)).addGroupToAzure(any());
         verify(azureClient, times(1)).updateGroup(any());
@@ -124,14 +166,14 @@ public class ResourceGroupConsumerServiceTest {
     }
 
     @Test
-    void updateAzure_UpdatedGroup_CallsAzureUpdate_IsIgnoredIfConfigured() {
+    void updateAzure_UpdatedGroup_if_not_allowed() {
         String kafkaKeyID = "TestKafkaKeyID";
 
         when(azureClient.doesGroupExist(anyString())).thenReturn(true);
         when(configGroup.getAllowgroupupdate()).thenReturn(false);
 
-        ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud Testresource");
-        resourceGroupConsumerService.updateAzure(kafkaKeyID, resourceGroup);
+        ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
+        resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
 
         verify(azureClient, times(0)).addGroupToAzure(any());
         verify(azureClient, times(0)).updateGroup(any());
@@ -139,22 +181,26 @@ public class ResourceGroupConsumerServiceTest {
     }
 
     @Test
-    void updateAzure_UpdatedGroup_CallsAzureDelete() {
+    void updateAzure_DeletedGroup_If_Allowed_Calls_deleteGroup() {
         String kafkaKeyID = "TestKafkaKeyID";
 
-        ResourceGroup resourceGroup = ResourceGroup.builder()
-                .id(RandomStringUtils.random(4))
-                .resourceId(RandomStringUtils.randomAlphanumeric(12))
-                .displayName("TestDisplayName " + RandomStringUtils.random(6))
-                .resourceId(RandomStringUtils.random(12))
-                .resourceName(null)
-                .identityProviderGroupObjectId(RandomStringUtils.random(12))
-                .build();
-
-        resourceGroupConsumerService.updateAzure(kafkaKeyID, resourceGroup);
+        when(configGroup.getAllowgroupdelete()).thenReturn(true);
+        resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.empty());
 
         verify(azureClient, times(0)).addGroupToAzure(any());
         verify(azureClient, times(0)).updateGroup(any());
         verify(azureClient, times(1)).deleteGroup(any());
+    }
+
+    @Test
+    void updateAzure_DeletedGroup_If_Not_Allowed_Do_Not_Calls_deleteGroup() {
+        String kafkaKeyID = "TestKafkaKeyID";
+
+        when(configGroup.getAllowgroupdelete()).thenReturn(false);
+        resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.empty());
+
+        verify(azureClient, times(0)).addGroupToAzure(any());
+        verify(azureClient, times(0)).updateGroup(any());
+        verify(azureClient, times(0)).deleteGroup(any());
     }
 }
