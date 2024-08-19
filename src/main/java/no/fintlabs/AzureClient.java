@@ -304,7 +304,7 @@ public class AzureClient {
                 graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references()
                         .buildRequest()
                         .postAsync(directoryObject);
-                log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                log.debug("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                 azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
                 log.debug("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
             } catch (GraphServiceException e) {
@@ -312,7 +312,7 @@ public class AzureClient {
                 if (e.getResponseCode() == 400) {
                     if(e.getError().error.message.contains("object references already exist")) {
                         azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-                        log.info("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                        log.debug("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }
                     if(e.getError().error.code.contains("Request_ResourceNotFound")){
