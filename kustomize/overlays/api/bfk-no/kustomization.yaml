@@ -38,7 +38,7 @@ patches:
         path: "/spec/env/0"
         value:
           name: "JAVA_TOOL_OPTIONS"
-          value: "-XX:+ExitOnOutOfMemoryError -Xmx5760g"
+          value: "-XX:+ExitOnOutOfMemoryError -Xmx5760m"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
