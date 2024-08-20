@@ -178,7 +178,14 @@ public class AzureClient {
                 azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
                 azureGroup.getMembers().add(member.id);
             }
-            page = (page.getNextPage() != null) ? page.getNextPage().buildRequest().get() : null;
+
+            CompletableFuture<DirectoryObjectCollectionWithReferencesPage> nextPageFuture = (page.getNextPage() != null) ?
+                    page.getNextPage().buildRequest().getAsync() :
+                    CompletableFuture.completedFuture(null);
+
+            page = nextPageFuture.join();
+
+            //page = (page.getNextPage() != null) ? page.getNextPage().buildRequest().get() : null;
         } while (page != null);
 
         log.debug("{} memberships detected in groupName {} with groupId {}", members, azureGroup.getDisplayName(), azureGroup.getId());
