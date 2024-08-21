@@ -17,7 +17,7 @@ public class AzureGroup {
 
     protected String id;
     protected String displayName;
-    protected List<String> members;
+    //protected List<String> members;
     protected Long resourceGroupID;
 
     protected ExtensionCollectionPage extensions;
@@ -25,7 +25,7 @@ public class AzureGroup {
 
         this.id = group.id;
         this.displayName = group.displayName;
-        this.members = new ArrayList<>();
+        //this.members = new ArrayList<>();
 
         //TODO: Implement tests to verify ResourceID as LONG from kafka [FKS-216]
         if (!group.additionalDataManager().isEmpty() && group.additionalDataManager().containsKey(configGroup.getFintkontrollidattribute()))
