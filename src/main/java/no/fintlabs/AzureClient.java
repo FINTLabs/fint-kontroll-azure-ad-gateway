@@ -176,7 +176,7 @@ public class AzureClient {
             for (DirectoryObject member : page.getCurrentPage()) {
                 members++;
                 azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
-                azureGroup.getMembers().add(member.id);
+                //azureGroup.getMembers().add(member.id);
             }
 
             CompletableFuture<DirectoryObjectCollectionWithReferencesPage> nextPageFuture = (page.getNextPage() != null) ?
