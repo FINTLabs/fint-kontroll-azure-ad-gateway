@@ -27,18 +27,17 @@ patches:
         value: "afk-no.kontroll.entity.resource-group*"
       - op: add
         path: "/spec/resources"
-        value: 
+        value:
           limits:
-            cpu: "2000m"
-            memory: "14Gi"
+            memory: "24Gi"
           requests:
             cpu: "1000m"
-            memory: "10Gi"
+            memory: "16Gi"
       - op: add
         path: "/spec/env/0"
         value:
           name: "JAVA_TOOL_OPTIONS"
-          value: "-XX:+ExitOnOutOfMemoryError -Xmx13824m"
+          value: "-XX:+ExitOnOutOfMemoryError -Xmx23808m"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
