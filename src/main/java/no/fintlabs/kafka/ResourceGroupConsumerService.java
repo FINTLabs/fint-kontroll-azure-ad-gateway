@@ -81,8 +81,11 @@ public class ResourceGroupConsumerService {
                 if (configGroup.getAllowgroupupdate() && resourceGroup.getIdentityProviderGroupObjectId() != null) {
                     azureClient.updateGroup(resourceGroup);
                     log.info("Updated group with ResourceGroupId {}", resourceGroup.getId());
-                } else {
-                    log.warn("ResourceGroupId {} was NOT updated, as environmentparameter allowgroupupdate is set to false or IdentityProviderGroupObjectId is not set", resourceGroup.getId());
+                } else if (!configGroup.getAllowgroupupdate()) {
+                    log.warn("ResourceGroupId {} was NOT updated, as \"allowgroupupdate\" is set to false", resourceGroup.getId());
+                }
+                else if (resourceGroup.getIdentityProviderGroupObjectId() == null) {
+                    log.warn("ResourceGroupId {} was NOT updated, as IdentityProviderGroupObjectId is not present in Kafka message", resourceGroup.getId());
                 }
             }
         } else {
