@@ -201,7 +201,7 @@ public class AzureClient {
                 .map(member -> CompletableFuture.runAsync(() -> {
                     members.incrementAndGet();
                     azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
-                    log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", azureGroup.getDisplayName(), azureGroup.getId());
+                    log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member, azureGroup.getId());
                 }))
                 .toList();
 
