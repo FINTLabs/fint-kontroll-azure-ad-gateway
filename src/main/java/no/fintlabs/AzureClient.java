@@ -88,7 +88,7 @@ public class AzureClient {
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
-        log.info("{} User objects detected in Microsoft Entra", users);
+        log.info("*** <<< {} User objects detected in Microsoft Entra >>> ***", users);
         //});
     }
 
@@ -139,7 +139,7 @@ public class AzureClient {
         AtomicInteger groupCounter = new AtomicInteger(0);  // Counter for groups
 
         return fetchAllGroupsRecursive(initialPage, allGroups, groupCounter).thenApply(v -> {
-            log.info("*** <<< Found {} groups with suffix {} >>> ***", groupCounter.get(), configGroup.getSuffix());
+            log.info("*** <<< Found {} groups with suffix \"{}\" >>> ***", groupCounter.get(), configGroup.getSuffix());
             return allGroups;
         });
     }
@@ -484,7 +484,7 @@ public class AzureClient {
                 .buildRequest()
                 .postAsync(group)
                 .thenAccept(createdGroup -> {
-                    log.info("Added Group to Azure: {}", resourceGroup.getResourceName());
+                    log.info("Added Group to Azure: {}", group.displayName);
                     azureGroupProducerService.publish(new AzureGroup(createdGroup, configGroup));
                 }).exceptionally(ex -> {
                     handleGraphApiError(ex);
@@ -559,7 +559,7 @@ public class AzureClient {
                 graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references()
                         .buildRequest()
                         .postAsync(directoryObject)
-                        .thenAccept(acceptedMember -> log.info("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef()));
+                        .thenAccept(acceptedMember -> log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef()));
 
                 //log.debug("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                 azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
@@ -603,15 +603,16 @@ public class AzureClient {
         String user = splitString[1];
 
         try {
-            log.debug("Removing UserId: {} from GroupId: {} in Graph", user, group);
+            log.debug("trying to remove UserId: {} from GroupId: {} in Graph", user, group);
 
             graphService.groups(group)
                     .members(user)
                     .reference()
                     .buildRequest()
-                    .deleteAsync();
+                    .deleteAsync()
+                    .thenAccept(removedMember -> log.info("UserId: {} removed from GroupId: {}", user, group));
 
-            log.debug("UserId: {} removed from GroupId: {} in Graph", user, group);
+            //log.info("UserId: {} removed from GroupId: {}", user, group);
             azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
             log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
         } catch (GraphServiceException e) {
