@@ -290,27 +290,37 @@ class AzureClientTest {
         );
     }
 
-    @Test
-    public  void addGroupMembership () {
-        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-        when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
-        //when(configGroup.getFintkontrollidattribute()).thenReturn("somefakeattribute");
-        when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
-        when(directoryObjectCollectionWithReferencesRequestBuilder.references().buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
+     @Test
+     public void addGroupMembership() {
+         // Setup the mocks
+         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+         when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
+         when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
+         when(directoryObjectCollectionReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
 
-        String kafkaKey = "somekey";
-        ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
-                .id("testid")
-                .azureGroupRef("exampleGroupRef")
-                .azureUserRef("someUserRef")
-                .roleRef("exampleRoleRef")
-                .build();
+         // Create a mock DirectoryObject
+         DirectoryObject mockDirectoryObject = new DirectoryObject();
+         mockDirectoryObject.id = "someUserRef";
 
-        azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+         // Mocking postAsync to return a completed CompletableFuture with DirectoryObject
+         CompletableFuture<DirectoryObject> future = CompletableFuture.completedFuture(mockDirectoryObject);
+         when(directoryObjectCollectionReferenceRequest.postAsync(any(DirectoryObject.class))).thenReturn(future);
 
-        verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
+         // Creating test data
+         String kafkaKey = "somekey";
+         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
+                 .id("testid")
+                 .azureGroupRef("exampleGroupRef")
+                 .azureUserRef("someUserRef")
+                 .roleRef("exampleRoleRef")
+                 .build();
 
-    }
+         // Call the method under test
+         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+
+         // Verify the interaction
+         verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
+     }
 
     @Test
     public void makeSureHTTP400IsHandledGraceullyWhenAddingGroupMembership () {
