@@ -8,8 +8,6 @@ import com.microsoft.graph.http.GraphErrorResponse;
 import com.microsoft.graph.http.GraphServiceException;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
-import com.microsoft.graph.options.Option;
-import com.microsoft.graph.options.QueryOption;
 import com.microsoft.graph.requests.*;
 import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
@@ -19,13 +17,11 @@ import okhttp3.Request;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.InterruptedIOException;
 import java.util.*;
@@ -427,7 +423,7 @@ class AzureClientTest {
 
         String kafkaKey = "exampleGroupID_exampleUserID";
 
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        azureClient.deleteGroupMembership(kafkaKey);
 
         verify(directoryObjectReferenceRequest, times(1) ).deleteAsync();
     }
@@ -457,11 +453,11 @@ class AzureClientTest {
                 .build();
 
         String kafkaKey = "example";
-        azureClient.deleteGroupMembership(null, kafkaKey);
+        azureClient.deleteGroupMembership(kafkaKey);
         verify(directoryObjectReferenceRequest, times(0)).deleteAsync();
 
         kafkaKey = "exampleGroupID_exampleUserID";
-        azureClient.deleteGroupMembership(null, kafkaKey);
+        azureClient.deleteGroupMembership(kafkaKey);
         verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
     }
 
@@ -475,7 +471,7 @@ class AzureClientTest {
         //when(directoryObjectReferenceRequest.deleteAsync()).thenReturn(new DirectoryObject());
 
         String membershipkey = "someid_1234";
-        azureClient.deleteGroupMembership(null, membershipkey);
+        azureClient.deleteGroupMembership(membershipkey);
 
         verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
     }
@@ -496,15 +492,15 @@ class AzureClientTest {
                 .build();
 
         String kafkaKey = "example_with_multiple_underscores";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        azureClient.deleteGroupMembership(kafkaKey);
         verify(directoryObjectReferenceRequest, times(0)).deleteAsync();
 
         kafkaKey = "exampleGroupID_exampleUserID";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        azureClient.deleteGroupMembership(kafkaKey);
         verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
 
         kafkaKey = "exampleGroupID_exampleUserID2";
-        azureClient.deleteGroupMembership(resourceGroupMembership, kafkaKey);
+        azureClient.deleteGroupMembership(kafkaKey);
         verify(directoryObjectReferenceRequest, times(2)).deleteAsync();
     }
 
