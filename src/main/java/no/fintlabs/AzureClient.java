@@ -9,9 +9,7 @@ import com.microsoft.graph.models.Group;
 import com.microsoft.graph.models.User;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.microsoft.graph.options.HeaderOption;
-import com.microsoft.graph.options.Option;
-import java.util.concurrent.CompletableFuture;
+
 import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -203,6 +201,7 @@ public class AzureClient {
                 .map(member -> CompletableFuture.runAsync(() -> {
                     members.incrementAndGet();
                     azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
+                    log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", azureGroup.getDisplayName(), azureGroup.getId());
                 }))
                 .toList();
 
@@ -593,7 +592,7 @@ public class AzureClient {
         }
     }
 
-    public void deleteGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
+    public void deleteGroupMembership(String resourceGroupMembershipKey) {
         String[] splitString = resourceGroupMembershipKey.split     ("_");
         if (splitString.length != 2) {
             log.error("Key on kafka object {} not formatted correctly. NOT deleting membership from group",resourceGroupMembershipKey);
@@ -609,10 +608,9 @@ public class AzureClient {
                     .members(user)
                     .reference()
                     .buildRequest()
-                    .deleteAsync()
-                    .thenAccept(removedMember -> log.info("UserId: {} removed from GroupId: {}", user, group));
+                    .deleteAsync();
 
-            //log.info("UserId: {} removed from GroupId: {}", user, group);
+            log.info("UserId: {} removed from GroupId: {}", user, group);
             azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
             log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
         } catch (GraphServiceException e) {
