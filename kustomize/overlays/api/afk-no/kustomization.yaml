@@ -29,15 +29,15 @@ patches:
         path: "/spec/resources"
         value:
           limits:
-            memory: "24Gi"
+            memory: "6Gi"
           requests:
-            cpu: "1000m"
-            memory: "16Gi"
+            cpu: "500m"
+            memory: "4Gi"
       - op: add
         path: "/spec/env/0"
         value:
           name: "JAVA_TOOL_OPTIONS"
-          value: "-XX:+ExitOnOutOfMemoryError -Xmx23808m"
+          value: "-XX:+ExitOnOutOfMemoryError -Xmx5824m"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
