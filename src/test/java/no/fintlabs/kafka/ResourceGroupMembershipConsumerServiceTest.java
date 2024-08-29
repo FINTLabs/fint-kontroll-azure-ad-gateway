@@ -77,7 +77,7 @@ class ResourceGroupMembershipConsumerServiceTest {
         resourceGroupMembershipConsumerService.processEntity(null, null);
 
         verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        verify(azureClient, times(0)).deleteGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(azureClient, times(0)).deleteGroupMembership(anyString());
     }
 
     @Test
@@ -225,7 +225,7 @@ class ResourceGroupMembershipConsumerServiceTest {
         resourceGroupMembershipConsumerService.updateAzureWithMembership(exampleKafkaKey, Optional.of(exampleGroupMembership));
 
         verify(azureClient, times(1)).addGroupMembership(any(),anyString());
-        verify(azureClient, times(0)).deleteGroupMembership(any(), anyString());
+        verify(azureClient, times(0)).deleteGroupMembership(anyString());
     }
 
     @Test
@@ -233,7 +233,7 @@ class ResourceGroupMembershipConsumerServiceTest {
         resourceGroupMembershipConsumerService.updateAzureWithMembership(exampleKafkaKey,Optional.empty());
 
         verify(azureClient, times(0)).addGroupMembership(any(),anyString());
-        verify(azureClient, times(1)).deleteGroupMembership(any(), anyString());
+        verify(azureClient, times(1)).deleteGroupMembership(anyString());
     }
 }
 

@@ -71,7 +71,7 @@ public class ResourceGroupMembershipConsumerService {
         log.debug("Starting updateAzureWithMembership function {}.", randomUUID);
 
         if (resourceGroupMembership.isEmpty()) {
-            azureClient.deleteGroupMembership(null, kafkakKey);
+            azureClient.deleteGroupMembership(kafkakKey);
         } else {
             azureClient.addGroupMembership(resourceGroupMembership.get(), kafkakKey);
         }
