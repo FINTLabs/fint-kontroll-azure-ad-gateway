@@ -92,9 +92,10 @@ jobs:
       - name: Set the target cluster
         uses: azure/aks-set-context@v4
         with:
-          creds: "${{ secrets[format('AKS_{0}_FINT_GITHUB', steps.environment.outputs.result)] }}"
           cluster-name: '${{ matrix.cluster }}'
           resource-group: '${{ steps.resource-group.outputs.result }}'
+          admin: 'true'
+          use-kubelogin: 'true'
 
       - name: Deploy
         uses: azure/k8s-deploy@v5
