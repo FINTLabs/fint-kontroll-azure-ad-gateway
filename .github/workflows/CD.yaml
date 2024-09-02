@@ -88,6 +88,13 @@ jobs:
         with:
           renderEngine: 'kustomize'
           kustomizationPath: 'kustomize/overlays/${{ steps.environment.outputs.result }}/${{ matrix.org }}'
+      - uses: azure/login@v1
+        with:
+          creds: '${{ secrets.AKS_ALPHA_FINT_GITHUB }}'
+
+      - uses: azure/use-kubelogin@v1
+        with:
+          kubelogin-version: 'v0.0.26'
 
       - name: Set the target cluster
         uses: azure/aks-set-context@v4

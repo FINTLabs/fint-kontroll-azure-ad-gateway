@@ -23,13 +23,13 @@ public class AzureUser {
         private Boolean accountEnabled;
 
         public AzureUser(User user, ConfigUser configUser) {
-                this.mail = user.mail;
-                this.id = user.id;
-                this.accountEnabled = user.accountEnabled;
-                this.userPrincipalName = user.userPrincipalName;
+                this.mail = user.getMail();
+                this.id = user.getId();
+                this.accountEnabled = user.getAccountEnabled();
+                this.userPrincipalName = user.getUserPrincipalName();
                 this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
                 this.studentId = getAttributeValue(user, configUser.getStudentidattribute());
-                this.idpUserObjectId = user.id;
+                this.idpUserObjectId = user.getId();
         }
 
         public static String getAttributeValue(User user, String attributeName) {
@@ -38,7 +38,7 @@ public class AzureUser {
 
                 if (attributeParts[0].equals("onPremisesExtensionAttributes")) {
                         // Set attribute values
-                        OnPremisesExtensionAttributes attributeValues = user.onPremisesExtensionAttributes;
+                        OnPremisesExtensionAttributes attributeValues = user.getOnPremisesExtensionAttributes();
                         try {
                                 Field field = OnPremisesExtensionAttributes.class.getDeclaredField(attributeParts[1]);
                                 field.setAccessible(true);

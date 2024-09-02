@@ -7,15 +7,12 @@ import no.fintlabs.cache.FintCacheManager;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import java.util.Locale;
 import java.util.Optional;
 
 @AllArgsConstructor
 @Configuration
 public class CacheConfiguration {
-/*    @Autowired
-    private final AzureClient azureClient;*/
     private final FintCacheManager fintCacheManager;
 
     @Bean
@@ -25,7 +22,6 @@ public class CacheConfiguration {
 
     @Bean
     FintCache<String, Optional> resourceGroupMembershipCache() {
-        //return createResourceCache(ClassValue<Optional<ResourceGroupMembership>>);
         return fintCacheManager.createCache(
                 ResourceGroupMembership.class.getName().toLowerCase(Locale.ROOT),
                 String.class,
@@ -36,13 +32,6 @@ public class CacheConfiguration {
     @Bean
     FintCache<String, AzureGroup> azureGroupCache() {
         return createResourceCache(AzureGroup.class);
-        /*List<AzureGroup> allGroups = azureClient.getAllGroups();
-
-        FintCache<String, AzureGroup> retCache = createResourceCache(AzureGroup.class);
-        for (AzureGroup group: allGroups) {
-            retCache.put(group.getId(), group);
-        }
-        return retCache;*/
     }
 
     private <V> FintCache<String, V> createResourceCache(Class<V> resourceClass) {
