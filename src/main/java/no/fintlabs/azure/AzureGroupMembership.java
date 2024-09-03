@@ -16,7 +16,7 @@ public class AzureGroupMembership {
 
     public AzureGroupMembership(String group_id, DirectoryObject directoryObject) {
         this.group_id = group_id;
-        this.user_id = directoryObject.id;
+        this.user_id = directoryObject.getId();
         this.id = this.group_id + "_" + this.user_id;
     }
 }

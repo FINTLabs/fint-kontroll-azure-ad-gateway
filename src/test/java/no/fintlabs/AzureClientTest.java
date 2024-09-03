@@ -2,18 +2,18 @@
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import com.microsoft.graph.core.ClientException;
-import com.microsoft.graph.http.GraphError;
-import com.microsoft.graph.http.GraphErrorResponse;
-import com.microsoft.graph.http.GraphServiceException;
+import com.microsoft.graph.directoryobjects.item.DirectoryObjectItemRequestBuilder;
+import com.microsoft.graph.education.classes.item.group.GroupRequestBuilder;
+import com.microsoft.graph.groups.GroupsRequestBuilder;
+import com.microsoft.graph.groups.item.GroupItemRequestBuilder;
+import com.microsoft.graph.models.*;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
-import com.microsoft.graph.requests.*;
 import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
-import okhttp3.Request;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -25,21 +25,25 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.InterruptedIOException;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
  @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
     @Mock
-    private GraphServiceClient<Request> graphServiceClient;
+    private GraphServiceClient graphServiceClient;
     @Mock
-    private GroupCollectionPage groupCollectionPage;
+    private GroupCollectionResponse groupCollectionPage;
     @Mock
-    private GroupCollectionRequest groupCollectionRequest;
+    private Request groupCollectionRequest;
 
     @Mock
-    private CompletableFuture<GroupCollectionPage> groupCollectionPageFuture;
+    private CompletableFuture<GroupCollectionResponse> groupCollectionPageFuture;
     @Mock
-    private GroupCollectionRequestBuilder groupCollectionRequestBuilder;
+    private GroupItemRequestBuilder groupItemRequestBuilder;
+
+    @Mock
+    private GroupsRequestBuilder groupRequestConfiguration;
 
     @Mock
     private ConfigGroup configGroup;
@@ -55,10 +59,11 @@ class AzureClientTest {
     private Group azureGroupObject()
     {
         Group group = new Group();
-        group.id = "123";
-        group.displayName = "testgroup1";
-        group.id = "098393-7593-8754-93875-4983754";
-        group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive("123"));
+        group.setDisplayName("testgroup1");
+        group.setId("098393-7593-8754-93875-4983754");
+        HashMap<String, Object> additionalData = new HashMap<>();
+        additionalData.put(configGroup.getFintkontrollidattribute(), "123");
+        group.setAdditionalData(additionalData);
         return group;
     }
 
@@ -67,9 +72,11 @@ class AzureClientTest {
         List<Group> retGroupList = new ArrayList<>();
         for (int i=0; i<numberOfGroups; i++) {
             Group group = new Group();
-            group.id = "12" + (i + 2);
-            group.displayName = "testgroup1";
-            group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive("123"));
+            group.setId("12" + (i + 2));
+            group.setDisplayName("testgroup1");
+            HashMap<String, Object> additionalData = new HashMap<>();
+            additionalData.put(configGroup.getFintkontrollidattribute(), "123");
+            group.setAdditionalData(additionalData);
             retGroupList.add(group);
         }
 
@@ -79,15 +86,15 @@ class AzureClientTest {
     void doesGroupExist_found() {
         String resourceGroupID = "123";
 
-        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
-        when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
-        when(graphServiceClient.groups().buildRequest().select(anyString())).thenReturn(groupCollectionRequest);
-        when(graphServiceClient.groups().buildRequest().filter(anyString())).thenReturn(groupCollectionRequest);
-        when(graphServiceClient.groups().buildRequest().get()).thenReturn(groupCollectionPage);
+        when(graphServiceClient.groups().byGroupId(resourceGroupID).get()).thenReturn(groupItemRequestBuilder.get());
+        when(graphServiceClient.groups().get(requestConfiguration -> {
+            requestConfiguration.queryParameters.select = new String[]{String.format("id,%s", configGroup.getFintkontrollidattribute())};
+            requestConfiguration.queryParameters.filter = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupID);
+        })).thenReturn(groupRequestConfiguration.get());
 
         List<Group> groupList = getTestGrouplist(3);
 
-        when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
+        when(groupCollectionPage.getValue()).thenReturn(groupList);
 
         assertTrue(azureClient.doesGroupExist(resourceGroupID));
     }
@@ -95,14 +102,15 @@ class AzureClientTest {
     void doesGroupExist_notfound() {
         String resourceGroupID = "234";
 
-        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
-        when(graphServiceClient.groups().buildRequest()).thenReturn(groupCollectionRequest);
-        when(graphServiceClient.groups().buildRequest().select(anyString())).thenReturn(groupCollectionRequest);
-        when(graphServiceClient.groups().buildRequest().get()).thenReturn(groupCollectionPage);
-        when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+        when(graphServiceClient.groups().byGroupId(anyString()).get()).thenReturn(groupItemRequestBuilder.get());
+        //when(graphServiceClient.groups().get()).thenReturn(groupCollectionRequest);
+        when(graphServiceClient.groups().get(requestConfiguration -> {
+            requestConfiguration.queryParameters.select = new String[]{String.format("id,%s", configGroup.getFintkontrollidattribute())};
+            requestConfiguration.queryParameters.filter = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupID);
+        })).thenReturn(groupRequestConfiguration.get());
 
         List<Group> groupList = getTestGrouplist(3);
-        when(groupCollectionPage.getCurrentPage()).thenReturn(groupList);
+        when(groupCollectionPage.getValue()).thenReturn(groupList);
 
         assertFalse(azureClient.doesGroupExist(resourceGroupID));
     }
@@ -125,25 +133,25 @@ class AzureClientTest {
         CompletableFuture<Group> future = CompletableFuture.completedFuture(mockGroup);
 
         // Mock the graph service client and the builder
-        GroupCollectionRequestBuilder groupCollectionRequestBuilder = mock(GroupCollectionRequestBuilder.class);
-        GroupCollectionRequest groupCollectionRequest = mock(GroupCollectionRequest.class);
+        GroupCollectionResponse groupCollectionRequestBuilder = mock(GroupCollectionResponse.class);
+        GroupItemRequestBuilder groupCollectionRequest = mock(GroupItemRequestBuilder.class);
 
         // Mock the graphServiceClient behavior
-        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
-        when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequest.postAsync(any(Group.class))).thenReturn(future);
+        when(graphServiceClient.groups().get()).thenReturn(groupCollectionRequestBuilder);
+        when(groupCollectionRequestBuilder.getValue()).thenReturn(groupCollectionPage.getValue());
+        when(groupCollectionRequest.patch(any(Group.class))).thenReturn(any());
 
         // Call the method under test
         azureClient.addGroupToAzure(resourceGroup);
 
         // Verify that postAsync was called with the correct parameters
-        verify(groupCollectionRequest, times(1)).postAsync(any(Group.class));
+        verify(groupCollectionRequest, times(1)).patch(any(Group.class));
     }
 
     @Mock
     private GroupRequestBuilder groupRequestBuilder;
     @Mock
-    private GroupRequest groupRequest;
+    private Request groupRequest;
 
      @Test
      void deleteGroup() {
@@ -256,12 +264,13 @@ class AzureClientTest {
 
 
     @Mock
-    DirectoryObjectCollectionWithReferencesRequestBuilder directoryObjectCollectionWithReferencesRequestBuilder;
+
+    DirectoryObjectItemRequestBuilder directoryObjectCollectionWithReferencesRequestBuilder;
 
     @Mock
-    private DirectoryObjectCollectionReferenceRequestBuilder directoryObjectCollectionReferenceRequestBuilder;
+    private DirectoryObjectItemRequestBuilder directoryObjectCollectionReferenceRequestBuilder;
     @Mock
-    private DirectoryObjectCollectionReferenceRequest directoryObjectCollectionReferenceRequest;
+    private DirectoryObjectItemRequestBuilder directoryObjectCollectionReferenceRequest;
 
      @Mock
      private AzureGroupMembershipProducerService azureGroupMembershipProducerService;
@@ -392,12 +401,12 @@ class AzureClientTest {
     }
 
     @Mock
-    private DirectoryObjectWithReferenceRequestBuilder directoryObjectWithReferenceRequestBuilder;
+    private DirectoryObjectItemRequestBuilder directoryObjectWithReferenceRequestBuilder;
     @Mock
-    private DirectoryObjectReferenceRequestBuilder directoryObjectReferenceRequestBuilder;
+    private DirectoryObjectItemRequestBuilder directoryObjectReferenceRequestBuilder;
 
     @Mock
-    private DirectoryObjectReferenceRequest directoryObjectReferenceRequest;
+    private DirectoryObjectItemRequestBuilder directoryObjectReferenceRequest;
 
     @Test
     public void gracefullyHandleErroneousKafkaID () {
@@ -559,8 +568,8 @@ class AzureClientTest {
 
     @Test
     public void makeSureTrownErrorIsSwallowedAndNotThrown() {
-        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
-        when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
+        when(graphServiceClient.groups()).thenReturn(groupItemRequestBuilder);
+        when(groupItemRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
         //when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
         //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
@@ -575,9 +584,9 @@ class AzureClientTest {
 
     @Test
     public void shouldHandleTimeoutException() {
-        when(graphServiceClient.groups()).thenReturn(groupCollectionRequestBuilder);
+        when(graphServiceClient.groups()).thenReturn(groupItemRequestBuilder);
         //when(groupCollectionRequestBuilder.buildRequest(any(LinkedList.class))).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
+        when(groupItemRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
         when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
        // when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
         //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);

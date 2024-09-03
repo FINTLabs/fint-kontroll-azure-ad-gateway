@@ -22,16 +22,16 @@ class AzureUserTest {
         when(configUser.getStudentidattribute()).thenReturn("Studentid");
 
         User user = new User();
-        user.id = "123";
-        user.mail = "testuser@mail.com";
-        user.userPrincipalName = "testuser@mail.com";
-        user.accountEnabled = true;
+        user.setId("123");
+        user.setMail("testuser@mail.com");
+        user.setUserPrincipalName("testuser@mail.com");
+        user.setAccountEnabled(true);
 
         AzureUser convertedUser = new AzureUser(user, configUser);
 
-        assert(convertedUser.getId() == user.id );
-        assert(convertedUser.getIdpUserObjectId() == user.id);
-        assert(convertedUser.getUserPrincipalName() == user.userPrincipalName);
+        assert(convertedUser.getId() == user.getId() );
+        assert(convertedUser.getIdpUserObjectId() == user.getId());
+        assert(convertedUser.getUserPrincipalName() == user.getUserPrincipalName());
         assert(convertedUser.getAccountEnabled() == true);
 
     }
@@ -41,15 +41,15 @@ class AzureUserTest {
 
 
         User user = new User();
-        user.id = "123";
-        user.mail = "testuser@mail.com";
-        user.userPrincipalName = "testuser@mail.com";
-        user.accountEnabled = true;
+        user.setId("123");
+        user.setMail("testuser@mail.com");
+        user.setUserPrincipalName("testuser@mail.com");
+        user.setAccountEnabled(true);
 
         AzureUserExternal convertedUser = new AzureUserExternal(user, configUser);
 
-        assert(convertedUser.getIdpUserObjectId() == user.id);
-        assert(convertedUser.getUserPrincipalName() == user.userPrincipalName);
+        assert(convertedUser.getIdpUserObjectId() == user.getId());
+        assert(convertedUser.getUserPrincipalName() == user.getUserPrincipalName());
         assert(convertedUser.getAccountEnabled() == true);
 
     }
