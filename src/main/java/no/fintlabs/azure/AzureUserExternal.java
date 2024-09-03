@@ -25,20 +25,20 @@ public class AzureUserExternal  {
     private Boolean accountEnabled;
 
     public AzureUserExternal(User user, ConfigUser configUser) {
-        this.idpUserObjectId = user.id;
-        this.userPrincipalName = user.userPrincipalName;
-        this.accountEnabled = user.accountEnabled;
-        this.firstName = user.givenName;
-        this.lastName = user.surname;
-        this.mobilePhone = user.mobilePhone;
-        this.email = user.mail;
-        if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().containsKey(configUser.getMainorgunitnameattribute())) {
-            this.mainOrganisationUnitName = user.additionalDataManager().get(configUser.getMainorgunitnameattribute()).getAsString();
+        this.idpUserObjectId = user.getId();
+        this.userPrincipalName = user.getUserPrincipalName();
+        this.accountEnabled = user.getAccountEnabled();
+        this.firstName = user.getGivenName();
+        this.lastName = user.getSurname();
+        this.mobilePhone = user.getMobilePhone();
+        this.email = user.getMail();
+        if (!user.getAdditionalData().isEmpty() && user.getAdditionalData().containsKey(configUser.getMainorgunitnameattribute())) {
+            this.mainOrganisationUnitName = user.getAdditionalData().get(configUser.getMainorgunitnameattribute()).toString();
         }
-        if (!user.additionalDataManager().isEmpty() && user.additionalDataManager().containsKey(configUser.getMainorgunitidattribute())) {
+        if (!user.getAdditionalData().isEmpty() && user.getAdditionalData().containsKey(configUser.getMainorgunitidattribute())) {
 
-            this.mainOrganisationUnitId = user.additionalDataManager().get(configUser.getMainorgunitidattribute()).getAsString();
+            this.mainOrganisationUnitId = user.getAdditionalData().get(configUser.getMainorgunitidattribute()).toString();
         }
-        this.userName = user.mail;
+        this.userName = user.getMail();
     }
 }

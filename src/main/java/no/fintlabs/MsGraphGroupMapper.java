@@ -5,6 +5,8 @@ import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.Group;
 import no.fintlabs.kafka.ResourceGroup;
 
+import java.util.HashMap;
+
 public class MsGraphGroupMapper {
 
     public Group toMsGraphGroup(ResourceGroup resourceGroup, ConfigGroup configGroup, Config config) {
@@ -13,14 +15,14 @@ public class MsGraphGroupMapper {
         int groupMailEnabledMaxLen = 64;
 
         //TODO: Change to new functions on Change of Graph to 6.*.* [FKS-883]
-        group.displayName = (configGroup.getPrefix() +
+        group.setDisplayName(configGroup.getPrefix().toLowerCase() +
                              resourceGroup.getResourceType().substring(0, 3) +
                              "-" +
                              resourceGroup.getResourceName().replace("\s", ".") +
-                             configGroup.getSuffix()).toLowerCase();
+                             configGroup.getSuffix().toLowerCase());
 
-        group.mailEnabled = false;
-        group.securityEnabled = true;
+        group.setMailEnabled(false);
+        group.setSecurityEnabled(true);
 
         // Remove special characters
         String mailNickname = resourceGroup.getResourceName()
@@ -31,8 +33,11 @@ public class MsGraphGroupMapper {
         if (mailNickname.length() > groupMailEnabledMaxLen) {
             mailNickname = mailNickname.substring(0, groupMailEnabledMaxLen);
         }
-        group.mailNickname = mailNickname;
-        group.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(resourceGroup.getId()));
+        group.setMailNickname(mailNickname);
+
+        HashMap<String, Object> additionalData = new HashMap<>();
+        additionalData.put(configGroup.getFintkontrollidattribute(), resourceGroup.getId());
+        group.setAdditionalData(additionalData);
 
         return group;
     }

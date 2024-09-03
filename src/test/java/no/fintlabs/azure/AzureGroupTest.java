@@ -12,6 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.HashMap;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
@@ -21,13 +23,14 @@ import static org.mockito.Mockito.verify;
 class AzureGroupTest {
     @Mock
     private ConfigGroup configGroup;
-    //public AzureGroup(Group group, ConfigGroup configGroup) {
     @Test
     public void makeSureConversionToLongFromRandomStringThrowsException() {
         Group testgroup = new Group();
-        testgroup.id = RandomStringUtils.randomNumeric(8);
-        testgroup.displayName = "-pre-app-microsoft.kabal-suff-";
-        testgroup.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive("kabal"));
+        testgroup.setId(RandomStringUtils.randomNumeric(8));
+        testgroup.setDisplayName("-pre-app-microsoft.kabal-suff-");
+        HashMap<String, Object> additionalData = new HashMap<>();
+        additionalData.put(configGroup.getFintkontrollidattribute(), "kabal");
+        testgroup.setAdditionalData(additionalData);
 
         assertThrows(NumberFormatException.class, () -> {
             AzureGroup newTestgroup = new AzureGroup(testgroup, configGroup);
@@ -36,12 +39,12 @@ class AzureGroupTest {
     @Test
     public void makeSureNumericStringIsConvertedCorrectly() {
         Group testgroup = new Group();
-        testgroup.id = RandomStringUtils.randomNumeric(8);
-        testgroup.displayName = "-pre-app-microsoft.kabal-suff-";
+        testgroup.setId(RandomStringUtils.randomNumeric(8));
+        testgroup.setDisplayName("-pre-app-microsoft.kabal-suff-");
         String number = RandomStringUtils.randomNumeric(8);
-
-        testgroup.additionalDataManager().put(configGroup.getFintkontrollidattribute(), new JsonPrimitive(number));
-
+        HashMap<String, Object> additionalData = new HashMap<>();
+        additionalData.put(configGroup.getFintkontrollidattribute(), number);
+        testgroup.setAdditionalData(additionalData);
         AzureGroup newTestGroup = new AzureGroup(testgroup, configGroup);
 
         assertThat(newTestGroup.getResourceGroupID() == Long.valueOf(number));
