@@ -563,32 +563,25 @@ public class AzureClient {
 
     public boolean doesGroupExist(String resourceGroupId) {
         // TODO: Attributes should not be hard-coded [FKS-210]
-        String selectionCriteria = String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute());
+        String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
+        String filterCriteria = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId);
 
         GroupCollectionResponse groupCollectionPage = graphServiceClient.groups()
                 .get(requestConfiguration -> {
-                    requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
-                    requestConfiguration.queryParameters.filter = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId);
+                    requestConfiguration.queryParameters.select = selectionCriteria;
+                    requestConfiguration.queryParameters.filter = filterCriteria;
                 });
 
-        while (groupCollectionPage != null) {
-            for (Group group : groupCollectionPage.getValue()) {
-                String attributeValue = group.getAdditionalData().get(configGroup.getFintkontrollidattribute()).toString();
+        if (groupCollectionPage.getOdataNextLink() != null) {
+            log.error("doesGroupExist should only return a single group!");
+        }
 
-                if (attributeValue != null && attributeValue.equals(resourceGroupId)) {
-                    return true; // Group with the specified ResourceID found
-                }
+        for (Group group : groupCollectionPage.getValue()) {
+            String attributeValue = group.getAdditionalData().get(configGroup.getFintkontrollidattribute()).toString();
+
+            if (attributeValue != null && attributeValue.equals(resourceGroupId)) {
+                return true; // Group with the specified ResourceID found
             }
-
-            // Move to the next page if available
-            //groupCollectionPage = groupCollectionPage.getOdataNextLink() == null ? null :
-            //        graphServiceClient.groups().get(requestconfiguration ->
-            //                requestconfiguration.queryParameters.toQueryParameters(groupCollectionPage.getOdataNextLink())
-            //                );
-            //groupCollectionPage = groupCollectionPage.getNextPage() == null ? null :
-            //        groupCollectionPage.getNextPage()
-            //                .buildRequest()
-            //                .get();
         }
 
         return false; // Group with resourceID not found

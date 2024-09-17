@@ -150,15 +150,11 @@ class AzureClientTest {
     void doesGroupExist_notfound() {
         String resourceGroupID = "234";
 
-        when(graphServiceClient.groups().byGroupId(anyString()).get()).thenReturn(groupItemRequestBuilder.get());
-        //when(graphServiceClient.groups().get()).thenReturn(groupCollectionRequest);
-        when(graphServiceClient.groups().get(requestConfiguration -> {
-            requestConfiguration.queryParameters.select = new String[]{String.format("id,%s", configGroup.getFintkontrollidattribute())};
-            requestConfiguration.queryParameters.filter = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupID);
-        })).thenReturn(groupRequestConfiguration.get());
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
 
         List<Group> groupList = getTestGrouplist(3);
-        when(groupCollectionPage.getValue()).thenReturn(groupList);
+        when(groupCollectionResponse.getValue()).thenReturn(groupList);
 
         assertFalse(azureClient.doesGroupExist(resourceGroupID));
     }
