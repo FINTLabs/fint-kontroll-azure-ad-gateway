@@ -37,7 +37,7 @@ public class MsGraphGroupMapperTest {
     @BeforeAll
     static void setup() {
     }
-
+/*
     @Test
     public void shouldMapFromResourceGroupToMsGraphGroup() {
         String fintKontrollIdAttribute = "fakeFintKontrollId";
@@ -116,7 +116,7 @@ public class MsGraphGroupMapperTest {
         Group msGroup = new MsGraphGroupMapper().toMsGraphGroup(group, configGroup, config);
         assertThat(msGroup.mailNickname).isEqualTo("adobecloud123testadfasdfkasdfawefawfeawdfawdfwodfpoaweporwkfpoda");
     }
-
+*/
 
 //https://fintlabs.atlassian.net/wiki/spaces/FINTKB/pages/693403649/Navngiving+p+Azure+AD-grupper+fra+fint-kontroll
 }

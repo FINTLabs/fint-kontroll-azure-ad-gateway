@@ -680,7 +680,9 @@ public class AzureClient {
             referenceMember.setOdataId(String.format("https://graph.microsoft.com/v1.0/directoryObjects/%s",resourceGroupMembership.getAzureUserRef()));
 
             try {
-                graphServiceClient.groups().byGroupId(resourceGroupMembership.getAzureGroupRef()).members().ref().post(referenceMember);
+                graphServiceClient.groups()
+                        .byGroupId(resourceGroupMembership
+                                .getAzureGroupRef()).members().ref().post(referenceMember);
 //                        .buildRequest()
 //                        .postAsync(directoryObject)
 //                        .thenAccept(acceptedMember ->
