@@ -88,11 +88,11 @@ class AzureClientTest {
     @InjectMocks
     private AzureClient azureClient;
 
-    @BeforeEach
+    /*@BeforeEach
     void setUp() {
      MockitoAnnotations.openMocks(this);           // Initialize the mocks
 
-        }
+        }*/
 
     private ResourceGroup resourceGroup(){
         // Create a mock ResourceGroup object
@@ -137,28 +137,12 @@ class AzureClientTest {
     @Test
     void doesGroupExist_found() {
         String resourceGroupID = "123";
-        // Mock the 'groups()' method to return the GroupsRequestBuilder
-        when(graphServiceClient.groups().get()).thenReturn(groupCollectionResponse);
 
-        // Mock 'byGroupId()' method to return the GroupRequestBuilder
-        when(groupsRequestBuilder.byGroupId(resourceGroupID)).thenReturn(groupItemRequestBuilder);
-
-        // Mock the 'get()' method to return the Group instance
-        when(groupItemRequestBuilder.get()).thenReturn(group);
-
-        // Mock group properties as needed
-        when(group.getId()).thenReturn(resourceGroupID);  // Assuming `id` is a field in the Group class
-
-
-        when(graphServiceClient.groups().byGroupId(resourceGroupID)).thenReturn(groupItemRequestBuilder);
-//        when(graphServiceClient.groups().get(requestConfiguration -> {
-//            requestConfiguration.queryParameters.select = new String[]{String.format("id,%s", configGroup.getFintkontrollidattribute())};
-//            requestConfiguration.queryParameters.filter = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupID);
-//        })).thenReturn(groupRequestConfiguration);
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
 
         List<Group> groupList = getTestGrouplist(3);
-
-        when(groupCollectionPage.getValue()).thenReturn(groupList);
+        when(groupCollectionResponse.getValue()).thenReturn(groupList);
 
         assertTrue(azureClient.doesGroupExist(resourceGroupID));
     }

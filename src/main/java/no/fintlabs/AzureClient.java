@@ -579,6 +579,16 @@ public class AzureClient {
                     return true; // Group with the specified ResourceID found
                 }
             }
+
+            // Move to the next page if available
+            //groupCollectionPage = groupCollectionPage.getOdataNextLink() == null ? null :
+            //        graphServiceClient.groups().get(requestconfiguration ->
+            //                requestconfiguration.queryParameters.toQueryParameters(groupCollectionPage.getOdataNextLink())
+            //                );
+            //groupCollectionPage = groupCollectionPage.getNextPage() == null ? null :
+            //        groupCollectionPage.getNextPage()
+            //                .buildRequest()
+            //                .get();
         }
 
         return false; // Group with resourceID not found
