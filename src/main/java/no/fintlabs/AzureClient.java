@@ -561,7 +561,7 @@ public class AzureClient {
 //                .thenCompose(nextPage -> processPageAsync(azureGroup, nextPage, members));
 //    }
 
-    public boolean doesGroupExist(String resourceGroupId) {
+    public boolean doesGroupExist(String resourceGroupId) throws Exception {
         // TODO: Attributes should not be hard-coded [FKS-210]
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
         String filterCriteria = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId);
@@ -573,7 +573,7 @@ public class AzureClient {
                 });
 
         if (groupCollectionPage.getOdataNextLink() != null) {
-            log.error("doesGroupExist should only return a single group!");
+            throw new Exception("doesGroupExist should only return a single group!");
         }
 
         for (Group group : groupCollectionPage.getValue()) {
