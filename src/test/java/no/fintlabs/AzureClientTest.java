@@ -85,6 +85,7 @@ class AzureClientTest {
     @Mock
     private Config config;
 
+
     @InjectMocks
     private AzureClient azureClient;
 
@@ -135,7 +136,7 @@ class AzureClientTest {
         return retGroupList;
     }
     @Test
-    void doesGroupExist_found() {
+    void doesGroupExist_found() throws Exception {
         String resourceGroupID = "123";
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
@@ -147,7 +148,7 @@ class AzureClientTest {
         assertTrue(azureClient.doesGroupExist(resourceGroupID));
     }
     @Test
-    void doesGroupExist_notfound() {
+    void doesGroupExist_notfound() throws Exception {
         String resourceGroupID = "234";
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
@@ -157,6 +158,19 @@ class AzureClientTest {
         when(groupCollectionResponse.getValue()).thenReturn(groupList);
 
         assertFalse(azureClient.doesGroupExist(resourceGroupID));
+    }
+
+    @Test
+    void doesGroupExist_throwswhennextpageisindicated() {
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
+
+        when(groupCollectionResponse.getOdataNextLink()).thenReturn("somefakeurl");
+
+        assertThrows(Exception.class,
+                () -> azureClient.doesGroupExist("123")
+        );
+
     }
 
      @Test

@@ -41,8 +41,13 @@ public class ResourceGroupConsumerService {
                 .parallel(20) // Parallelism with up to 20 threads
                 .runOn(Schedulers.boundedElastic())
                 .subscribe
-                        (keyAndResourceGroup ->
-                                updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
+                        (keyAndResourceGroup -> {
+                            try {
+                                updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2());
+                            } catch (Exception e) {
+                                log.error("Failed to update azure", e);
+                            }
+                        }
                 );
     }
     protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink) {
@@ -68,13 +73,19 @@ public class ResourceGroupConsumerService {
         );
     }
 
-    void updateAzure(String kafkaKey, Optional<ResourceGroup> resourceGroupOptional) {
+    void updateAzure(String kafkaKey, Optional<ResourceGroup> resourceGroupOptional) throws Exception {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzure function {}.", randomUUID);
         ResourceGroup resourceGroup;
         if (resourceGroupOptional.isPresent()) {
             resourceGroup = resourceGroupOptional.get();
-            if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
+            boolean groupexists;
+            try {
+                groupexists = azureClient.doesGroupExist(resourceGroup.getId());
+            } catch (Exception e) {
+                throw e;
+            }
+            if (resourceGroup.getResourceName() != null && !groupexists) {
                 log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
                 azureClient.addGroupToAzure(resourceGroup);
             } else {

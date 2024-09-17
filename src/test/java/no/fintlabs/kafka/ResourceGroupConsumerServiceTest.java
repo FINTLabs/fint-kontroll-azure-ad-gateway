@@ -137,7 +137,7 @@ public class ResourceGroupConsumerServiceTest {
     }
 
     @Test
-    void updateAzure_NewGroupCallsAzureCreate() {
+    void updateAzure_NewGroupCallsAzureCreate() throws Exception {
 
         String kafkaKeyID = "TestKafkaKeyID";
 
@@ -151,7 +151,7 @@ public class ResourceGroupConsumerServiceTest {
         verify(azureClient, times(0)).deleteGroup(any());
     }
     @Test
-    void updateAzure_UpdatedGroup_if_allowed() {
+    void updateAzure_UpdatedGroup_if_allowed() throws Exception {
         String kafkaKeyID = "TestKafkaKeyID";
 
         when(azureClient.doesGroupExist(anyString())).thenReturn(true);
@@ -166,7 +166,7 @@ public class ResourceGroupConsumerServiceTest {
     }
 
     @Test
-    void updateAzure_UpdatedGroup_if_not_allowed() {
+    void updateAzure_UpdatedGroup_if_not_allowed() throws Exception {
         String kafkaKeyID = "TestKafkaKeyID";
 
         when(azureClient.doesGroupExist(anyString())).thenReturn(true);
@@ -181,7 +181,7 @@ public class ResourceGroupConsumerServiceTest {
     }
 
     @Test
-    void updateAzure_DeletedGroup_If_Allowed_Calls_deleteGroup() {
+    void updateAzure_DeletedGroup_If_Allowed_Calls_deleteGroup() throws Exception {
         String kafkaKeyID = "TestKafkaKeyID";
 
         when(configGroup.getAllowgroupdelete()).thenReturn(true);
@@ -193,7 +193,7 @@ public class ResourceGroupConsumerServiceTest {
     }
 
     @Test
-    void updateAzure_DeletedGroup_If_Not_Allowed_Do_Not_Calls_deleteGroup() {
+    void updateAzure_DeletedGroup_If_Not_Allowed_Do_Not_Calls_deleteGroup() throws Exception {
         String kafkaKeyID = "TestKafkaKeyID";
 
         when(configGroup.getAllowgroupdelete()).thenReturn(false);
