@@ -1,4 +1,4 @@
- package no.fintlabs;
+package no.fintlabs;
 
 import com.azure.core.http.rest.PagedResponse;
 import com.google.gson.JsonElement;
@@ -9,14 +9,17 @@ import com.microsoft.graph.groups.GroupsRequestBuilder;
 import com.microsoft.graph.groups.item.GroupItemRequestBuilder;
 import com.microsoft.graph.groups.item.getmemberobjects.GetMemberObjectsRequestBuilder;
 import com.microsoft.graph.groups.item.owners.graphserviceprincipal.GraphServicePrincipalRequestBuilder;
-import com.microsoft.graph.models.*;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
+//import com.microsoft.graph.requests.GroupCollectionRequest;
+//import com.microsoft.graph.requests.GroupCollectionRequestBuilder;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.Group;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.graph.models.*;
 import com.microsoft.kiota.RequestAdapter;
 import lombok.RequiredArgsConstructor;
 import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
+import no.fintlabs.azure.AzureGroupProducerService;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.jetbrains.annotations.NotNull;
@@ -44,34 +47,35 @@ class AzureClientTest {
 
     @Mock
     private GraphServiceClient graphServiceClient;
-    @Mock
-    private GroupCollectionResponse groupCollectionPage;
-    @Mock
-    private Request groupCollectionRequest;
 
-    @Mock
-    private CompletableFuture<GroupCollectionResponse> groupCollectionPageFuture;
+    //@Mock
+    //private GroupCollectionResponse groupCollectionPage;
+    //@Mock
+    //private Request groupCollectionRequest;
+
+    //@Mock
+    //private CompletableFuture<GroupCollectionResponse> groupCollectionPageFuture;
 
     @Mock
     private GroupCollectionResponse groupCollectionResponse;
 
-    @Mock
-    private GroupItemRequestBuilder groupItemRequestBuilder;
+    //@Mock
+    //private GroupItemRequestBuilder groupItemRequestBuilder;
 
     @Mock
     private GroupsRequestBuilder groupsRequestBuilder;
 
     @Mock
-    private GroupRequestBuilder groupRequestBuilder;
+    private AzureGroupProducerService azureGroupProducerService;
 
-    @Mock
-    private GroupsRequestBuilder groupRequestConfiguration;
+    //@Mock
+    //private GroupRequestBuilder groupRequestBuilder;
+
+    //@Mock
+    //private GroupCollectionRequestBuilder groupCollectionRequestBuilder;
 
     @Mock
     private ConfigGroup configGroup;
-
-//    @Mock
-//    private ConfigGroup configGroup;
 
     @Mock
     private ConfigUser configUser;
@@ -174,21 +178,30 @@ class AzureClientTest {
     }
 
      @Test
-     void addGroupToAzure() {
+     void confirm_addgrouptoazure_triggers_post() {
 
-         // Create a mock group and the future it should return
-         Group mockGroup = new Group();
-         CompletableFuture<Group> future = CompletableFuture.completedFuture(mockGroup);
+         ResourceGroup resourceGroup = ResourceGroup.builder()
+                 .id("12")
+                 .resourceId("123")
+                 .displayName("testdisplayname")
+                 .identityProviderGroupObjectId("testidpgroup")
+                 .resourceName("testresourcename")
+                 .resourceType("testresourcetype")
+                 .resourceLimit("1000")
+                 .build();
 
-         // Mock the graph service client
-         GraphServiceClient graphServiceClient = mock(GraphServiceClient.class);
+         // Mock the graphServiceClient behavior
          when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+         when(groupsRequestBuilder.post(any(Group.class))).thenReturn(new Group());
+         when(configGroup.getPrefix()).thenReturn("random-prefix");
+         when(configGroup.getSuffix()).thenReturn("random-postfix");
 
          // Call the method under test
-         this.azureClient.addGroupToAzure(resourceGroup());
+         azureClient.addGroupToAzure(resourceGroup);
 
-         // Verify that patchAsync was called with the correct parameters
-         verify(groupCollectionRequest, times(1));
+         // Verify that postAsync was called once
+         verify(groupsRequestBuilder, times(1)).post(any(Group.class));
+
      }
 
 /*
