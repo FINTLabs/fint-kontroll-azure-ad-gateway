@@ -79,9 +79,9 @@ public class AzureClient {
 
             log.info("*** <<< Finished pulling users from Microsoft Entra in {} minutes and {} seconds >>> *** ", minutes, seconds);
 
-        } catch (ApiException | ReflectiveOperationException ex){
-                log.error("pullAllUsers failed with message: {}", ex.getMessage());
-            }
+        } catch (ApiException | ReflectiveOperationException ex) {
+            log.error("pullAllUsers failed with message: {}", ex.getMessage());
+        }
     }
 
     private void pageThroughUsers(UserCollectionResponse userPage) throws ReflectiveOperationException {
@@ -99,13 +99,13 @@ public class AzureClient {
                     users.getAndIncrement();
                     //allUsers.add(user);
                     if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()) != null
-                        && (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).equalsIgnoreCase(configUser.getExternaluservalue()))) {
-                    log.debug("Adding external user to Kafka, {}", user.getUserPrincipalName());
-                    azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
-                } else {
-                    log.debug("Adding user to Kafka, {}", user.getUserPrincipalName());
-                    azureUserProducerService.publish(new AzureUser(user, configUser));
-                }
+                            && (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).equalsIgnoreCase(configUser.getExternaluservalue()))) {
+                        log.debug("Adding external user to Kafka, {}", user.getUserPrincipalName());
+                        azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+                    } else {
+                        log.debug("Adding user to Kafka, {}", user.getUserPrincipalName());
+                        azureUserProducerService.publish(new AzureUser(user, configUser));
+                    }
 
                     return true;
                 }).build();
@@ -157,6 +157,7 @@ public class AzureClient {
             log.error("Failed when trying to get groups. ", e);
         }
     }
+
     private List<AzureGroup> pageThroughGroups(GroupCollectionResponse groupPage) throws ReflectiveOperationException {
         List<AzureGroup> allGroups = new ArrayList<>();
         AtomicInteger groupCounter = new AtomicInteger(0);
@@ -664,19 +665,19 @@ public class AzureClient {
         Group groupResponse = graphServiceClient.groups()
                 .byGroupId(resourceGroup.getIdentityProviderGroupObjectId())
                 .patch(group);
-                if (groupResponse != null) {
-                    log.info("Group with GroupObjectId '{}' successfully updated", resourceGroup.getIdentityProviderGroupObjectId());
-                };
+        if (groupResponse != null) {
+            log.info("Group with GroupObjectId '{}' successfully updated", resourceGroup.getIdentityProviderGroupObjectId());
+        }
+        ;
     }
 
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
-        if(resourceGroupMembership.getAzureUserRef() != null && resourceGroupMembership.getAzureGroupRef() != null)
-        {
+        if (resourceGroupMembership.getAzureUserRef() != null && resourceGroupMembership.getAzureGroupRef() != null) {
 
             DirectoryObject directoryObject = new DirectoryObject();
             directoryObject.setId(resourceGroupMembership.getAzureUserRef());
             ReferenceCreate referenceMember = new com.microsoft.graph.models.ReferenceCreate();
-            referenceMember.setOdataId(String.format("https://graph.microsoft.com/v1.0/directoryObjects/%s",resourceGroupMembership.getAzureUserRef()));
+            referenceMember.setOdataId(String.format("https://graph.microsoft.com/v1.0/directoryObjects/%s", resourceGroupMembership.getAzureUserRef()));
             CompletableFuture.runAsync(() -> {
                 try {
                     graphServiceClient.groups()
@@ -730,9 +731,9 @@ public class AzureClient {
     }
 
     public void deleteGroupMembership(String resourceGroupMembershipKey) {
-        String[] splitString = resourceGroupMembershipKey.split     ("_");
+        String[] splitString = resourceGroupMembershipKey.split("_");
         if (splitString.length != 2) {
-            log.error("Key on kafka object {} not formatted correctly. NOT deleting membership from group",resourceGroupMembershipKey);
+            log.error("Key on kafka object {} not formatted correctly. NOT deleting membership from group", resourceGroupMembershipKey);
             return;
         }
         String groupId = splitString[0];
@@ -777,39 +778,40 @@ public class AzureClient {
             return null; // exceptionally must return a value
         });
     }
-
-    private void handleGraphApiError(Throwable ex) {
-        if (ex instanceof CompletionException) {
-            Throwable cause = ex.getCause();
-            if (cause instanceof ApiException gse) {
-                int statusCode = gse.getResponseStatusCode();
-                switch (statusCode) {
-//                    case 204:
-//                        log.info("No content response received.");
-//                        break;
-                    case 400:
-                        log.debug("Group not created or updated. Failed with error 400");
-                        break;
-                    case 401:
-                        log.error("Unauthorized. Check your authentication credentials");
-                        break;
-                    case 403:
-                        log.error("Forbidden. You do not have permission to perform this action");
-                        break;
-                    case 404:
-                        log.debug("Not found on updating group. The resource does not exist. Creating group as it is missing");
-                        break;
-                    case 500:
-                        log.error("Internal server error. Try again later");
-                        break;
-                    default:
-                        log.error("Unexpected error: {}", gse.getMessage());
-                }
-            } else {
-                log.error("An unexpected error occurred: {}", cause.getMessage());
-            }
-        } else {
-            log.error("An unexpected error occurred: {}", ex.getMessage());
-        }
-    }
 }
+
+//    private void handleGraphApiError(Throwable ex) {
+//        if (ex !instanceof CompletionException){
+//            log.error("An unexpected error occurred: {}", ex.getMessage());
+//            return;
+//        }
+//        Throwable cause = ex.getCause();
+//        if (cause !instanceof ApiException){
+//            log.error("An unexpected error occurred: {}", cause.getMessage());
+//            return;
+//        }
+
+//        switch ( ) {
+////            case 204:
+////                log.info("No content response received.");
+////                break;
+//            case 400:
+//                log.debug("Group not created or updated. Failed with error 400");
+//                break;
+//            case 401:
+//                log.error("Unauthorized. Check your authentication credentials");
+//                break;
+//            case 403:
+//                log.error("Forbidden. You do not have permission to perform this action");
+//                break;
+//            case 404:
+//                log.debug("Not found on updating group. The resource does not exist. Creating group as it is missing");
+//                break;
+//            case 500:
+//                log.error("Internal server error. Try again later");
+//                break;
+//            default:
+//                log.error("Unexpected error: {}", gse.getMessage());
+//        }
+//    }
+//}
