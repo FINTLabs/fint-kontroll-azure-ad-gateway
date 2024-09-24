@@ -1,10 +1,14 @@
 package no.fintlabs.azure;
 
 import com.microsoft.graph.models.DirectoryObject;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
+@RequiredArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @Log4j2

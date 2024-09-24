@@ -2,26 +2,30 @@ package no.fintlabs;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.microsoft.graph.core.tasks.PageIterator;
+import com.microsoft.graph.groups.delta.DeltaGetResponse;
 import com.microsoft.graph.models.*;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
+import java.util.Dictionary;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.microsoft.kiota.ApiException;
+import com.microsoft.kiota.serialization.UntypedArray;
+import com.microsoft.kiota.serialization.UntypedObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.concurrent.CompletionException;
 
 @Component
 @Log4j2
@@ -31,6 +35,7 @@ public class AzureClient {
     protected final ConfigGroup configGroup;
     protected final ConfigUser configUser;
     protected final GraphServiceClient graphServiceClient;
+    private String deltaLinkCache;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
@@ -136,27 +141,157 @@ public class AzureClient {
 //        //});
     }
 
+//    @Scheduled(
+//            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
+//            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
+//    )
+//    public void pullAllGroups() {
+//        log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
+//        long startTime = System.currentTimeMillis();
+//
+//        try {
+//            List<AzureGroup> allGroups = pageThroughGroups(graphServiceClient.groups()
+//                    .get(requestConfiguration -> {
+//                        requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
+//                    }));
+//
+//            // After all groups are retrieved, fetch members for each group
+//            //fetchAndPublishMembersForAllGroups(allGroups);
+//
+//        } catch (ApiException | ReflectiveOperationException e) {
+//            log.error("Failed when trying to get groups. ", e);
+//        }
+//    }
+
     @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )
-    public void pullAllGroups() {
+    public void pullAllGroupsDelta() {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
 
         try {
-            List<AzureGroup> allGroups = pageThroughGroups(graphServiceClient.groups()
-                    .get(requestConfiguration -> {
-                        requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
-                    }));
-
-            // After all groups are retrieved, fetch members for each group
-            //fetchAndPublishMembersForAllGroups(allGroups);
+            if (deltaLinkCache != null) {
+                String deltaUrl = deltaLinkCache;
+                DeltaGetResponse groupPage = graphServiceClient.groups().delta().withUrl(deltaUrl)
+                        .get(requestConfiguration -> {
+                            requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
+                        });
+                pageThroughGroupsDelta(groupPage);
+            } else {
+                DeltaGetResponse groupPage = graphServiceClient.groups().delta()
+                        .get(requestConfiguration -> {
+                            requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
+                        });
+                pageThroughGroupsDelta(groupPage);
+            }
 
         } catch (ApiException | ReflectiveOperationException e) {
             log.error("Failed when trying to get groups. ", e);
         }
     }
+
+    private List<AzureGroup> pageThroughGroupsDelta(DeltaGetResponse groupPage) throws ReflectiveOperationException {
+        List<AzureGroup> allGroups = new ArrayList<>();
+        AtomicInteger groupCounter = new AtomicInteger(0);
+        Set<String> processedGroupIds = new HashSet<>();
+
+        while (true) {
+            // Process the current page and check for duplicates
+            deltaPageIterator(groupPage, groupCounter, allGroups, processedGroupIds);
+
+            // If @odataNextLink is present, fetch the next page
+            if (groupPage.getOdataNextLink() != null) {
+                groupPage = graphServiceClient.groups().delta().withUrl(groupPage.getOdataNextLink()).get();
+            } else {
+                // No more pages to process
+                break;
+            }
+        }
+
+        if(deltaLinkCache != null && groupPage.getOdataDeltaLink() != null )
+        {
+            log.info("*** <<< On this Delta call, found {} groups changed with suffix \"{}\" >>> ***", groupCounter.get(), configGroup.getSuffix());
+
+        }
+        else {
+            log.info("*** <<< Found {} groups with suffix \"{}\" >>> ***", groupCounter.get(), configGroup.getSuffix());
+        }
+        // Cache the deltaLink if available
+        if (groupPage.getOdataDeltaLink() != null) {
+            deltaLinkCache = groupPage.getOdataDeltaLink();
+        }
+
+        return allGroups;
+    }
+
+    private void deltaPageIterator(DeltaGetResponse groupPage, AtomicInteger groupCounter, List<AzureGroup> allGroups, Set<String> processedGroupIds) throws ReflectiveOperationException {
+        PageIterator<Group, DeltaGetResponse> pageIterator = new PageIterator.Builder<Group, DeltaGetResponse>()
+                .client(graphServiceClient)
+                .collectionPage(groupPage)
+                .collectionPageFactory(DeltaGetResponse::createFromDiscriminatorValue)
+                .processPageItemCallback(group -> {
+                    // Ensure the group has not been processed yet
+                    if (group.getDisplayName() != null && group.getDisplayName().endsWith(configGroup.getSuffix())
+                            && (!group.getAdditionalData().isEmpty() && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute()))
+                            && processedGroupIds.add(group.getId())) { // Only process if it's new
+
+                        groupCounter.getAndIncrement();
+
+                        // Create and process the AzureGroup object
+                        AzureGroup newGroup = new AzureGroup(group, configGroup);
+
+                        // Publish the group
+                        azureGroupProducerService.publish(newGroup);
+
+                        // Add to allGroups collection
+                        allGroups.add(newGroup);
+                        processMembersDelta(group);
+                    }
+                    return true;
+                }).build();
+
+        // Iterates through all pages and collects groups
+        pageIterator.iterate();
+    }
+
+    private void processMembersDelta(Group group) {
+        Map<String, Object> additionalData = group.getAdditionalData();
+        if (additionalData == null) {
+            return;
+        }
+        if (!additionalData.containsKey("members@delta")) {
+            return;
+        }
+        try {
+            Object membersDeltaObject = additionalData.get("members@delta");
+            UntypedArray membersDeltaArray = (UntypedArray) membersDeltaObject;
+            for (Object member : membersDeltaArray.getValue()) {
+                UntypedObject untypedMember = (UntypedObject) member;
+                String memberType = (String) untypedMember.getValue().get("@odata.type").getValue();
+                String memberId = (String) untypedMember.getValue().get("id").getValue();
+
+                if (!memberType.equals("#microsoft.graph.user")) {
+                    continue;
+                }
+
+                if (untypedMember.getValue().containsKey("@removed")) {
+                    log.info("Removed member with ObjectID: {} from group: {}", memberId, group.getId());
+                    continue;
+                }
+
+                String id = group.getId() + "_" + memberId;
+                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),id));
+                log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
+                log.info("GroupId: {} has member of user with ObjectID: {}", group.getId(), memberId);
+            }
+
+        } catch (ClassCastException e) {
+            log.error("Failed to process members@delta. Error: {}", e.getMessage());
+        }
+    }
+
 
     private List<AzureGroup> pageThroughGroups(GroupCollectionResponse groupPage) throws ReflectiveOperationException {
         List<AzureGroup> allGroups = new ArrayList<>();
@@ -184,6 +319,8 @@ public class AzureClient {
 
         return allGroups;
     }
+
+//
 /*
     private void fetchAndPublishMembersForAllGroups(List<AzureGroup> groups) {
         List<CompletableFuture<Void>> memberFutures = groups.stream()
@@ -590,66 +727,70 @@ public class AzureClient {
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
-//
-//        String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
-//        ReferenceCreate referenceOwner = new com.microsoft.graph.models.ReferenceCreate();
-//        referenceOwner.setOdataId(owner);
 
         //TODO: Remember to change from additionalDataManager to new function on Change of Graph to 6.*.* [FKS-883]
-
-//        var owners = new JsonArray();
-//        owners.add(owner);
-//        group.getAdditionalData().put("owners@odata.bind", owners);
-//        group.setOwners(new List<DirectoryObject>() {
-//        gr
-//        referenceOwner);
-//            }
-//        })
+        String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
+        HashMap<String, Object> additionalData = new HashMap<String, Object>();
+        LinkedList<String> ownersOdataBind = new LinkedList<String>();
+        ownersOdataBind.add(owner);
+        additionalData.put("owners@odata.bind", ownersOdataBind);
+        group.setAdditionalData(additionalData);
 
         //TODO: Consider if uniqueName chould be set upon creation of group
-        //group.additionalDataManager().put("uniqueName", new JsonPrimitive(resourceGroup.getId()));
+        //group.setUniqueName(resourceGroup.getId());
 
-        Group createdGroup = graphServiceClient
-                .groups()
-                .post(group);
+        CompletableFuture.runAsync(() -> {
+            try {
+                Group createdGroup = graphServiceClient
+                        .groups()
+                        .post(group);
 
+                if (createdGroup != null) {
+                    log.info("Added Group to Azure: {}", createdGroup.getDisplayName());
+                    azureGroupProducerService.publish(new AzureGroup(createdGroup, configGroup));
+                }
+            } catch (ApiException e) {
 
-        if (createdGroup != null) {
-            log.info("Added Group to Azure: {}", createdGroup.getDisplayName());
-            azureGroupProducerService.publish(new AzureGroup(createdGroup, configGroup));
-        }
+                // Handling 400 Bad Request error
+                log.warn(e.getMessage());
+            }
+
+        }).exceptionally(ex -> {
+            log.error("Exception while adding group: {}", ex.getMessage(), ex);
+            return null; // Exceptionally should return a value
+        });
     }
 
     public void deleteGroup(String resourceGroupId) {
+        GroupCollectionResponse groupCollectionPage = null;
         try {
-            GroupCollectionResponse groupCollectionPage = graphServiceClient.groups()
+            groupCollectionPage = graphServiceClient.groups()
                     .get(requestConfiguration -> {
                         requestConfiguration.queryParameters.select = new String[]{String.format("id,%s", configGroup.getFintkontrollidattribute())};
                         requestConfiguration.queryParameters.filter = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId);
                     });
+        } catch (ApiException e) {
+            log.error("Failed find the group in graph to be deleted using resourceGroupId {}: {}", resourceGroupId, e.getMessage());
+            // Handle the exception as necessary, such as throwing it up the stack or logging it.
+        }
 
-            while (groupCollectionPage != null) {
-                for (Group group : groupCollectionPage.getValue()) {
-                    Object attributeValue = group.getAdditionalData().get(configGroup.getFintkontrollidattribute());
+        while (groupCollectionPage != null) {
+            for (Group group : groupCollectionPage.getValue()) {
+                Object attributeValue = group.getAdditionalData().get(configGroup.getFintkontrollidattribute());
 
-                    if (attributeValue != null && attributeValue.equals(resourceGroupId)) {
-                        try {
-                            graphServiceClient.groups()
-                                    .byGroupId(group.getId())
-                                    .delete();
-                            log.info("Group objectId {} and resourceGroupId {} deleted ", group.getId(), resourceGroupId);
-                            return;
-                        } catch (ApiException e) {
-                            log.error("Failed to delete group with objectId {} and resourceGroupId {}: {}", group.getId(), resourceGroupId, e.getMessage());
-                            throw e;
-                        }
+                if (attributeValue != null && attributeValue.equals(resourceGroupId)) {
+                    try {
+                        graphServiceClient.groups()
+                                .byGroupId(group.getId())
+                                .delete();
+                        log.info("Group objectId {} and resourceGroupId {} deleted ", group.getId(), resourceGroupId);
+                        return;
+                    } catch (ApiException e) {
+                        log.error("Failed to delete group with objectId: {} and resourceGroupId: {} \n Error message: {}", group.getId(), resourceGroupId, e.getMessage());
+                        throw e;
                     }
                 }
             }
-
-        } catch (ApiException e) {
-            log.error("Failed to process deleteGroup for resourceGroupId {}: {}", resourceGroupId, e.getMessage());
-            // Handle the exception as necessary, such as throwing it up the stack or logging it.
         }
     }
 
@@ -668,7 +809,6 @@ public class AzureClient {
         if (groupResponse != null) {
             log.info("Group with GroupObjectId '{}' successfully updated", resourceGroup.getIdentityProviderGroupObjectId());
         }
-        ;
     }
 
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
@@ -779,6 +919,7 @@ public class AzureClient {
         });
     }
 }
+
 
 //    private void handleGraphApiError(Throwable ex) {
 //        if (ex !instanceof CompletionException){

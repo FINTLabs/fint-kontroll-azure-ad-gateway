@@ -2,7 +2,6 @@ plugins {
     id 'org.springframework.boot' version '3.3.3'
     id 'io.spring.dependency-management' version '1.1.6'
     id 'java'
-    //id 'groovy'
 }
 
 group = 'no.fintlabs'
@@ -33,8 +32,6 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    // TODO: Uncomment when migrating to Spring boot 3 [FKS-215]
-    //implementation 'org.springframework.boot:spring-boot-starter-web'
 
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'io.netty:netty-resolver-dns-native-macos:4.1.90.Final:osx-aarch_64'
@@ -46,24 +43,20 @@ dependencies {
 
     implementation 'org.springframework.kafka:spring-kafka'
     // TODO: Upgrade with reference to new version when migrating to Spring boot 3 [FKS-214]
-    implementation 'no.fintlabs:fint-kafka:3.1.0-rc-1'
+    implementation 'no.fintlabs:fint-kafka:3.2.0-rc-1'
     implementation 'no.fintlabs:fint-flyt-cache:1.0.0'
     implementation 'org.ehcache:ehcache:3.10.6'
     implementation 'net.sf.ehcache:ehcache:2.10.9.2'
 
     implementation 'org.apache.commons:commons-lang3:3.12.0'
 
-    compileOnly 'org.projectlombok:lombok'
+    compileOnly 'org.projectlombok:lombok:1.18.34'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor:3.3.3'
+    annotationProcessor 'org.projectlombok:lombok:1.18.34'
 
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'io.projectreactor:reactor-test'
-    testImplementation 'cglib:cglib-nodep:3.3.0'
-    testImplementation 'org.projectlombok:lombok'
-    testImplementation 'org.spockframework:spock-spring:2.3-groovy-3.0'
-    testImplementation 'org.spockframework:spock-core:2.3-groovy-3.0'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.3.3'
+    testImplementation 'org.projectlombok:lombok:1.18.34'
 }
 
 test {
