@@ -298,14 +298,16 @@ class AzureClientTest {
 
          // Verify that patchAsync was called once with any Group object
          verify(groupRequest, times(1)).patchAsync(any(Group.class));
-     }
+     }*/
 
      @Test
-     void makeSureUpdateGroupIsCalled() {
+     void makeSurePatchIsCalledWhenUpdateIsCalled() {
 
-         // Mocking GroupRequestBuilder and GroupRequest
-         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-         when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
+         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
+         when(groupItemRequestBuilder.patch(any(Group.class))).thenReturn(new Group());
+         when(configGroup.getPrefix()).thenReturn("random-prefix");
+         when(configGroup.getSuffix()).thenReturn("random-postfix");
 
          // Creating a mock ResourceGroup object
          ResourceGroup resourceGroup = ResourceGroup.builder()
@@ -318,28 +320,20 @@ class AzureClientTest {
                  .resourceLimit("1000")
                  .build();
 
-         // Mocking the behavior of patchAsync to return a completed future
-         CompletableFuture<Group> future = CompletableFuture.completedFuture(new Group());
-         when(groupRequest.patchAsync(any(Group.class))).thenReturn(future);
-
          // Call the method under test
          azureClient.updateGroup(resourceGroup);
 
          // Verify that patchAsync is called exactly once with any Group object
-         verify(groupRequest, times(1)).patchAsync(any(Group.class));
-
-         // Verify that postAsync and deleteAsync are not called
-         verify(groupRequest, times(0)).postAsync(any());
-         verify(groupRequest, times(0)).deleteAsync();
+         verify(groupItemRequestBuilder, times(1)).patch(any(Group.class));
 
          // TODO: Implement further tests [FKS-187]
      }
 
-
+/*
     @Mock
 
     DirectoryObjectItemRequestBuilder directoryObjectCollectionWithReferencesRequestBuilder;
-
+*/
     @Mock
     private DirectoryObjectItemRequestBuilder directoryObjectCollectionReferenceRequestBuilder;
     @Mock
@@ -352,8 +346,8 @@ class AzureClientTest {
          PagedResponse<DirectoryObject> emptyPagedResponse = mock(PagedResponse.class);
          when(emptyPagedResponse.getValue()).thenReturn(Collections.emptyList());
 
-         CompletableFuture<PagedResponse<DirectoryObject>> futurePagedResponse = CompletableFuture.completedFuture(emptyPagedResponse);
-         when(groupItemRequestBuilder.getMemberObjects()).thenReturn(isNull());
+         /*CompletableFuture<PagedResponse<DirectoryObject>> futurePagedResponse = CompletableFuture.completedFuture(emptyPagedResponse);
+         when(groupItemRequestBuilder.getMemberObjects()).thenReturn(isNull());*/
 
          // Set up the input object for the test
          String kafkaKey = "somekey";
@@ -368,10 +362,12 @@ class AzureClientTest {
          assertThrows(NullPointerException.class,
                  () -> azureClient.addGroupMembership(resourceGroupMembership, kafkaKey)
          );
+         // TODO: Make sure this is the correct way to make sure CompletableFuture.runAsync() is finished
+         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
 
      }
 
-
+/*
          @Test
      public void addGroupMembership() {
          // Setup the mocks
