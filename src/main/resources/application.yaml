@@ -63,7 +63,7 @@ fint:
       group-scheduler:
         pull:
           initial-delay-ms: 5000
-          delta-delay-ms: 600000
+          delta-delay-ms: 30000
       user-scheduler:
         pull:
           initial-delay-ms: 1000
