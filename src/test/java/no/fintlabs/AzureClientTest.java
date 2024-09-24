@@ -3,7 +3,8 @@ package no.fintlabs;
 import com.azure.core.http.rest.PagedResponse;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import com.microsoft.graph.directoryobjects.item.DirectoryObjectItemRequestBuilder;
+//import com.microsoft.graph.directoryobjects.item.DirectoryObjectItemRequestBuilder;
+import com.microsoft.graph.groups.item.members.item.DirectoryObjectItemRequestBuilder;
 import com.microsoft.graph.education.classes.item.group.GroupRequestBuilder;
 import com.microsoft.graph.groups.GroupsRequestBuilder;
 import com.microsoft.kiota.ApiException;
@@ -51,24 +52,11 @@ import java.util.concurrent.TimeUnit;
 @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
 
-
-
     @Mock
     private GraphServiceClient graphServiceClient;
 
-    //@Mock
-    //private GroupCollectionResponse groupCollectionPage;
-    //@Mock
-    //private Request groupCollectionRequest;
-
-    //@Mock
-    //private CompletableFuture<GroupCollectionResponse> groupCollectionPageFuture;
-
     @Mock
     private GroupCollectionResponse groupCollectionResponse;
-
-    //@Mock
-    //private GroupItemRequestBuilder groupItemRequestBuilder;
 
     @Mock
     private GroupsRequestBuilder groupsRequestBuilder;
@@ -76,18 +64,14 @@ class AzureClientTest {
     @Mock
     GroupItemRequestBuilder groupItemRequestBuilder;
 
-
     @Mock
     private AzureGroupProducerService azureGroupProducerService;
 
     @Mock
     private AzureGroupMembershipProducerService azureGroupMembershipProducerService;
 
-    //@Mock
-    //private GroupRequestBuilder groupRequestBuilder;
-
-    //@Mock
-    //private GroupCollectionRequestBuilder groupCollectionRequestBuilder;
+    @Mock
+    private DirectoryObjectItemRequestBuilder directoryObjectItemRequestBuilder;
 
     @Mock
     private ConfigGroup configGroup;
@@ -104,7 +88,6 @@ class AzureClientTest {
     @Mock
     private Config config;
 
-
     @InjectMocks
     private AzureClient azureClient;
 
@@ -112,15 +95,15 @@ class AzureClientTest {
     MembersRequestBuilder membersRequestBuilder;
 
     @Mock
+    ApiException apiException;
+
+    @Mock
     RefRequestBuilder refRequestBuilder;
 
-    /*@BeforeEach
-    void setUp() {
-     MockitoAnnotations.openMocks(this);           // Initialize the mocks
+    @Mock
+    com.microsoft.graph.groups.item.members.item.ref.RefRequestBuilder singleMemberRefRequestBuilder;
 
-        }*/
-
-    private ResourceGroup resourceGroup(){
+    /*private ResourceGroup resourceGroup(){
         // Create a mock ResourceGroup object
         ResourceGroup resourceGroup = ResourceGroup.builder()
                 .id("12")
@@ -132,9 +115,9 @@ class AzureClientTest {
                 .resourceLimit("1000")
                 .build();
         return resourceGroup;
-    }
+    }*/
 
-    private Group azureGroupObject()
+    /*private Group azureGroupObject()
     {
         Group group = new Group();
         group.setDisplayName("testgroup1");
@@ -143,7 +126,7 @@ class AzureClientTest {
         additionalData.put(configGroup.getFintkontrollidattribute(), "123");
         group.setAdditionalData(additionalData);
         return group;
-    }
+    }*/
 
     private List<Group> getTestGrouplist(int numberOfGroups) {
         ConfigGroup configGroup = new ConfigGroup();
@@ -222,83 +205,32 @@ class AzureClientTest {
 
          // Verify that postAsync was called once
          verify(groupsRequestBuilder, times(1)).post(any(Group.class));
-
      }
 
-     /*
-     @Test
-     void deleteGroup() {
-         String delGroupID = "123";
-         String mockGroupId = "mock-group-id";
+     // TODO: To be reimplemented after deleteGroup function has been refactored [FKS-946]
+//     @Test
+//     void makeSureHTTPDeleteIsCalledWhenDeleteGroupIsCalled() throws Exception {
+//         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+//         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
+//         when(groupItemRequestBuilder.get()).thenReturn(groupCollectionResponse);
+//
+//         azureClient.deleteGroup("delGroupID");
+//
+//         verify(groupItemRequestBuilder, times(1)).delete();
+//     }
 
-         // Step 1: Mock the group object that will be returned by the get() method
-         Group mockGroup = new Group();  // Assuming Group is the model you expect
-         mockGroup.setId(mockGroupId);
-
-         // Step 2: Mock the GraphServiceClient using its builder pattern
-         when(this.graphServiceClient.getRequestAdapter()).thenReturn(mock(RequestAdapter.class));
-         GraphServiceClient graphServiceClient = mock(GraphServiceClient.class);
-         GroupsRequestBuilder groupsRequestBuilder = mock(GroupsRequestBuilder.class);
-         GroupItemRequestBuilder groupItemRequestBuilder = mock(GroupItemRequestBuilder.class);
-
-
-         // Configure the mock to return the GroupsRequestBuilder
-         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
-
-         // Configure the mock to return the GroupItemRequestBuilder
-         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
-
-         // Configure the mock to return the Group object
-         when(groupItemRequestBuilder.get()).thenReturn(mockGroup);
-
-         // Assuming `azureClient` uses `graphServiceClient` internally
-         // Ensure that `azureClient` is configured to use the mocked `graphServiceClient`
-         graphServiceClient.setRequestAdapter(mock(RequestAdapter.class));
-         //azureClient.setGraphServiceClient(graphServiceClient); // Adjust this line based on your actual setup
-
-
-         // Call your deleteGroup method (assume it uses graphServiceClient internally)
-         azureClient.deleteGroup(delGroupID);
-
-         // Verify that the get() method was called on groupItemRequestBuilder
-         verify(groupItemRequestBuilder, times(1)).get();
-     }
-
-
-     @Test
-     void updateGroup() {
-         // Prepare a mock Group object
-         Group mockGroup = new Group();
-
-         // Create a mock ResourceGroup object
-         ResourceGroup resourceGroup = ResourceGroup.builder()
-                 .id("12")
-                 .resourceId("123")
-                 .displayName("testdisplayname")
-                 .identityProviderGroupObjectId("testidpgroup")
-                 .resourceName("testresourcename")
-                 .resourceType("testresourcetype")
-                 .resourceLimit("1000")
-                 .build();
-
-         // Mock the GroupRequestBuilder and GroupRequest
-         GroupRequestBuilder groupRequestBuilder = mock(GroupRequestBuilder.class);
-         GroupRequest groupRequest = mock(GroupRequest.class);
-
-         // Mock the behavior of the graphServiceClient
-         when(graphServiceClient.groups(resourceGroup.getIdentityProviderGroupObjectId())).thenReturn(groupRequestBuilder);
-         when(groupRequestBuilder.buildRequest()).thenReturn(groupRequest);
-
-         // Mock the behavior of patchAsync to return a completed CompletableFuture
-         CompletableFuture<Group> future = CompletableFuture.completedFuture(mockGroup);
-         when(groupRequest.patchAsync(any(Group.class))).thenReturn(future);
-
-         // Call the method under test
-         azureClient.updateGroup(resourceGroup);
-
-         // Verify that patchAsync was called once with any Group object
-         verify(groupRequest, times(1)).patchAsync(any(Group.class));
-     }*/
+    // TODO: To be reimplemented after deleteGroup function has been refactored [FKS-946]
+//    @Test
+//    void multiplePagesWhenDeletingSingleGroupShouldThrowError {
+//        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+//        when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
+//        when(groupItemRequestBuilder.get()).thenReturn(groupCollectionResponse);
+//        when(groupCollectionResponse.getOdataNextLink()).thenReturn("SomeFakeURL");
+//
+//        azureClient.deleteGroup("delGroupID");
+//
+//        //verify(groupItemRequestBuilder, times(1)).delete();
+//    }
 
      @Test
      void makeSurePatchIsCalledWhenUpdateIsCalled() {
@@ -325,64 +257,33 @@ class AzureClientTest {
 
          // Verify that patchAsync is called exactly once with any Group object
          verify(groupItemRequestBuilder, times(1)).patch(any(Group.class));
-
-         // TODO: Implement further tests [FKS-187]
      }
 
-/*
-    @Mock
 
-    DirectoryObjectItemRequestBuilder directoryObjectCollectionWithReferencesRequestBuilder;
-*/
-    @Mock
-    private DirectoryObjectItemRequestBuilder directoryObjectCollectionReferenceRequestBuilder;
-    @Mock
-    private DirectoryObjectItemRequestBuilder directoryObjectCollectionReferenceRequest;
+    @Test
+    public void makeSureMSGraphExceptionIsHandledGracefully() {
 
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+
+        // Call the method under test
+        ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
+                .id("testid")
+                .azureGroupRef("exampleGroupRef")
+                .azureUserRef("someUserRef")
+                .roleRef("exampleRoleRef")
+                .build();
+
+        azureClient.addGroupMembership(resourceGroupMembership, "resourcekey");
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+
+        verify(azureGroupMembershipProducerService, times(0)).publishAddedMembership(any(AzureGroupMembership.class));
+    }
      @Test
-     public void makeSureEmptyReferencesIsHandledCorrectly() {
-         when(graphServiceClient.groups().byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
-
-         PagedResponse<DirectoryObject> emptyPagedResponse = mock(PagedResponse.class);
-         when(emptyPagedResponse.getValue()).thenReturn(Collections.emptyList());
-
-         /*CompletableFuture<PagedResponse<DirectoryObject>> futurePagedResponse = CompletableFuture.completedFuture(emptyPagedResponse);
-         when(groupItemRequestBuilder.getMemberObjects()).thenReturn(isNull());*/
-
-         // Set up the input object for the test
-         String kafkaKey = "somekey";
-         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
-                 .id("testid")
-                 .azureGroupRef("exampleGroupRef")
-                 .azureUserRef("someUserRef")
-                 .roleRef("exampleRoleRef")
-                 .build();
-
-         // Assert that NullPointerException is thrown when adding group membership with null references.
-         assertThrows(NullPointerException.class,
-                 () -> azureClient.addGroupMembership(resourceGroupMembership, kafkaKey)
-         );
-         // TODO: Make sure this is the correct way to make sure CompletableFuture.runAsync() is finished
-         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-
-     }
-
-/*
-         @Test
-     public void addGroupMembership() {
-         // Setup the mocks
-         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-         when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
-         when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
-         when(directoryObjectCollectionReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
-
-         // Create a mock DirectoryObject
-         DirectoryObject mockDirectoryObject = new DirectoryObject();
-         mockDirectoryObject.id = "someUserRef";
-
-         // Mocking postAsync to return a completed CompletableFuture with DirectoryObject
-         CompletableFuture<DirectoryObject> future = CompletableFuture.completedFuture(mockDirectoryObject);
-         when(directoryObjectCollectionReferenceRequest.postAsync(any(DirectoryObject.class))).thenReturn(future);
+     public void makeSureAddGroupMembershipCallsHTTPPostWhenMembershipIsCorrect() {
+         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
+         when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
+         when(membersRequestBuilder.ref()).thenReturn(refRequestBuilder);
 
          // Creating test data
          String kafkaKey = "somekey";
@@ -397,68 +298,46 @@ class AzureClientTest {
          azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
          // Verify the interaction
-         verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
+         verify(refRequestBuilder, times(1)).post(any(ReferenceCreate.class));
      }
 
     @Test
-    public void makeSureHTTP400IsHandledGraceullyWhenAddingGroupMembership () {
-        // TODO: Make sure HTTP 400 is handled gracefully [FKS-213]
-        /*when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-        when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
-        when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
-        when(directoryObjectCollectionWithReferencesRequestBuilder.references().buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
+    public void makeSureAddGroupMembershipDoesntPopulateKafkaWhenMSGraphThrowsError() {
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
+        when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
+        when(membersRequestBuilder.ref()).thenReturn(refRequestBuilder);
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        doThrow(apiException).when(refRequestBuilder).post(any(ReferenceCreate.class));
 
-        String jsonResponse = "{ \"error\": { \"code\": \"InternalServerError\", \"message\": \"Internal Server Error\" } }";
-        GraphErrorResponse errorResponse = objectMapper.readValue(jsonResponse, GraphErrorResponse.class);
-
-        GraphServiceException graphServiceException = new GraphServiceException().
-        /*GraphErrorResponse errorResponse = new GraphErrorResponse();
-        errorResponse.setRawObject(
-                GraphErrorResponse.buildFromJson()
-        );*/
-
-        /*aphServiceException graphServiceException = new GraphServiceException(
-                "Error Message",
-                "Error Description",
-                Arrays.asList("TestHeader: testValue"),
-                "RequestId",
-                500, "" +
-                "Error Subcode",
-                Arrays.asList("TestRetHeaderr: testRetValue"),
-                errorResponse
-                true);*/
-
-
-
-        /*when(directoryObjectCollectionReferenceRequest.post()).thenThrow(graphServiceException);
-
-
-
+        // Creating test data
+        String kafkaKey = "somekey";
         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                 .id("testid")
                 .azureGroupRef("exampleGroupRef")
                 .azureUserRef("someUserRef")
                 .roleRef("exampleRoleRef")
-                .build();*/
+                .build();
 
-        /*GraphServiceException graphServiceException = GraphServiceException.createFromResponse(
-                "ExampleMSGraphURL",
-                "GET",
-                Arrays.asList("exampleRequestHeaders"),
-                "exampleRequestBody",
-                Map.of("exampleHeader", "exampleHeaderValue" ),
-                "exampleResponseMessage",
-                400,
-                new GraphErrorResponse(),
-                true
-        );*/
+        // Call the method under test
+        azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
-        /*assertThrows(GraphServiceException.class,
-                ()->azureClient.addGroupMembership(resourceGroupMembership,"exampleKey"));*/
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(azureGroupMembershipProducerService, times(0)).publishAddedMembership(any(AzureGroupMembership.class));
+    }
 
-/*        when(directoryObjectCollectionReferenceRequest.post()).thenThrow(graphServiceException);
+    @Test
+    public void makeSureHTTP400IsHandledGraceullyWhenAddingGroupMembership () {
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
+        when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
+        when(membersRequestBuilder.ref()).thenReturn(refRequestBuilder);
+
+        when(apiException.getResponseStatusCode()).thenReturn(400);
+        // NOTE: Message need to contain "object reference..."
+        when(apiException.getMessage()).thenReturn("Test errormessage: object references already exist");
+
+        doThrow(apiException).when(refRequestBuilder).post(any(ReferenceCreate.class));
 
         String kafkaKey = "somekey";
         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
@@ -468,11 +347,12 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        assertThrows(   NullPointerException.class,
-                () -> azureClient.addGroupMembership(resourceGroupMembership, kafkaKey)
-        );
-    }
+        azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(azureGroupMembershipProducerService, times(1)).publishAddedMembership(any(AzureGroupMembership.class));
+    }
+/*
     @Mock
     private DirectoryObjectItemRequestBuilder directoryObjectWithReferenceRequestBuilder;
     @Mock
@@ -485,47 +365,34 @@ class AzureClientTest {
     public void gracefullyHandleErroneousKafkaID () {
 
     }
-
+*/
     @Test
-    public void makeSureAzureDeleteFunctionIsCalled () {
-        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-        when(groupRequestBuilder.members(anyString())).thenReturn(directoryObjectWithReferenceRequestBuilder);
-        when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
-        when(directoryObjectReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectReferenceRequest);
+    public void makeSureDeleteGroupMembershipCallsHTTPDelete() {
 
-        DirectoryObject directoryObject = new DirectoryObject();
-        //when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
+        when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
+        when(membersRequestBuilder.byDirectoryObjectId(anyString())).thenReturn(directoryObjectItemRequestBuilder);
+        when(directoryObjectItemRequestBuilder.ref()).thenReturn(singleMemberRefRequestBuilder);
 
-        ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
-                .id("testid")
-                .azureGroupRef("exampleGroupRef")
-                .azureUserRef("someUserRef")
-                .roleRef("exampleRoleRef")
-                .build();
-
-        String kafkaKey = "exampleGroupID_exampleUserID";
+        // Creating test data
+        String kafkaKey = "somekey_someotherkey";
 
         azureClient.deleteGroupMembership(kafkaKey);
 
-        verify(directoryObjectReferenceRequest, times(1) ).deleteAsync();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(singleMemberRefRequestBuilder, times(1) ).delete();
     }
 
-    // @Test
-    //public void makeSureNulluser
-
-    @Test
-    public void makeSureExternalAttributeNullIsSupported() {
-
-    }
     @Test
     public void logAndSkipDeletionWhenKafkaIDIswithoutUnderscore () {
 
-        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-        when(groupRequestBuilder.members(anyString())).thenReturn(directoryObjectWithReferenceRequestBuilder);
-        when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
-        when(directoryObjectReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectReferenceRequest);
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
+        when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
+        when(membersRequestBuilder.byDirectoryObjectId(anyString())).thenReturn(directoryObjectItemRequestBuilder);
+        when(directoryObjectItemRequestBuilder.ref()).thenReturn(singleMemberRefRequestBuilder);
 
-        //when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
 
         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                 .id("testid")
@@ -534,37 +401,25 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        String kafkaKey = "example";
+        String kafkaKey = "exampleWithoutUnderscore";
         azureClient.deleteGroupMembership(kafkaKey);
-        verify(directoryObjectReferenceRequest, times(0)).deleteAsync();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(singleMemberRefRequestBuilder, times(0) ).delete();
+
 
         kafkaKey = "exampleGroupID_exampleUserID";
         azureClient.deleteGroupMembership(kafkaKey);
-        verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(singleMemberRefRequestBuilder, times(1) ).delete();
     }
 
-    @Test
-    public void makeSureDeleteAzureMembershipCanBeCalledWithNull() {
-        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-        when(groupRequestBuilder.members(anyString())).thenReturn(directoryObjectWithReferenceRequestBuilder);
-        when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
-        when(directoryObjectReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectReferenceRequest);
-
-        //when(directoryObjectReferenceRequest.deleteAsync()).thenReturn(new DirectoryObject());
-
-        String membershipkey = "someid_1234";
-        azureClient.deleteGroupMembership(membershipkey);
-
-        verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
-    }
     @Test
     public void logAndSkipDeletionWhenKafkaIDhaveMultipleUnderscores () {
-        when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-        when(groupRequestBuilder.members(anyString())).thenReturn(directoryObjectWithReferenceRequestBuilder);
-        when(directoryObjectWithReferenceRequestBuilder.reference()).thenReturn(directoryObjectReferenceRequestBuilder);
-        when(directoryObjectReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectReferenceRequest);
-
-        //when(directoryObjectReferenceRequest.delete()).thenReturn(new DirectoryObject());
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
+        when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
+        when(membersRequestBuilder.byDirectoryObjectId(anyString())).thenReturn(directoryObjectItemRequestBuilder);
+        when(directoryObjectItemRequestBuilder.ref()).thenReturn(singleMemberRefRequestBuilder);
 
         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                 .id("testid")
@@ -575,19 +430,21 @@ class AzureClientTest {
 
         String kafkaKey = "example_with_multiple_underscores";
         azureClient.deleteGroupMembership(kafkaKey);
-        verify(directoryObjectReferenceRequest, times(0)).deleteAsync();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(singleMemberRefRequestBuilder, times(0) ).delete();
 
         kafkaKey = "exampleGroupID_exampleUserID";
         azureClient.deleteGroupMembership(kafkaKey);
-        verify(directoryObjectReferenceRequest, times(1)).deleteAsync();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(singleMemberRefRequestBuilder, times(1) ).delete();
 
         kafkaKey = "exampleGroupID_exampleUserID2";
         azureClient.deleteGroupMembership(kafkaKey);
-        verify(directoryObjectReferenceRequest, times(2)).deleteAsync();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(singleMemberRefRequestBuilder, times(2) ).delete();
     }
 
-    //@MockBean
-    //private ConfigGroup configGroup;
+    // TODO: Refactor when delta is implemented [FKS-944]
 //    @Test
 //    public void makeSureGetNextPageIsCalledAsExpected() {
 //        GroupCollectionRequestBuilder groupCollectionRequestBuilder = mock(GroupCollectionRequestBuilder.class);
@@ -639,50 +496,53 @@ class AzureClientTest {
 ////        verify(mockCollPage2, times(1)).getNextPage();
 //    }
 
-    @Test
-    public void makeSureTrownErrorIsSwallowedAndNotThrown() {
-        when(graphServiceClient.groups()).thenReturn(groupItemRequestBuilder);
-        when(groupItemRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
-        //when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
-        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+    // TODO: Refactor when delta is implemented [FKS-944]
+//    @Test
+//    public void makeSureTrownErrorIsSwallowedAndNotThrown() {
+//        when(graphServiceClient.groups()).thenReturn(groupItemRequestBuilder);
+//        when(groupItemRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
+//        when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
+//        //when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
+//        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+//
+//        when(groupCollectionRequest.getAsync()).thenThrow(ClientException.class);
+//
+//        //assertDoesNotThrow( );
+//        assertDoesNotThrow(()-> {
+//            azureClient.pullAllGroups();
+//        });
+//    }
 
-        when(groupCollectionRequest.getAsync()).thenThrow(ClientException.class);
+    // TODO: Refactor when delta is implemented [FKS-944]
+//    @Test
+//    public void shouldHandleTimeoutException() {
+//        when(graphServiceClient.groups()).thenReturn(groupItemRequestBuilder);
+//        //when(groupCollectionRequestBuilder.buildRequest(any(LinkedList.class))).thenReturn(groupCollectionRequest);
+//        when(groupItemRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
+//        when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
+//       // when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
+//        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
+//
+//        when(groupCollectionRequest.getAsync()).thenThrow(new ClientException("Timeout", new InterruptedIOException("timeout")));
+//
+//        /*GroupCollectionRequestBuilder mockGroupCollectionRequestBuilder2 = Mockito.mock(GroupCollectionRequestBuilder.class);
+//        GroupCollectionRequest mockGroupCollectionRequest2 = Mockito.mock(GroupCollectionRequest.class);
+//        GroupCollectionPage mockCollPage2= Mockito.mock(GroupCollectionPage.class);*/
+//
+//        /*when(groupCollectionPage.getNextPage()).thenReturn(mockGroupCollectionRequestBuilder2);
+//        when(mockGroupCollectionRequestBuilder2.buildRequest()).thenReturn(mockGroupCollectionRequest2);
+//        when(mockGroupCollectionRequest2.get()).thenReturn(mockCollPage2);
+//
+//        azureClient.pullAllGroups();
+//
+//        when(groupCollectionRequest.get()).thenAnswer();
+//
+//        azureClient.pullAllGroups();*/
+//
+//        /*verify(groupCollectionPage, times(2)).getNextPage();
+//        verify(mockCollPage2, times(1)).getNextPage();
+//    }
 
-        //assertDoesNotThrow( );
-        assertDoesNotThrow(()-> {
-            azureClient.pullAllGroups();
-        });
-    }
-
-    @Test
-    public void shouldHandleTimeoutException() {
-        when(graphServiceClient.groups()).thenReturn(groupItemRequestBuilder);
-        //when(groupCollectionRequestBuilder.buildRequest(any(LinkedList.class))).thenReturn(groupCollectionRequest);
-        when(groupItemRequestBuilder.buildRequest()).thenReturn(groupCollectionRequest);
-        when(groupCollectionRequest.select(anyString())).thenReturn(groupCollectionRequest);
-       // when(groupCollectionRequest.expand(anyString())).thenReturn(groupCollectionRequest);
-        //when(groupCollectionRequest.filter(anyString())).thenReturn(groupCollectionRequest);
-
-        when(groupCollectionRequest.getAsync()).thenThrow(new ClientException("Timeout", new InterruptedIOException("timeout")));
-
-        /*GroupCollectionRequestBuilder mockGroupCollectionRequestBuilder2 = Mockito.mock(GroupCollectionRequestBuilder.class);
-        GroupCollectionRequest mockGroupCollectionRequest2 = Mockito.mock(GroupCollectionRequest.class);
-        GroupCollectionPage mockCollPage2= Mockito.mock(GroupCollectionPage.class);*/
-
-        /*when(groupCollectionPage.getNextPage()).thenReturn(mockGroupCollectionRequestBuilder2);
-        when(mockGroupCollectionRequestBuilder2.buildRequest()).thenReturn(mockGroupCollectionRequest2);
-        when(mockGroupCollectionRequest2.get()).thenReturn(mockCollPage2);
-
-        azureClient.pullAllGroups();
-
-        when(groupCollectionRequest.get()).thenAnswer();
-
-        azureClient.pullAllGroups();*/
-
-        /*verify(groupCollectionPage, times(2)).getNextPage();
-        verify(mockCollPage2, times(1)).getNextPage();
-    }*/
 
     @Test
      public void publishPostedMembershipToKafkaIfPostIsSuccessful()
@@ -703,10 +563,8 @@ class AzureClientTest {
                      .build();
 
              azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
-             // TODO: Make sure this is the correct way to make sure CompletableFuture.runAsync() is finished
+
              assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-             // Verify that the post method was called once and threw the exception
-             // TODO: Assert that HTTP POST returns successfully [TBN]
              verify(azureGroupMembershipProducerService, times(1)).publishAddedMembership(any(AzureGroupMembership.class));
          }
 
@@ -718,9 +576,7 @@ class AzureClientTest {
 
          when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
          when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
-
          when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
-
          when(membersRequestBuilder.ref()).thenReturn(refRequestBuilder);
 
          doThrow(apiException).when(refRequestBuilder).post(any(ReferenceCreate.class));
@@ -735,10 +591,7 @@ class AzureClientTest {
 
          azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
-         // TODO: Make sure this is the correct way to make sure CompletableFuture.runAsync() is finished
          assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-         // TODO: Assert that HTTP POST is finished and has failed accordingly [TBN]
-         // Verify publishAddedMembership is NOT being called if HTTP POST is unsuccessful
          verify(azureGroupMembershipProducerService, times(0)).publishAddedMembership(any(AzureGroupMembership.class));
      }
 
