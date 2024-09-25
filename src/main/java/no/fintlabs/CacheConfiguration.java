@@ -7,9 +7,6 @@ import no.fintlabs.cache.FintCacheManager;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.Dictionary;
-import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -25,7 +22,6 @@ public class CacheConfiguration {
 
     @Bean
     FintCache<String, Optional> resourceGroupMembershipCache() {
-        //return createResourceCache(ClassValue<Optional<ResourceGroupMembership>>);
         return fintCacheManager.createCache(
                 ResourceGroupMembership.class.getName().toLowerCase(Locale.ROOT),
                 String.class,
@@ -45,9 +41,4 @@ public class CacheConfiguration {
                 resourceClass
         );
     }
-
-    @Bean
-    String deltaLinkCache() {
-        return new String();
-    };
 }
