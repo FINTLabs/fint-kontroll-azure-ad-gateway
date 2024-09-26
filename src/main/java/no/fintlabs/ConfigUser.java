@@ -35,6 +35,7 @@ public class ConfigUser {
     private String studentidattribute;
     private String externaluserattribute;
     private String externaluservalue;
+    private Integer userpagingsize;
     public List<String> AllAttributes(){
         List<String> AllAttribs = new ArrayList<>();
         AllAttribs.add(this.getStudentidattribute());

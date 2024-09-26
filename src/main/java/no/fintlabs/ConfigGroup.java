@@ -15,4 +15,5 @@ public class ConfigGroup {
     private String suffix;
     private Boolean allowgroupupdate;
     private Boolean allowgroupdelete;
+    private Integer grouppagingsize;
 }
