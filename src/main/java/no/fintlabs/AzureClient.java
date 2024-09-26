@@ -43,11 +43,13 @@ public class AzureClient {
     private void pullAllUsers() {
         log.info("*** <<< Starting to pull users from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
+        String[] selectionCriteria = new String[]{String.join(",", configUser.AllAttributes())};
+        String filterCriteria = "usertype eq 'member'";
         try {
             this.pageThroughUsers(graphServiceClient.users()
                     .get(requestConfiguration -> {
-                        requestConfiguration.queryParameters.select = new String[]{String.join(",", configUser.AllAttributes())};
-                        requestConfiguration.queryParameters.filter = "usertype eq 'member'";
+                        requestConfiguration.queryParameters.select = selectionCriteria;
+                        requestConfiguration.queryParameters.filter = filterCriteria;
                         requestConfiguration.queryParameters.top = configUser.getUserpagingsize();
                     }));
 
@@ -95,21 +97,21 @@ public class AzureClient {
 //    )
     public void pullAllGroupsDelta() {
         log.info("*** <<< Fetching groups and members using delta call from Microsoft Entra >>> ***");
-
+        String[] selectionCriteria = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
 
         try {
             if (deltaLinkCache != null) {
                 String deltaUrl = deltaLinkCache;
                 DeltaGetResponse groupPage = graphServiceClient.groups().delta().withUrl(deltaUrl)
                         .get(requestConfiguration -> {
-                            requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
+                            requestConfiguration.queryParameters.select = selectionCriteria;
                             requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
                         });
                 pageThroughGroupsDelta(groupPage);
             } else {
                 DeltaGetResponse groupPage = graphServiceClient.groups().delta()
                         .get(requestConfiguration -> {
-                            requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
+                            requestConfiguration.queryParameters.select = selectionCriteria;
                         });
                 pageThroughGroupsDelta(groupPage);
             }
@@ -232,7 +234,7 @@ public class AzureClient {
     public void pullAllGroupsAsync() {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
-
+        String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
         // Define an executor for asynchronous tasks
         ExecutorService executor = Executors.newFixedThreadPool(4);  // Can adjust thread pool size if needed
 
@@ -240,7 +242,7 @@ public class AzureClient {
             try {
                 return pageThroughGroups(graphServiceClient.groups()
                         .get(requestConfiguration -> {
-                            requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
+                            requestConfiguration.queryParameters.select = selectionCriteria;
                             requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
                         }));
             } catch (ApiException | ReflectiveOperationException e) {
@@ -252,7 +254,7 @@ public class AzureClient {
             long elapsedTimeInSeconds = (endTime - startTime) / 1000;
             long minutes = elapsedTimeInSeconds / 60;
             long seconds = elapsedTimeInSeconds % 60;
-            log.info("{} groups processed in {} minutes and {} seconds. Continuing processing memberships >>> ***", allGroups.size(), minutes, seconds);
+            log.info("*** <<< {} groups processed in {} minutes and {} seconds. Continuing processing memberships >>> ***", allGroups.size(), minutes, seconds);
             fetchAndPublishMembersForAllGroupsAsync(allGroups);
 
         }).exceptionally(ex -> {
@@ -263,7 +265,7 @@ public class AzureClient {
             long elapsedTimeInSeconds = (endTime - startTime) / 1000;
             long minutes = elapsedTimeInSeconds / 60;
             long seconds = elapsedTimeInSeconds % 60;
-            log.info("Done processing groups and memberships in {} minutes and {} seconds >>> ***", minutes, seconds);
+            log.info("*** <<< Done processing groups and memberships in {} minutes and {} seconds >>> ***", minutes, seconds);
         }).join();
     }
 
@@ -430,11 +432,13 @@ public class AzureClient {
 
     public void deleteGroup(String resourceGroupId) {
         GroupCollectionResponse groupCollectionPage = null;
+        String[] selectionCriteria = new String[]{String.format("id,%s", configGroup.getFintkontrollidattribute())};
+        String filterCriteria = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId);
         try {
             groupCollectionPage = graphServiceClient.groups()
                     .get(requestConfiguration -> {
-                        requestConfiguration.queryParameters.select = new String[]{String.format("id,%s", configGroup.getFintkontrollidattribute())};
-                        requestConfiguration.queryParameters.filter = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId);
+                        requestConfiguration.queryParameters.select = selectionCriteria;
+                        requestConfiguration.queryParameters.filter = filterCriteria;
                     });
         } catch (ApiException e) {
             log.error("Failed find the group in graph to be deleted using resourceGroupId {}: {}", resourceGroupId, e.getMessage());
