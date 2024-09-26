@@ -53,6 +53,7 @@ fint:
         mainorgunitnameattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitName
         externaluserattribute: state
         externaluservalue: frid
+        userpagingsize: 999
       group:
         fintkontrollidattribute: extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
         prefix: "-pre-"
@@ -60,10 +61,14 @@ fint:
         allowgroupupdate: false
         allowgroupdelete: false
         uniquenameprefix: "FKRID"
+        grouppagingsize: 999
       group-scheduler:
         pull:
           initial-delay-ms: 5000
           delta-delay-ms: 600000
+        delta-pull:
+          initial-delay-ms: 5000
+          delta-delay-ms: 60000
       user-scheduler:
         pull:
           initial-delay-ms: 1000

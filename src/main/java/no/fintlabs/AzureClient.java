@@ -48,6 +48,7 @@ public class AzureClient {
                     .get(requestConfiguration -> {
                         requestConfiguration.queryParameters.select = new String[]{String.join(",", configUser.AllAttributes())};
                         requestConfiguration.queryParameters.filter = "usertype eq 'member'";
+                        requestConfiguration.queryParameters.top = configUser.getUserpagingsize();
                     }));
 
             long endTime = System.currentTimeMillis();
@@ -89,11 +90,11 @@ public class AzureClient {
 //    TODO: Implement Delta. Scheduler is as for now disabled
 
 //    @Scheduled(
-//            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
-//            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
+//            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.initial-delay-ms}",
+//            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.delta-delay-ms}"
 //    )
     public void pullAllGroupsDelta() {
-        log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
+        log.info("*** <<< Fetching groups and members using delta call from Microsoft Entra >>> ***");
 
 
         try {
@@ -102,6 +103,7 @@ public class AzureClient {
                 DeltaGetResponse groupPage = graphServiceClient.groups().delta().withUrl(deltaUrl)
                         .get(requestConfiguration -> {
                             requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
+                            requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
                         });
                 pageThroughGroupsDelta(groupPage);
             } else {
@@ -205,8 +207,9 @@ public class AzureClient {
 
                 if (untypedMember.getValue().containsKey("@removed")) {
                     String kafkaKey = group.getId() + "_" + memberId;
-                    log.info("Removed member with ObjectID: {} from group: {}", memberId, group.getId());
-                    azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
+                                        azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
+                    log.debug("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
+                    log.info("UserId: {} is removed as member from GroupId: {}", group.getId(), memberId);
                     continue;
                 }
 
@@ -221,8 +224,7 @@ public class AzureClient {
         }
     }
 
-//  TODO: Consider if this should be active if delta is implemented
-
+//  TODO: Consider if this should be deactivated if delta is implemented
     @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
@@ -239,13 +241,13 @@ public class AzureClient {
                 return pageThroughGroups(graphServiceClient.groups()
                         .get(requestConfiguration -> {
                             requestConfiguration.queryParameters.select = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
+                            requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
                         }));
             } catch (ApiException | ReflectiveOperationException e) {
                 log.error("Failed when trying to get groups. ", e);
-                return new ArrayList<AzureGroup>(); // Return an empty list on failure
+                return new ArrayList<AzureGroup>();
             }
         }, executor).thenAccept(allGroups -> {
-            // After retrieving all groups, handle them (e.g., publish members, etc.)
             long endTime = System.currentTimeMillis();
             long elapsedTimeInSeconds = (endTime - startTime) / 1000;
             long minutes = elapsedTimeInSeconds / 60;
@@ -257,13 +259,12 @@ public class AzureClient {
             log.error("An error occurred while fetching groups: {}", ex.getMessage());
             return null;
         }).thenRun(() -> {
-            // Optional: Do something when all tasks are completed
             long endTime = System.currentTimeMillis();
             long elapsedTimeInSeconds = (endTime - startTime) / 1000;
             long minutes = elapsedTimeInSeconds / 60;
             long seconds = elapsedTimeInSeconds % 60;
             log.info("Done processing groups and memberships in {} minutes and {} seconds >>> ***", minutes, seconds);
-        });
+        }).join();
     }
 
     private List<AzureGroup> pageThroughGroups(GroupCollectionResponse groupPage) throws ReflectiveOperationException {
@@ -300,7 +301,8 @@ public class AzureClient {
                                 .byGroupId(group.getId())
                                 .members()
                                 .get(requestConfiguration -> {
-                                    requestConfiguration.queryParameters.select = new String[]{"id"}; // Fetching only member IDs
+                                    requestConfiguration.queryParameters.select = new String[]{"id"};
+                                    requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
                                 });
                     } catch (Exception e) {
                         log.error("Error fetching members for group {}: {}", group.getId(), e.getMessage());
