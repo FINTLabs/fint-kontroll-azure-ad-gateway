@@ -1,51 +1,37 @@
 package no.fintlabs;
 
-import com.azure.core.http.rest.PagedResponse;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
 //import com.microsoft.graph.directoryobjects.item.DirectoryObjectItemRequestBuilder;
+import com.microsoft.graph.groups.delta.DeltaGetResponse;
+import com.microsoft.graph.groups.delta.DeltaRequestBuilder;
 import com.microsoft.graph.groups.item.members.item.DirectoryObjectItemRequestBuilder;
 import com.microsoft.graph.education.classes.item.group.GroupRequestBuilder;
 import com.microsoft.graph.groups.GroupsRequestBuilder;
 import com.microsoft.kiota.ApiException;
-import com.microsoft.graph.core.exceptions.*;
-import com.microsoft.graph.groups.item.GroupItemRequestBuilder;
-import com.microsoft.graph.groups.item.getmemberobjects.GetMemberObjectsRequestBuilder;
-import com.microsoft.graph.groups.item.members.MembersRequestBuilder;
+        import com.microsoft.graph.groups.item.GroupItemRequestBuilder;
+        import com.microsoft.graph.groups.item.members.MembersRequestBuilder;
 import com.microsoft.graph.groups.item.members.ref.RefRequestBuilder;
-import com.microsoft.graph.groups.item.owners.graphserviceprincipal.GraphServicePrincipalRequestBuilder;
 //import com.microsoft.graph.requests.GroupCollectionRequest;
 //import com.microsoft.graph.requests.GroupCollectionRequestBuilder;
-import com.microsoft.graph.models.DirectoryObject;
-import com.microsoft.graph.models.Group;
+        import com.microsoft.graph.models.Group;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.models.*;
-import com.microsoft.kiota.ApiExceptionBuilder;
-import com.microsoft.kiota.RequestAdapter;
-import lombok.RequiredArgsConstructor;
-import no.fintlabs.azure.AzureGroupMembership;
+        import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
 import no.fintlabs.azure.AzureGroupProducerService;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+        import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.junit.jupiter.MockitoExtension;
+        import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.io.InterruptedIOException;
-import java.lang.ref.Reference;
-import java.util.*;
+        import java.util.*;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ForkJoinPool;
+        import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 
@@ -60,6 +46,22 @@ class AzureClientTest {
 
     @Mock
     private GroupsRequestBuilder groupsRequestBuilder;
+
+    @Mock
+    private DeltaRequestBuilder deltaRequestBuilder;
+
+    @Mock
+    private DeltaGetResponse deltaGetResponse;
+
+    @Mock
+    private BaseDeltaFunctionResponse baseDeltaFunctionResponse;
+
+    @Mock
+    private GroupRequestBuilder.GetRequestConfiguration getRequestConfiguration;
+
+    @Mock
+    private GroupRequestBuilder.GetQueryParameters getQueryParameters;
+
 
     @Mock
     GroupItemRequestBuilder groupItemRequestBuilder;
@@ -445,6 +447,24 @@ class AzureClientTest {
     }
 
     // TODO: Refactor when delta is implemented [FKS-944]
+
+    @Test
+    public void makeSureDeltaIsCalledAndReturnsGroups()
+    {
+        String[] selectionCriteria = new String[]{String.format("id,displayName,description,members")};
+        when(configGroup.getFintkontrollidattribute()).thenReturn("12345");
+
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.get()).thenReturn(deltaGetResponse);
+        //when(getRequestConfiguration.queryParameters).thenReturn(getRequestConfiguration.queryParameters);
+        //when(getQueryParameters.select).thenReturn(selectionCriteria);
+
+        when(deltaGetResponse.getValue()).thenReturn(getTestGrouplist(3));
+
+        azureClient.pullAllGroupsDelta();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+    }
 //    @Test
 //    public void makeSureGetNextPageIsCalledAsExpected() {
 //        GroupCollectionRequestBuilder groupCollectionRequestBuilder = mock(GroupCollectionRequestBuilder.class);
