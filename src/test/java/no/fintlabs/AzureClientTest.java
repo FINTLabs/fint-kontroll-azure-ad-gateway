@@ -1,37 +1,39 @@
 package no.fintlabs;
 
 //import com.microsoft.graph.directoryobjects.item.DirectoryObjectItemRequestBuilder;
+import com.microsoft.graph.core.tasks.PageIterator;
 import com.microsoft.graph.groups.delta.DeltaGetResponse;
 import com.microsoft.graph.groups.delta.DeltaRequestBuilder;
 import com.microsoft.graph.groups.item.members.item.DirectoryObjectItemRequestBuilder;
 import com.microsoft.graph.education.classes.item.group.GroupRequestBuilder;
 import com.microsoft.graph.groups.GroupsRequestBuilder;
 import com.microsoft.kiota.ApiException;
-        import com.microsoft.graph.groups.item.GroupItemRequestBuilder;
-        import com.microsoft.graph.groups.item.members.MembersRequestBuilder;
+import com.microsoft.kiota.RequestAdapter;
+import com.microsoft.kiota.serialization.UntypedArray;
+import com.microsoft.kiota.serialization.UntypedObject;
+import com.microsoft.graph.groups.item.GroupItemRequestBuilder;
+import com.microsoft.graph.groups.item.members.MembersRequestBuilder;
 import com.microsoft.graph.groups.item.members.ref.RefRequestBuilder;
 //import com.microsoft.graph.requests.GroupCollectionRequest;
 //import com.microsoft.graph.requests.GroupCollectionRequestBuilder;
-        import com.microsoft.graph.models.Group;
+import com.microsoft.graph.models.Group;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.models.*;
-        import no.fintlabs.azure.AzureGroupMembership;
+import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
 import no.fintlabs.azure.AzureGroupProducerService;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
-        import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-        import org.mockito.junit.jupiter.MockitoExtension;
-
+import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-        import java.util.*;
+import java.util.*;
 import java.util.List;
-        import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 
@@ -52,6 +54,12 @@ class AzureClientTest {
 
     @Mock
     private DeltaGetResponse deltaGetResponse;
+
+    @Mock
+    private PageIterator<Group, DeltaGetResponse> pageIterator;
+
+    @Mock
+    private RequestAdapter requestAdapter;
 
     @Mock
     private BaseDeltaFunctionResponse baseDeltaFunctionResponse;
@@ -136,9 +144,9 @@ class AzureClientTest {
         for (int i=0; i<numberOfGroups; i++) {
             Group group = new Group();
             group.setId("12" + (i + 2));
-            group.setDisplayName("testgroup1");
+            group.setDisplayName("testgroup" + i + "-suff-");
             HashMap<String, Object> additionalData = new HashMap<>();
-            additionalData.put(configGroup.getFintkontrollidattribute(), "123");
+            additionalData.put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", "123");
             group.setAdditionalData(additionalData);
             retGroupList.add(group);
         }
@@ -148,7 +156,7 @@ class AzureClientTest {
     @Test
     void doesGroupExist_found() throws Exception {
         String resourceGroupID = "123";
-
+        when(configGroup.getFintkontrollidattribute()).thenReturn("qweqweqwe");
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
 
@@ -451,26 +459,41 @@ class AzureClientTest {
     @Test
     public void makeSureDeltaIsCalledAndReturnsGroups()
     {
-        String[] selectionCriteria = new String[]{String.format("id,displayName,description,members")};
+        configGroup.setSuffix("-suff-");
+        when(configGroup.getSuffix()).thenReturn("-suff-");
+        when(configGroup.getFintkontrollidattribute()).thenReturn("123");
+        lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(configGroup.getFintkontrollidattribute()).thenReturn("12345");
-
+        DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
+        deltaGetResponseTest.setValue(getTestGrouplist(3));
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
-        when(deltaRequestBuilder.get(any(java.util.function.Consumer.class))).thenReturn(deltaGetResponse);
-        when(deltaGetResponse.)
-
-        //)).thenReturn(deltaGetResponse);
-        //when(getRequestConfiguration.queryParameters).thenReturn(getRequestConfiguration.queryParameters);
-        //when(getQueryParameters.select).thenReturn(selectionCriteria);
-
-        when(deltaGetResponse.getValue()).thenReturn(getTestGrouplist(3));
+        when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
         azureClient.pullAllGroupsDelta();
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        //TODO: Missing verifier
     }
 
     @Test
     public void makeSurePageThroughGroupsDeltaHandlesZeroGroups() {
+
+        when(configGroup.getSuffix()).thenReturn("-suff-");
+        lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
+        deltaGetResponseTest.setValue(getTestGrouplist(0));
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
+
+        azureClient.pullAllGroupsDelta();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        //TODO: Missing verifier
 
     }
 
