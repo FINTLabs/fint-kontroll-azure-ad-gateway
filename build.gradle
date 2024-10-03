@@ -1,7 +1,11 @@
 plugins {
-    id 'org.springframework.boot' version '3.3.3'
+    id 'org.springframework.boot' version '3.3.4'
     id 'io.spring.dependency-management' version '1.1.6'
     id 'java'
+}
+
+ext {
+    springCloudVersion = "2023.0.3"
 }
 
 group = 'no.fintlabs'
@@ -49,6 +53,7 @@ dependencies {
     implementation 'net.sf.ehcache:ehcache:2.10.9.2'
 
     implementation 'org.apache.commons:commons-lang3:3.12.0'
+    implementation 'org.springframework.cloud:spring-cloud-function-context'
 
     compileOnly 'org.projectlombok:lombok:1.18.34'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
@@ -62,4 +67,10 @@ dependencies {
 test {
     useJUnitPlatform()
     jvmArgs '-XX:+EnableDynamicAgentLoading'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"
+    }
 }
