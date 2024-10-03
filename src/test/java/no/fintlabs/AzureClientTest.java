@@ -456,7 +456,10 @@ class AzureClientTest {
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
-        when(deltaRequestBuilder.get()).thenReturn(deltaGetResponse);
+        when(deltaRequestBuilder.get(any(java.util.function.Consumer.class))).thenReturn(deltaGetResponse);
+        when(deltaGetResponse.)
+
+        //)).thenReturn(deltaGetResponse);
         //when(getRequestConfiguration.queryParameters).thenReturn(getRequestConfiguration.queryParameters);
         //when(getQueryParameters.select).thenReturn(selectionCriteria);
 
@@ -465,6 +468,28 @@ class AzureClientTest {
         azureClient.pullAllGroupsDelta();
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
     }
+
+    @Test
+    public void makeSurePageThroughGroupsDeltaHandlesZeroGroups() {
+
+    }
+
+    @Test
+    public void makeSurePageThroughGroupsDeltaReturnsDeltaOnLastPage() {
+
+    }
+
+    @Test
+    public void makeSurePageThroughGroupsDeltaPagesThroughGroups() {
+        // Check that if OdataNextLinks is non-zero, it loops multiple times
+
+    }
+
+    @Test
+    public void makeSurePageThroughGroupsDeltaPagesThrowsErrorIfLastPageDoesntContainDeltaLink() {
+        // Make sure deltaLink Always is present on last "iteration"
+    }
+
 //    @Test
 //    public void makeSureGetNextPageIsCalledAsExpected() {
 //        GroupCollectionRequestBuilder groupCollectionRequestBuilder = mock(GroupCollectionRequestBuilder.class);
