@@ -144,11 +144,18 @@ public class AzureClient {
         long seconds = elapsedTimeInSeconds % 60;
         if(deltaLinkCache != null && groupPage.getOdataDeltaLink() != null )
         {
-            log.info("*** <<< Found {} groups with suffix \"{}\" that was changed since last delta call, in {} minutes and {} seconds >>> ***", groupCounter.get(), configGroup.getSuffix(), minutes, seconds);
-
+            log.info("*** <<< Found {} groups with suffix \"{}\" that was changed since last delta call, in {} minutes and {} seconds >>> ***",
+                    groupCounter.get(),
+                    configGroup.getSuffix(),
+                    minutes,
+                    seconds);
         }
         else {
-            log.info("*** <<< Found {} groups with suffix \"{}\" in first delta run, in {} minutes and {} seconds >>> ***", groupCounter.get(), configGroup.getSuffix(), minutes, seconds);
+            log.info("*** <<< Found {} groups with suffix \"{}\" in first delta run, in {} minutes and {} seconds >>> ***",
+                    groupCounter.get(),
+                    configGroup.getSuffix(),
+                    minutes,
+                    seconds);
         }
 //  TODO: Consider if delta link should be saved to a table, not just runtime
         if (groupPage.getOdataDeltaLink() != null) {
