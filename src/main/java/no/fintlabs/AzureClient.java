@@ -112,6 +112,7 @@ public class AzureClient {
                 DeltaGetResponse groupPage = graphServiceClient.groups().delta()
                         .get(requestConfiguration -> {
                             requestConfiguration.queryParameters.select = selectionCriteria;
+                            requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
                         });
                 pageThroughGroupsDelta(groupPage);
             }
@@ -172,7 +173,8 @@ public class AzureClient {
                 .processPageItemCallback(group -> {
                     // Ensure the group has not been processed yet
                     if (group.getDisplayName() != null && group.getDisplayName().endsWith(configGroup.getSuffix())
-                            && (!group.getAdditionalData().isEmpty() && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute()))
+                            && (!group.getAdditionalData().isEmpty()
+                            && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute()))
                             && processedGroupIds.add(group.getId())) { // Only process if it's new
 
                         groupCounter.getAndIncrement();
