@@ -19,6 +19,7 @@ import com.microsoft.graph.groups.item.members.ref.RefRequestBuilder;
 import com.microsoft.graph.models.Group;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.models.*;
+import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
 import no.fintlabs.azure.AzureGroupProducerService;
@@ -53,23 +54,7 @@ class AzureClientTest {
     private DeltaRequestBuilder deltaRequestBuilder;
 
     @Mock
-    private DeltaGetResponse deltaGetResponse;
-
-    @Mock
-    private PageIterator<Group, DeltaGetResponse> pageIterator;
-
-    @Mock
     private RequestAdapter requestAdapter;
-
-    @Mock
-    private BaseDeltaFunctionResponse baseDeltaFunctionResponse;
-
-    @Mock
-    private GroupRequestBuilder.GetRequestConfiguration getRequestConfiguration;
-
-    @Mock
-    private GroupRequestBuilder.GetQueryParameters getQueryParameters;
-
 
     @Mock
     GroupItemRequestBuilder groupItemRequestBuilder;
@@ -85,18 +70,6 @@ class AzureClientTest {
 
     @Mock
     private ConfigGroup configGroup;
-
-    @Mock
-    private ConfigUser configUser;
-
-    @Mock
-    private Request groupRequest;
-
-    @Mock
-    Group group;
-
-    @Mock
-    private Config config;
 
     @InjectMocks
     private AzureClient azureClient;
@@ -143,10 +116,11 @@ class AzureClientTest {
         List<Group> retGroupList = new ArrayList<>();
         for (int i=0; i<numberOfGroups; i++) {
             Group group = new Group();
-            group.setId("12" + (i + 2));
+            group.setId(UUID.randomUUID().toString());
             group.setDisplayName("testgroup" + i + "-suff-");
             HashMap<String, Object> additionalData = new HashMap<>();
             additionalData.put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", "123");
+            additionalData.put("members@delta",new HashMap<>());
             group.setAdditionalData(additionalData);
             retGroupList.add(group);
         }
@@ -156,7 +130,7 @@ class AzureClientTest {
     @Test
     void doesGroupExist_found() throws Exception {
         String resourceGroupID = "123";
-        when(configGroup.getFintkontrollidattribute()).thenReturn("qweqweqwe");
+        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
 
@@ -168,6 +142,7 @@ class AzureClientTest {
     @Test
     void doesGroupExist_notfound() throws Exception {
         String resourceGroupID = "234";
+        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
@@ -459,13 +434,12 @@ class AzureClientTest {
     @Test
     public void makeSureDeltaIsCalledAndReturnsGroups()
     {
-        configGroup.setSuffix("-suff-");
+
         when(configGroup.getSuffix()).thenReturn("-suff-");
-        when(configGroup.getFintkontrollidattribute()).thenReturn("123");
+        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
-        when(configGroup.getFintkontrollidattribute()).thenReturn("12345");
         DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
         deltaGetResponseTest.setValue(getTestGrouplist(3));
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
@@ -474,7 +448,8 @@ class AzureClientTest {
 
         azureClient.pullAllGroupsDelta();
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        //TODO: Missing verifier
+        verify(azureGroupProducerService,times(3)).publish(any());
+
     }
 
     @Test
@@ -493,7 +468,7 @@ class AzureClientTest {
 
         azureClient.pullAllGroupsDelta();
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        //TODO: Missing verifier
+        verify(azureGroupProducerService,times(0)).publish(any());
 
     }
 
@@ -511,6 +486,25 @@ class AzureClientTest {
     @Test
     public void makeSurePageThroughGroupsDeltaPagesThrowsErrorIfLastPageDoesntContainDeltaLink() {
         // Make sure deltaLink Always is present on last "iteration"
+    }
+
+    @Test
+    public void makeSurePageThroughGroupsDeltaPagesThroughMembers() {
+        when(configGroup.getSuffix()).thenReturn("-suff-");
+        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
+        deltaGetResponseTest.setValue(getTestGrouplist(3));
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
+
+        azureClient.pullAllGroupsDelta();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(azureGroupMembershipProducerService,times(3)).publishAddedMembership(any());
+
     }
 
 //    @Test
