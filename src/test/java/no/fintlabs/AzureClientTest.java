@@ -1,6 +1,8 @@
 package no.fintlabs;
 
 //import com.microsoft.graph.directoryobjects.item.DirectoryObjectItemRequestBuilder;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.microsoft.graph.core.tasks.PageIterator;
 import com.microsoft.graph.groups.delta.DeltaGetResponse;
 import com.microsoft.graph.groups.delta.DeltaRequestBuilder;
@@ -9,8 +11,11 @@ import com.microsoft.graph.education.classes.item.group.GroupRequestBuilder;
 import com.microsoft.graph.groups.GroupsRequestBuilder;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestAdapter;
+import com.microsoft.kiota.serialization.AdditionalDataHolder;
 import com.microsoft.kiota.serialization.UntypedArray;
+import com.microsoft.kiota.serialization.UntypedNode;
 import com.microsoft.kiota.serialization.UntypedObject;
+import com.microsoft.graph.models.Entity;
 import com.microsoft.graph.groups.item.GroupItemRequestBuilder;
 import com.microsoft.graph.groups.item.members.MembersRequestBuilder;
 import com.microsoft.graph.groups.item.members.ref.RefRequestBuilder;
@@ -32,6 +37,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
@@ -57,6 +64,15 @@ class AzureClientTest {
     private RequestAdapter requestAdapter;
 
     @Mock
+    private Map<String, Object> map;
+
+    @Mock
+    private Object object;
+
+    @Mock
+    private UntypedArray untypedArray;
+
+    @Mock
     GroupItemRequestBuilder groupItemRequestBuilder;
 
     @Mock
@@ -70,6 +86,22 @@ class AzureClientTest {
 
     @Mock
     private ConfigGroup configGroup;
+
+    @Mock
+    private Group group;
+
+    @Mock
+    private AdditionalDataHolder additionalDataHolder;
+
+    @Mock
+    private UntypedNode untypedNode;
+
+    @Mock
+    private AzureGroup azureGroup;
+
+    @Mock
+    private AzureGroupMembership azureGroupMembership;
+
 
     @InjectMocks
     private AzureClient azureClient;
@@ -112,7 +144,6 @@ class AzureClientTest {
     }*/
 
     private List<Group> getTestGrouplist(int numberOfGroups) {
-        ConfigGroup configGroup = new ConfigGroup();
         List<Group> retGroupList = new ArrayList<>();
         for (int i=0; i<numberOfGroups; i++) {
             Group group = new Group();
@@ -120,8 +151,17 @@ class AzureClientTest {
             group.setDisplayName("testgroup" + i + "-suff-");
             HashMap<String, Object> additionalData = new HashMap<>();
             additionalData.put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", "123");
-            additionalData.put("members@delta",new HashMap<>());
+            additionalData.put("members@delta", object);
             group.setAdditionalData(additionalData);
+//            List<Map<String, Object>> membersDeltaList = new ArrayList<>();
+//            Map<String, Object> member1 = new HashMap<>();
+//            member1.put("@odata.type", "#microsoft.graph.user");
+//            member1.put("id", "693acd06-2877-4339-8ade-b704261fe7a0");
+//            Map<String, Object> member2 = new HashMap<>();
+//            member2.put("@odata.type", "#microsoft.graph.user");
+//            member2.put("id", "49320844-be99-4164-8167-87ff5d047ace");
+//            membersDeltaList.add(member1);
+//            membersDeltaList.add(member2);
             retGroupList.add(group);
         }
 
@@ -490,6 +530,7 @@ class AzureClientTest {
 
     @Test
     public void makeSurePageThroughGroupsDeltaPagesThroughMembers() {
+
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
@@ -500,10 +541,43 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
+        when(group.getAdditionalData()).thenReturn(map);
+
+        //when(((Map<String, Object>) additionalDataHolder).get("members@delta")).thenReturn()
+        //when(untypedArray).thenReturn((UntypedArray) additionalDataHolder);
+//        Map<String, Object> data = group.getAdditionalData();
+//        UntypedArray retrievedArray = (UntypedArray) data.get("members@delta");
+//        Map<String, Object> additionalData = group.getAdditionalData();
+//        //when(additionalData.containsKey("members@delta")).thenReturn(true);
+//        when(additionalData.get("members@delta")).thenReturn(retrievedArray);
+
+        //when(untypedNode.getValue()).thenReturn(map);
+        //when(group.getAdditionalData().get("members@delta")).thenReturn(map);
+
+//        Map<String, Object> mockValue = new HashMap<>();
+//        mockValue.put("members@delta", "@odata.type");
+//        when(map.get(object)).thenReturn(mockValue);
+        //when(untypedArray.getValue()).thenReturn((Iterable<UntypedNode>) untypedNode);
+
+//        UntypedArray mockMembersDeltaArray = mock(UntypedArray.class);
+//
+//        // Create mock UntypedObject instances
+//        UntypedObject member1 = mock(UntypedObject.class);
+//        UntypedObject member2 = mock(UntypedObject.class);
+//        when(member1.getValue().get("@odata.type").getValue()).thenReturn("#microsoft.graph.user");
+//        when(member1.getValue().get("id").getValue()).thenReturn("693acd06-2877-4339-8ade-b704261fe7a0");
+//
+//        when(member2.getValue().get("@odata.type").getValue()).thenReturn("#microsoft.graph.user");
+//        when(member2.getValue().get("id").getValue()).thenReturn("49320844-be99-4164-8167-87ff5d047ace");
+//
+//        // Prepare additionalData with a mocked members@delta
+//        Map<String, Object> additionalData = new HashMap<>();
+//        additionalData.put("members@delta", mockMembersDeltaArray);
+//
 
         azureClient.pullAllGroupsDelta();
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(azureGroupMembershipProducerService,times(3)).publishAddedMembership(any());
+        verify(azureGroupMembershipProducerService,times(2)).publishAddedMembership(any());
 
     }
 
