@@ -220,14 +220,14 @@ public class AzureClient {
                     String kafkaKey = group.getId() + "_" + memberId;
                                         azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
                     log.debug("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
-                    log.info("UserId: {} is removed as member from GroupId: {}", group.getId(), memberId);
+                    log.info("UserId: {} is removed as member from GroupId: {}", memberId, group.getId());
                     continue;
                 }
 
                 String id = group.getId() + "_" + memberId;
                 azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),id));
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
-                log.info("UserId: {} is member of GroupId: {}", group.getId(), memberId);
+                log.info("UserId: {} is member of GroupId: {}", memberId, group.getId());
             }
 
         } catch (ClassCastException e) {

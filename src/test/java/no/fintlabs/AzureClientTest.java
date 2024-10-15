@@ -145,33 +145,39 @@ class AzureClientTest {
         return group;
     }*/
 
-    private List<Group> getTestGrouplist(int numberOfGroups) {
+    private UntypedObject getTestUser(boolean removed) {
+        Map<String, UntypedNode> userMap = new HashMap<>();
+        userMap.put("@odata.type", new UntypedString("#microsoft.graph.user"));
+        userMap.put("id", new UntypedString(UUID.randomUUID().toString()));
+
+        if (removed) {
+            userMap.put("@removed", new UntypedObject(
+                    Map.of(
+                            "reason", new UntypedString("deleted")
+                    )
+            ));
+        }
+        return new UntypedObject(userMap);
+    }
+
+    private UntypedArray getDeltaMembers(int numberOfUsers) {
+        List<UntypedNode> users = new ArrayList<>();
+        for (int i = 0; i < numberOfUsers; i++) {
+            users.add(getTestUser(false));
+        }
+        return new UntypedArray(users);
+    }
+
+    private List<Group> getTestGrouplist(int numberOfGroups, int numberOfUsers) {
         List<Group> retGroupList = new ArrayList<>();
         for (int i=0; i<numberOfGroups; i++) {
             Group group = new Group();
             group.setId(UUID.randomUUID().toString());
             group.setDisplayName("testgroup" + i + "-suff-");
-            HashMap<String, Object> additionalData = new HashMap<>();
-            additionalData.put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", "123");
-            //String jsonstr = "{\"id\": 1, \"name\": \"Example\", \"active\": true}"\;
-            //ParseNodeFactory factory2 = KiotaSerialization.deserialize();
-            //factory2.
-            //ParseNodeFactory factory = KiotaJsonSerialization.deserialize(jsonstr);
-            //factory.getParseNode("application/json")
-            UntypedArray deltamembers = new UntypedArray(Arrays.asList(
-                new UntypedObject(
-                        new HashMap<>() {{
-                            put("@odata.type", new UntypedString("#microsoft.graph.user"));
-                            put("id", new UntypedString("somefakeid_1"));
-                            put("@removed", new UntypedObject(
-                                    new HashMap<>() {{
-                                        put("reason", new UntypedString("deleted"));
-                                    }}
-                            ));
-                        }}
-                )
-            ));
-            additionalData.put("members@delta", deltamembers);
+            HashMap<String, Object> additionalData = new HashMap<>() {{
+                put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", "123");
+                put("members@delta", getDeltaMembers(numberOfUsers));
+            }};
             group.setAdditionalData(additionalData);
             retGroupList.add(group);
         }
@@ -185,7 +191,7 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
 
-        List<Group> groupList = getTestGrouplist(3);
+        List<Group> groupList = getTestGrouplist(3, 3);
         when(groupCollectionResponse.getValue()).thenReturn(groupList);
 
         assertTrue(azureClient.doesGroupExist(resourceGroupID));
@@ -198,7 +204,7 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
 
-        List<Group> groupList = getTestGrouplist(3);
+        List<Group> groupList = getTestGrouplist(3, 3);
         when(groupCollectionResponse.getValue()).thenReturn(groupList);
 
         assertFalse(azureClient.doesGroupExist(resourceGroupID));
@@ -485,34 +491,27 @@ class AzureClientTest {
 
     // TODO: Refactor when delta is implemented [FKS-944]
 
+    // TODO: What are we actually testing here? Nothing is returned.
     @Test
     public void makeSureDeltaIsCalledAndReturnsGroups()
     {
-
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
-        DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
-        deltaGetResponseTest.setValue(getTestGrouplist(3));
+
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
-        //when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
-        DeltaGetResponse a = new DeltaGetResponse();
-        when(deltaRequestBuilder.get(any(java.util.function.Consumer.class))).thenReturn(a);
-        //when(deltaGetResponse.)
 
-        //)).thenReturn(deltaGetResponse);
-        //when(getRequestConfiguration.queryParameters).thenReturn(getRequestConfiguration.queryParameters);
-        //when(getQueryParameters.select).thenReturn(selectionCriteria);
-
-        //when(deltaGetResponse.getValue()).thenReturn(getTestGrouplist(3));
+        DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
+        deltaGetResponseTest.setValue(getTestGrouplist(3,3 ));
+        when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
         azureClient.pullAllGroupsDelta();
+
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
         verify(azureGroupProducerService,times(3)).publish(any());
-
     }
 
     @Test
@@ -523,10 +522,13 @@ class AzureClientTest {
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+
         DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
-        deltaGetResponseTest.setValue(getTestGrouplist(0));
+        deltaGetResponseTest.setValue(getTestGrouplist(0,0));
+
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
         azureClient.pullAllGroupsDelta();
@@ -562,63 +564,19 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
 
         DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
-        deltaGetResponseTest.setValue(getTestGrouplist(3));
+
+        // 3 groups with exactly 3 members in each group.
+        deltaGetResponseTest.setValue(getTestGrouplist(3, 3));
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
-        /*var table = new UntypedArray(Arrays.asList(
-                new UntypedObject(
-                        new HashMap<>(
-                                new UntypedString("@odata.type"),
-                                new UntypedString("id"),
-                                new UntypedObject("@removed", new UntypedObject(
-                                        new HashMap<String, Object>() {"reason"}
-                                )
-                        )
-                );
-        ));*/
-        when(group.getAdditionalData()).thenReturn(map);
-        //when(object).thenReturn();
-
-        //when(((Map<String, Object>) additionalDataHolder).get("members@delta")).thenReturn()
-        //when(untypedArray).thenReturn((UntypedArray) additionalDataHolder);
-//        Map<String, Object> data = group.getAdditionalData();
-//        UntypedArray retrievedArray = (UntypedArray) data.get("members@delta");
-//        Map<String, Object> additionalData = group.getAdditionalData();
-//        //when(additionalData.containsKey("members@delta")).thenReturn(true);
-//        when(additionalData.get("members@delta")).thenReturn(retrievedArray);
-
-        //when(untypedNode.getValue()).thenReturn(map);
-        //when(group.getAdditionalData().get("members@delta")).thenReturn(map);
-
-//        Map<String, Object> mockValue = new HashMap<>();
-//        mockValue.put("members@delta", "@odata.type");
-//        when(map.get(object)).thenReturn(mockValue);
-        //when(untypedArray.getValue()).thenReturn((Iterable<UntypedNode>) untypedNode);
-
-//        UntypedArray mockMembersDeltaArray = mock(UntypedArray.class);
-//
-//        // Create mock UntypedObject instances
-//        UntypedObject member1 = mock(UntypedObject.class);
-//        UntypedObject member2 = mock(UntypedObject.class);
-//        when(member1.getValue().get("@odata.type").getValue()).thenReturn("#microsoft.graph.user");
-//        when(member1.getValue().get("id").getValue()).thenReturn("693acd06-2877-4339-8ade-b704261fe7a0");
-//
-//        when(member2.getValue().get("@odata.type").getValue()).thenReturn("#microsoft.graph.user");
-//        when(member2.getValue().get("id").getValue()).thenReturn("49320844-be99-4164-8167-87ff5d047ace");
-//
-//        // Prepare additionalData with a mocked members@delta
-//        Map<String, Object> additionalData = new HashMap<>();
-//        additionalData.put("members@delta", mockMembersDeltaArray);
-//
-
         azureClient.pullAllGroupsDelta();
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(azureGroupMembershipProducerService,times(2)).publishAddedMembership(any());
+        verify(azureGroupMembershipProducerService,times(9)).publishAddedMembership(any());
 
     }
 
