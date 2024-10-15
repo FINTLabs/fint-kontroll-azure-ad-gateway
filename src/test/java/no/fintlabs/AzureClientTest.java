@@ -88,6 +88,9 @@ class AzureClientTest {
     private ConfigGroup configGroup;
 
     @Mock
+    private Config config;
+
+    @Mock
     private Group group;
 
     @Mock
@@ -224,11 +227,13 @@ class AzureClientTest {
          when(groupsRequestBuilder.post(any(Group.class))).thenReturn(new Group());
          when(configGroup.getPrefix()).thenReturn("random-prefix");
          when(configGroup.getSuffix()).thenReturn("random-postfix");
+         when(config.getEntobjectid()).thenReturn("testentobjectid123");
 
          // Call the method under test
          azureClient.addGroupToAzure(resourceGroup);
 
          // Verify that postAsync was called once
+         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
          verify(groupsRequestBuilder, times(1)).post(any(Group.class));
      }
 
@@ -322,6 +327,7 @@ class AzureClientTest {
          // Call the method under test
          azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
+         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
          // Verify the interaction
          verify(refRequestBuilder, times(1)).post(any(ReferenceCreate.class));
      }
@@ -542,6 +548,7 @@ class AzureClientTest {
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
         when(group.getAdditionalData()).thenReturn(map);
+        when(object).thenReturn();
 
         //when(((Map<String, Object>) additionalDataHolder).get("members@delta")).thenReturn()
         //when(untypedArray).thenReturn((UntypedArray) additionalDataHolder);
