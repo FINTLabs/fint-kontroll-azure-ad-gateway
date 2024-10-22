@@ -37,7 +37,6 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'io.netty:netty-resolver-dns-native-macos:4.1.90.Final:osx-aarch_64'
 
     implementation 'com.azure:azure-identity:1.13.2'
@@ -54,6 +53,7 @@ dependencies {
 
     implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation 'org.springframework.cloud:spring-cloud-function-context'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
     compileOnly 'org.projectlombok:lombok:1.18.34'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
