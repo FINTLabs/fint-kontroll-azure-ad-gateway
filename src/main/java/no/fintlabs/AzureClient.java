@@ -91,10 +91,10 @@ public class AzureClient {
 
 //    TODO: Implement Delta. Scheduler is as for now disabled
 
-//    @Scheduled(
-//            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.initial-delay-ms}",
-//            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.delta-delay-ms}"
-//    )
+    @Scheduled(
+            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.initial-delay-ms}",
+            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.delta-delay-ms}"
+    )
     public void pullAllGroupsDelta() {
         log.info("*** <<< Fetching groups and members using delta call from Microsoft Entra >>> ***");
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
@@ -143,25 +143,21 @@ public class AzureClient {
         long elapsedTimeInSeconds = (endTime - startTime) / 1000;
         long minutes = elapsedTimeInSeconds / 60;
         long seconds = elapsedTimeInSeconds % 60;
-        if(deltaLinkCache != null && groupPage.getOdataDeltaLink() != null )
+        if (groupPage.getOdataDeltaLink() == null) {
+            log.error("Logic error: Last page doesn't contain ODataDeltaLink");
+            throw new ReflectiveOperationException("Logic error: Last page doesn't contain ODataDeltaLink");
+        }
+        if(deltaLinkCache == null)
         {
-            log.info("*** <<< Found {} groups with suffix \"{}\" that was changed since last delta call, in {} minutes and {} seconds >>> ***",
-                    groupCounter.get(),
-                    configGroup.getSuffix(),
-                    minutes,
-                    seconds);
+            log.info("First delta run detected!");
         }
-        else {
-            log.info("*** <<< Found {} groups with suffix \"{}\" in first delta run, in {} minutes and {} seconds >>> ***",
-                    groupCounter.get(),
-                    configGroup.getSuffix(),
-                    minutes,
-                    seconds);
-        }
-//  TODO: Consider if delta link should be saved to a table, not just runtime
-        if (groupPage.getOdataDeltaLink() != null) {
-            deltaLinkCache = groupPage.getOdataDeltaLink();
-        }
+        log.info("*** <<< Found {} groups with suffix \"{}\", in {} minutes and {} seconds >>> ***",
+                 groupCounter.get(),
+                 configGroup.getSuffix(),
+                 minutes,
+                 seconds);
+        //  TODO: Consider if delta link should be persisted, not just stored runtime
+        deltaLinkCache = groupPage.getOdataDeltaLink();
         return allGroups;
     }
 
@@ -216,16 +212,16 @@ public class AzureClient {
                     continue;
                 }
 
+                String kafkaKey = group.getId() + "_" + memberId;
+
                 if (untypedMember.getValue().containsKey("@removed")) {
-                    String kafkaKey = group.getId() + "_" + memberId;
-                                        azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
+                    azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
                     log.debug("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
                     log.info("UserId: {} is removed as member from GroupId: {}", memberId, group.getId());
                     continue;
                 }
 
-                String id = group.getId() + "_" + memberId;
-                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),id));
+                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
                 log.info("UserId: {} is member of GroupId: {}", memberId, group.getId());
             }
@@ -236,10 +232,10 @@ public class AzureClient {
     }
 
 //  TODO: Consider if this should be deactivated if delta is implemented
-    @Scheduled(
+    /*@Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
-    )
+    )*/
     public void pullAllGroupsAsync() {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
