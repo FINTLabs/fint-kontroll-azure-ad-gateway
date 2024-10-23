@@ -4,6 +4,7 @@ spring:
 #      resourceserver:
 #        jwt:
 #          issuer-uri: https://idp.felleskomponent.no/nidp/oauth/nam
+
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
@@ -13,7 +14,8 @@ spring:
       properties:
         spring.deserializer.key.delegate.class: 'org.apache.kafka.common.serialization.StringDeserializer'
         spring.deserializer.value.delegate.class: 'org.springframework.kafka.support.serializer.JsonDeserializer'
-
+server:
+  port: 8080
 
 logging:
   level:

@@ -19,10 +19,10 @@ public class LookupRestController {
         UserWithGroupsDto userWithGroups = LookupService.getAzureUserWithGroups(objectId);
 
         if (userWithGroups == null) {
-            return ResponseEntity.notFound().build();  // Handle case where user is not found
+            return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(userWithGroups);  // Return the UserWithGroupsDto record
+        return ResponseEntity.ok(userWithGroups);
     }
 }
 
