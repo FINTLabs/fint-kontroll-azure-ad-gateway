@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Data
-@Setter
 public class UserWithGroupsDto {
     private AzureUser user;
     private List<AzureGroup> groups;
