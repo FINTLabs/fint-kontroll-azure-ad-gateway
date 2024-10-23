@@ -1,13 +1,7 @@
 package no.fintlabs.rest;
-import com.microsoft.graph.models.Group;
-import com.microsoft.graph.users.item.getmembergroups.GetMemberGroupsPostResponse;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.AzureUser;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 
 @Data
@@ -21,5 +15,4 @@ public class UserWithGroupsDto {
         dto.setGroups(groups);
         return dto;
     }
-
 }
