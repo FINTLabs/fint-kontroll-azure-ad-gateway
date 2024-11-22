@@ -1,26 +1,26 @@
 package no.fintlabs;
 
 //import com.microsoft.graph.directoryobjects.item.DirectoryObjectItemRequestBuilder;
-import com.google.gson.*;
-import com.google.gson.reflect.TypeToken;
-import com.microsoft.graph.core.tasks.PageIterator;
+
+import com.microsoft.graph.groups.GroupsRequestBuilder;
 import com.microsoft.graph.groups.delta.DeltaGetResponse;
 import com.microsoft.graph.groups.delta.DeltaRequestBuilder;
-import com.microsoft.graph.groups.item.members.item.DirectoryObjectItemRequestBuilder;
-import com.microsoft.graph.education.classes.item.group.GroupRequestBuilder;
-import com.microsoft.graph.groups.GroupsRequestBuilder;
-import com.microsoft.kiota.ApiException;
-import com.microsoft.kiota.RequestAdapter;
-import com.microsoft.kiota.serialization.*;
-import com.microsoft.graph.models.Entity;
 import com.microsoft.graph.groups.item.GroupItemRequestBuilder;
 import com.microsoft.graph.groups.item.members.MembersRequestBuilder;
+import com.microsoft.graph.groups.item.members.item.DirectoryObjectItemRequestBuilder;
 import com.microsoft.graph.groups.item.members.ref.RefRequestBuilder;
-//import com.microsoft.graph.requests.GroupCollectionRequest;
-//import com.microsoft.graph.requests.GroupCollectionRequestBuilder;
 import com.microsoft.graph.models.Group;
+import com.microsoft.graph.models.GroupCollectionResponse;
+import com.microsoft.graph.models.ReferenceCreate;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.graph.models.*;
+import com.microsoft.kiota.ApiException;
+import com.microsoft.kiota.RequestAdapter;
+import com.microsoft.kiota.RequestInformation;
+import com.microsoft.kiota.serialization.AdditionalDataHolder;
+import com.microsoft.kiota.serialization.UntypedArray;
+import com.microsoft.kiota.serialization.UntypedNode;
+import com.microsoft.kiota.serialization.UntypedObject;
+import com.microsoft.kiota.serialization.UntypedString;
 import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
@@ -28,20 +28,29 @@ import no.fintlabs.azure.AzureGroupProducerService;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.exceptions.base.MockitoAssertionError;
 import org.mockito.junit.jupiter.MockitoExtension;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-import org.junit.jupiter.api.extension.ExtendWith;
-import com.microsoft.kiota.serialization.*;
 
-import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +69,7 @@ class AzureClientTest {
     private DeltaRequestBuilder deltaRequestBuilder;
 
     @Mock
-    private DeltaRequestBuilder deltaRequestBuilder2;
+    private DeltaRequestBuilder lastGroupPage;
 
     @Mock
     private RequestAdapter requestAdapter;
@@ -601,37 +610,53 @@ class AzureClientTest {
 
     @Test
     public void makeSurePageThroughGroupsDeltaPagesThroughPages() {
+        // Mock configuration values
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
-        lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
-        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
 
-        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        // First page, should have next link
+        DeltaGetResponse firstPage = new DeltaGetResponse();
+        firstPage.setValue(getTestGrouplistAddedRemoved(3, 6, 3));
+        firstPage.setOdataNextLink("LinkToSecondPage");
 
+        DeltaGetResponse secondPage = new DeltaGetResponse();
+        secondPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        secondPage.setOdataNextLink("LinkToThirdPage");
+
+        DeltaGetResponse thirdPage = new DeltaGetResponse();
+        thirdPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        thirdPage.setOdataDeltaLink("delta link");
+
+        // First page mocks
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
 
-        DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
-        deltaGetResponseTest.setValue(getTestGrouplistAddedRemoved(3,6,3));
-        deltaGetResponseTest.setOdataNextLink("SomeFakeURL");
+        // Mock requests for second and third page
+        when(requestAdapter.send(any(RequestInformation.class), any(), any()))
+                .thenReturn(secondPage, thirdPage);
 
-        when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
+        // Make sure last page does not have next link, and has delta link
+        DeltaGetResponse lastPage = new DeltaGetResponse();
+        lastPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        lastPage.setOdataNextLink(null);
+        lastPage.setOdataDeltaLink("last delta link");
 
-        when(deltaRequestBuilder.withUrl(anyString())).thenReturn(deltaRequestBuilder2);
+        when(deltaRequestBuilder.get()).thenReturn(lastPage);
+        when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
 
-        DeltaGetResponse deltaGetResponseTest2 = new DeltaGetResponse();
-        deltaGetResponseTest.setValue(getTestGrouplistAddedRemoved(4,2,1));
-
-        when(deltaRequestBuilder2.get(any())).thenReturn(deltaGetResponseTest2);
-
+        // Trigger the method
         azureClient.pullAllGroupsDelta();
 
-        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-
-        verify(azureGroupProducerService,times(7)).publish(any());
-
-        // Check that if OdataNextLinks is non-zero, it loops multiple times
-        assert(false);
+        // Verify data
+        verify(azureGroupProducerService, times(15)).publish(any());
+        verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
+        verify(groupsRequestBuilder, times(2)).delta();
+        verify(graphServiceClient, times(2)).groups();
+        verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
+        verify(deltaRequestBuilder, times(1)).get(any());
+        verify(deltaRequestBuilder, times(1)).get();
     }
 
     @Test
