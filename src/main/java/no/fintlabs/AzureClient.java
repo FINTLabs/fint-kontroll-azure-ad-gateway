@@ -132,7 +132,7 @@ public class AzureClient {
             // Process the current page and check for duplicates
             deltaPageIterator(groupPage, groupCounter, allGroups, processedGroupIds);
 
-            // If @odataNextLink is present, fetch the next page
+            // If @odataNextLink is present, fetch the next group page
             if (groupPage.getOdataNextLink() != null) {
                 groupPage = graphServiceClient.groups().delta().withUrl(groupPage.getOdataNextLink()).get();
             } else {
