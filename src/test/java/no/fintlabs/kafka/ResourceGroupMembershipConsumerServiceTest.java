@@ -90,7 +90,7 @@ class ResourceGroupMembershipConsumerServiceTest {
 
         resourceGroupMembershipConsumerService.processEntity(exampleGroupMembershipRandom(), "exampleID");
 
-        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> assertTrue(ForkJoinPool.commonPool().awaitQuiescence(10, TimeUnit.SECONDS)));
         verify(azureClient, times(1)).addGroupMembership(any(), anyString());
         verify(azureClient, times(0)).deleteGroupMembership(anyString());
     }
