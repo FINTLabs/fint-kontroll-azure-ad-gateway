@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.internal.matchers.Null;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -474,13 +473,6 @@ class AzureClientTest {
         when(membersRequestBuilder.byDirectoryObjectId(anyString())).thenReturn(directoryObjectItemRequestBuilder);
         when(directoryObjectItemRequestBuilder.ref()).thenReturn(singleMemberRefRequestBuilder);
 
-
-        ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
-                .id("testid")
-                .azureGroupRef("exampleGroupRef")
-                .azureUserRef("someUserRef")
-                .roleRef("exampleRoleRef")
-                .build();
 
         String kafkaKey = "exampleWithoutUnderscore";
         azureClient.deleteGroupMembership(kafkaKey);
