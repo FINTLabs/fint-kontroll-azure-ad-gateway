@@ -25,6 +25,7 @@ logging:
     com.azure: WARN
     com.microsoft: WARN
     org.apache: WARN
+    org.springframework.web.servlet.DispatcherServlet: WARN
 
 fint:
   cache:
