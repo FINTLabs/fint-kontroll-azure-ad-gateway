@@ -15,9 +15,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
 import static org.awaitility.Awaitility.await;
-
-import javax.swing.text.html.Option;
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -26,7 +23,6 @@ import static org.mockito.Mockito.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
@@ -212,13 +208,9 @@ class ResourceGroupMembershipConsumerServiceTest {
         resourceGroupMembershipConsumerService.processEntity(resourceGroupMembership2, kafkaKey2);
         resourceGroupMembershipConsumerService.processEntity(null, kafkaKey2);
 
-        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
-            verify(azureClient, times(2)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        });
+        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> verify(azureClient, times(2)).addGroupMembership(any(ResourceGroupMembership.class), anyString()));
 
-        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
-            verify(azureClient, times(2)).deleteGroupMembership(anyString());
-        });
+        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> verify(azureClient, times(2)).deleteGroupMembership(anyString()));
     }
 
     @Test
