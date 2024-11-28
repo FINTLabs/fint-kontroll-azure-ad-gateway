@@ -149,14 +149,21 @@ public class AzureClient {
         }
         if(deltaLinkCache == null)
         {
-            log.info("First delta run detected!");
+            log.info("*** <<< Initial Delta run on Groups completed >>> ***");
+            log.info("*** <<< Found {} groups with suffix \"{}\", in {} minutes and {} seconds >>> ***",
+                    groupCounter.get(),
+                    configGroup.getSuffix(),
+                    minutes,
+                    seconds);
         }
-        log.info("*** <<< Found {} groups with suffix \"{}\", in {} minutes and {} seconds >>> ***",
-                 groupCounter.get(),
-                 configGroup.getSuffix(),
-                 minutes,
-                 seconds);
-        //  TODO: Consider if delta link should be persisted, not just stored runtime
+        else {
+            log.info("*** <<< Found {} changed groups with suffix \"{}\", in {} minutes and {} seconds since last Delta run >>> ***",
+                    groupCounter.get(),
+                    configGroup.getSuffix(),
+                    minutes,
+                    seconds);
+        }
+        log.debug("Setting delta link to Cache");
         deltaLinkCache = groupPage.getOdataDeltaLink();
         return allGroups;
     }
