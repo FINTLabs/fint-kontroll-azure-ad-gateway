@@ -411,8 +411,8 @@ public class AzureClient {
 
         //TODO: Remember to change from additionalDataManager to new function on Change of Graph to 6.*.* [FKS-883]
         String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
-        HashMap<String, Object> additionalData = new HashMap<String, Object>();
-        LinkedList<String> ownersOdataBind = new LinkedList<String>();
+        HashMap<String, Object> additionalData = new HashMap<>();
+        LinkedList<String> ownersOdataBind = new LinkedList<>();
         ownersOdataBind.add(owner);
         additionalData.put("owners@odata.bind", ownersOdataBind);
         group.setAdditionalData(additionalData);
@@ -534,7 +534,7 @@ public class AzureClient {
                         }
 
                         // Handling 400 Bad Request error
-                        log.warn("Bad request: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                        log.warn("Bad request: userRef: {} - groupRef: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         log.warn(e.getMessage());
                     }
 
