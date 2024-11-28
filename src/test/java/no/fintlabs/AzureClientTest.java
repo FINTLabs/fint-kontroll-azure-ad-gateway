@@ -31,7 +31,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.internal.matchers.Null;
 import org.mockito.junit.jupiter.MockitoExtension;
+import static org.junit.jupiter.api.Assertions.*;
+
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,13 +47,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -125,6 +122,12 @@ class AzureClientTest {
 
     @Mock
     ApiException apiException;
+
+    @Mock
+    NullPointerException nullPointerException;
+
+    @Mock
+    ReflectiveOperationException reflectiveOperationException;
 
     @Mock
     RefRequestBuilder refRequestBuilder;
@@ -586,6 +589,7 @@ class AzureClientTest {
 
         DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
         deltaGetResponseTest.setValue(getTestGrouplist(0,0));
+        deltaGetResponseTest.setOdataDeltaLink("delta link");
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
@@ -600,12 +604,95 @@ class AzureClientTest {
 
     @Test
     public void makeSureDeltaFunctionFailsIfODataDeltaLinkIsUndefinedOnLastPage() {
-        assert(false);
+
+        when(configGroup.getSuffix()).thenReturn("-suff-");
+        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+
+        DeltaGetResponse firstPage = new DeltaGetResponse();
+        firstPage.setValue(getTestGrouplistAddedRemoved(3, 6, 3));
+        firstPage.setOdataNextLink("LinkToSecondPage");
+
+        DeltaGetResponse secondPage = new DeltaGetResponse();
+        secondPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        secondPage.setOdataNextLink("LinkToThirdPage");
+
+        DeltaGetResponse lastPage = new DeltaGetResponse();
+        lastPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        lastPage.setOdataNextLink(null);
+        lastPage.setOdataDeltaLink(null);
+
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
+        when(requestAdapter.send(any(RequestInformation.class), any(), any()))
+                .thenReturn(secondPage, lastPage);
+
+        when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
+
+
+        assertThrows(NullPointerException.class,
+                () -> azureClient.pullAllGroupsDelta(),
+                "Expected pullAllGroupsDelta to throw a NullPointerException when the delta link is missing on the last page."
+        );
+        assertNull(lastPage.getOdataDeltaLink(), "Last page should not have a delta link.");
+
     }
 
     @Test
     public void makeSurePageThroughGroupsDeltaReturnsDeltaOnLastPage() {
-        assert(false);
+        // Mock configuration values
+        when(configGroup.getSuffix()).thenReturn("-suff-");
+        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+
+        // First page, should have next link
+        DeltaGetResponse firstPage = new DeltaGetResponse();
+        firstPage.setValue(getTestGrouplistAddedRemoved(3, 6, 3));
+        firstPage.setOdataNextLink("LinkToSecondPage");
+
+        DeltaGetResponse secondPage = new DeltaGetResponse();
+        secondPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        secondPage.setOdataNextLink("LinkToThirdPage");
+
+        DeltaGetResponse thirdPage = new DeltaGetResponse();
+        thirdPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        thirdPage.setOdataDeltaLink("delta link");
+
+        // First page mocks
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
+
+        // Mock requests for second and third page
+        when(requestAdapter.send(any(RequestInformation.class), any(), any()))
+                .thenReturn(secondPage, thirdPage);
+
+        // Make sure last page does not have next link, and has delta link
+        DeltaGetResponse lastPage = new DeltaGetResponse();
+        lastPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        lastPage.setOdataNextLink(null);
+        lastPage.setOdataDeltaLink("last delta link");
+
+        when(deltaRequestBuilder.get()).thenReturn(lastPage);
+        when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
+
+        // Trigger the method
+        azureClient.pullAllGroupsDelta();
+
+        // Verify data
+        verify(azureGroupProducerService, times(15)).publish(any());
+        verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
+        verify(groupsRequestBuilder, times(2)).delta();
+        verify(graphServiceClient, times(2)).groups();
+        verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
+        verify(deltaRequestBuilder, times(1)).get(any());
+        verify(deltaRequestBuilder, times(1)).get();
+
+        assertNull(lastPage.getOdataNextLink(), "Last page should not have a next link.");
+        assertNotNull(lastPage.getOdataDeltaLink(), "Last page should have a delta link.");
+        assertEquals("last delta link", lastPage.getOdataDeltaLink(), "Delta link should match expected value.");
+
     }
 
     @Test
@@ -657,12 +744,6 @@ class AzureClientTest {
         verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
         verify(deltaRequestBuilder, times(1)).get(any());
         verify(deltaRequestBuilder, times(1)).get();
-    }
-
-    @Test
-    public void makeSurePageThroughGroupsDeltaPagesThrowsErrorIfLastPageDoesntContainDeltaLink() {
-        // Make sure deltaLink Always is present on last "iteration"
-        assert(false);
     }
 
     @Test
