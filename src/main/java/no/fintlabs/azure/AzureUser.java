@@ -6,6 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import no.fintlabs.ConfigUser;
 
 import java.lang.reflect.Field;
+import java.util.Objects;
 
 @Getter
 @Builder
@@ -63,6 +64,25 @@ public class AzureUser {
                 }
                 // Return null if no attribute values
                 return null;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+                if (this == o) return true; // If the references are the same
+                if (o == null || getClass() != o.getClass()) return false; // Check type compatibility
+                AzureUser azureUser = (AzureUser) o; // Cast and compare
+                return Objects.equals(mail, azureUser.mail) &&
+                        Objects.equals(id, azureUser.id) &&
+                        Objects.equals(userPrincipalName, azureUser.userPrincipalName) &&
+                        Objects.equals(employeeId, azureUser.employeeId) &&
+                        Objects.equals(studentId, azureUser.studentId) &&
+                        Objects.equals(idpUserObjectId, azureUser.idpUserObjectId) &&
+                        Objects.equals(accountEnabled, azureUser.accountEnabled);
+        }
+
+        @Override
+        public int hashCode() {
+                return Objects.hash(mail, id, userPrincipalName, employeeId, studentId, idpUserObjectId, accountEnabled);
         }
 }
 

@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.serialization.UntypedArray;
 import com.microsoft.kiota.serialization.UntypedObject;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
@@ -25,16 +26,27 @@ import java.util.*;
 @Component
 @Log4j2
 @RequiredArgsConstructor
+
 public class AzureClient {
     protected final Config config;
     protected final ConfigGroup configGroup;
     protected final ConfigUser configUser;
     protected final GraphServiceClient graphServiceClient;
     private String deltaLinkCache;
+
+    private final FintCache<String, AzureUser> entraIdUserCache;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
+
+    @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
+        public void clearCaches() {
+        deltaLinkCache = null;
+        entraIdUserCache .clear();
+            log.info("deltaLinkCache has been reset to null due to scheduler. Next Group call will be full from Entra ID");
+        }
+
 
     @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
@@ -53,43 +65,65 @@ public class AzureClient {
                         requestConfiguration.queryParameters.top = configUser.getUserpagingsize();
                     }));
 
-            long endTime = System.currentTimeMillis();
-            long elapsedTimeInSeconds = (endTime - startTime) / 1000;
-            long minutes = elapsedTimeInSeconds / 60;
-            long seconds = elapsedTimeInSeconds % 60;
 
-            log.info("*** <<< Finished pulling users from Microsoft Entra in {} minutes and {} seconds >>> *** ", minutes, seconds);
 
         } catch (ApiException | ReflectiveOperationException ex) {
             log.error("pullAllUsers failed with message: {}", ex.getMessage());
         }
+        long endTime = System.currentTimeMillis();
+        long elapsedTimeInSeconds = (endTime - startTime) / 1000;
+        long minutes = elapsedTimeInSeconds / 60;
+        long seconds = elapsedTimeInSeconds % 60;
+
+        log.info("*** <<< Finished pulling users from Microsoft Entra in {} minutes and {} seconds >>> *** ", minutes, seconds);
     }
 
     private void pageThroughUsers(UserCollectionResponse userPage) throws ReflectiveOperationException {
         AtomicInteger users = new AtomicInteger();
-
-        //List<User> allUsers = new LinkedList<>();
+        AtomicInteger changedUsers = new AtomicInteger();
         PageIterator<User, UserCollectionResponse> pageIterator = new PageIterator.Builder<User, UserCollectionResponse>()
                 .client(graphServiceClient)
                 .collectionPage(userPage)
                 .collectionPageFactory(UserCollectionResponse::createFromDiscriminatorValue)
                 .processPageItemCallback(user -> {
                     users.getAndIncrement();
-                    //allUsers.add(user);
-                    if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()) != null
-                            && (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).equalsIgnoreCase(configUser.getExternaluservalue()))) {
-                        log.debug("Adding external user to Kafka, {}", user.getUserPrincipalName());
+
+                    if (entraIdUserCache != null &&
+                        entraIdUserCache.containsKey(user.getId()))
+                    {
+                        AzureUser fromCache = entraIdUserCache.get(user.getId());
+                        AzureUser entraUserObject = new AzureUser(user, configUser);
+                        if(entraUserObject.equals(fromCache)) {
+                            log.debug("User {} is unchanged. Skipping publishing to Kafka.", user.getId());
+                            return true;
+                        }
+                    }
+
+                    String externalUserAttribute = AzureUser.getAttributeValue(user, configUser.getExternaluserattribute());
+                    if (externalUserAttribute != null
+                            && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
+                        log.debug("Publishing external user to Kafka: {}", user.getUserPrincipalName());
                         azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
                     } else {
-                        log.debug("Adding user to Kafka, {}", user.getUserPrincipalName());
+                        log.debug("Publishing user to Kafka: {}", user.getUserPrincipalName());
                         azureUserProducerService.publish(new AzureUser(user, configUser));
                     }
+
+                    // Update cache
+                    log.debug("Updating cache for user: {}", user.getId());
+                    entraIdUserCache.put(user.getId(), new AzureUser(user, configUser));
+                    changedUsers.getAndIncrement();
                     return true;
                 }).build();
-        pageIterator.iterate();
-    }
 
-//    TODO: Implement Delta. Scheduler is as for now disabled
+        pageIterator.iterate();
+        if(deltaLinkCache != null) {
+            log.info("Found total {} users in Entra ID. Published {} changed users to kafka", users, changedUsers);
+        }
+        else {
+            log.info("Found total {} users in Entra ID. All published to kafka as deltaLinkCache was empty", users);
+        }
+    }
 
     @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.initial-delay-ms}",
@@ -163,8 +197,9 @@ public class AzureClient {
                     minutes,
                     seconds);
         }
-        log.debug("Setting delta link to Cache");
+
         deltaLinkCache = groupPage.getOdataDeltaLink();
+        log.debug("Delta link updated in deltaLinkCache");
         return allGroups;
     }
 
@@ -224,13 +259,17 @@ public class AzureClient {
                 if (untypedMember.getValue().containsKey("@removed")) {
                     azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
                     log.debug("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
-                    log.info("UserId: {} is removed as member from GroupId: {}", memberId, group.getId());
+                    if(deltaLinkCache != null) {
+                        log.info("UserId: {} is removed as member from GroupId: {}", memberId, group.getId());
+                    }
                     continue;
                 }
 
                 azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
-                log.info("UserId: {} is member of GroupId: {}", memberId, group.getId());
+                if(deltaLinkCache != null) {
+                    log.info("UserId: {} is member of GroupId: {}", memberId, group.getId());
+                }
             }
 
         } catch (ClassCastException e) {
