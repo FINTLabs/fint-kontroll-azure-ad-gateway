@@ -71,11 +71,13 @@ fint:
           delta-delay-ms: 600000
         delta-pull:
           initial-delay-ms: 5000
-          delta-delay-ms: 60000
+          delta-delay-ms: 600000
+        clear-cache: "0 0 23 ? * SUN"
+
       user-scheduler:
         pull:
           initial-delay-ms: 1000
-          fixed-delay-ms: 500000
+          fixed-delay-ms: 450000
         refresh:
           interval-ms: 518400000
 
