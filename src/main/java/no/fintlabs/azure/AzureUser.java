@@ -35,6 +35,10 @@ public class AzureUser {
 
         public static String getAttributeValue(User user, String attributeName) {
                 // Split the attribute name by dot to get the nested field names
+                if(attributeName == null) {
+                        return null;
+                }
+
                 String[] attributeParts = attributeName.split("\\.");
 
                 if (attributeParts[0].equals("onPremisesExtensionAttributes")) {

@@ -39,12 +39,13 @@ public class AzureClient {
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
+    private final FintCache<String, Optional> resourceGroupMembershipCache;
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
         public void clearCaches() {
         deltaLinkCache = null;
         entraIdUserCache .clear();
-            log.info("deltaLinkCache has been reset to null due to scheduler. Next Group call will be full from Entra ID");
+            log.info("Delta caches for group and user has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
         }
 
 
@@ -52,7 +53,7 @@ public class AzureClient {
             initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
     )
-    private void pullAllUsers() {
+    public void pullAllUsers() {
         log.info("*** <<< Starting to pull users from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
         String[] selectionCriteria = new String[]{String.join(",", configUser.AllAttributes())};
@@ -105,8 +106,11 @@ public class AzureClient {
                         log.debug("Publishing external user to Kafka: {}", user.getUserPrincipalName());
                         azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
                     } else {
-                        log.debug("Publishing user to Kafka: {}", user.getUserPrincipalName());
-                        azureUserProducerService.publish(new AzureUser(user, configUser));
+                        AzureUser azureuser = new AzureUser(user, configUser);
+                        if(azureuser.getEmployeeId()!= null || azureuser.getStudentId()!= null) {
+                            log.debug("Publishing user to Kafka: {}", user.getUserPrincipalName());
+                            azureUserProducerService.publish(new AzureUser(user, configUser));
+                        }
                     }
 
                     // Update cache
@@ -121,7 +125,7 @@ public class AzureClient {
             log.info("Found total {} users in Entra ID. Published {} changed users to kafka", users, changedUsers);
         }
         else {
-            log.info("Found total {} users in Entra ID. All published to kafka as deltaLinkCache was empty", users);
+            log.info("Found total {} users in Entra ID. {} published to kafka", users, changedUsers);
         }
     }
 
@@ -258,6 +262,7 @@ public class AzureClient {
 
                 if (untypedMember.getValue().containsKey("@removed")) {
                     azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
+                    resourceGroupMembershipCache.remove(kafkaKey);
                     log.debug("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
                     if(deltaLinkCache != null) {
                         log.info("UserId: {} is removed as member from GroupId: {}", memberId, group.getId());
