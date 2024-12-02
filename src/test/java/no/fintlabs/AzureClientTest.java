@@ -9,10 +9,9 @@ import com.microsoft.graph.groups.item.GroupItemRequestBuilder;
 import com.microsoft.graph.groups.item.members.MembersRequestBuilder;
 import com.microsoft.graph.groups.item.members.item.DirectoryObjectItemRequestBuilder;
 import com.microsoft.graph.groups.item.members.ref.RefRequestBuilder;
-import com.microsoft.graph.models.Group;
-import com.microsoft.graph.models.GroupCollectionResponse;
-import com.microsoft.graph.models.ReferenceCreate;
+import com.microsoft.graph.models.*;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
+import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.RequestAdapter;
 import com.microsoft.kiota.RequestInformation;
@@ -21,10 +20,8 @@ import com.microsoft.kiota.serialization.UntypedArray;
 import com.microsoft.kiota.serialization.UntypedNode;
 import com.microsoft.kiota.serialization.UntypedObject;
 import com.microsoft.kiota.serialization.UntypedString;
-import no.fintlabs.azure.AzureGroup;
-import no.fintlabs.azure.AzureGroupMembership;
-import no.fintlabs.azure.AzureGroupMembershipProducerService;
-import no.fintlabs.azure.AzureGroupProducerService;
+import no.fintlabs.azure.*;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.junit.jupiter.api.Test;
@@ -35,11 +32,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
@@ -59,13 +53,23 @@ class AzureClientTest {
     private GroupCollectionResponse groupCollectionResponse;
 
     @Mock
+    private UserCollectionResponse userCollectionResponse;
+
+    @Mock
     private GroupsRequestBuilder groupsRequestBuilder;
+
+    @Mock
+    private UsersRequestBuilder usersRequestBuilder;
+
 
     @Mock
     private DeltaRequestBuilder deltaRequestBuilder;
 
     @Mock
     private DeltaRequestBuilder lastGroupPage;
+
+    @Mock
+    private DeltaRequestBuilder lastUserPage;
 
     @Mock
     private RequestAdapter requestAdapter;
@@ -92,7 +96,13 @@ class AzureClientTest {
     private DirectoryObjectItemRequestBuilder directoryObjectItemRequestBuilder;
 
     @Mock
+    private FintCache<String, Optional> resourceGroupMembershipCache;
+
+    @Mock
     private ConfigGroup configGroup;
+
+    @Mock
+    private ConfigUser configUser;
 
     @Mock
     private Config config;
@@ -112,9 +122,18 @@ class AzureClientTest {
     @Mock
     private AzureGroupMembership azureGroupMembership;
 
-
     @InjectMocks
     private AzureClient azureClient;
+
+    @Mock
+    private FintCache<String, AzureUser> entraIdUserCache;
+
+    @Mock
+    private AzureUserProducerService azureUserProducerService;
+
+    @Mock
+    private AzureUserExternalProducerService azureUserExternalProducerService;
+
 
     @Mock
     MembersRequestBuilder membersRequestBuilder;
@@ -529,8 +548,6 @@ class AzureClientTest {
         lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
-
-        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
         DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
@@ -552,8 +569,6 @@ class AzureClientTest {
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
-        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
-
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
@@ -739,6 +754,82 @@ class AzureClientTest {
     }
 
     @Test
+    public void makeSureUserIsnotRepublishedIfUserCacheContainsUser()
+    {
+        //when(configUser.getExternaluserattribute()).thenReturn("state");
+        when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
+        //when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+
+        User user = new User();
+        user.setId("123");
+        user.setMail("testuser1@mail.com");
+        user.setUserPrincipalName("testuser1@mail.com");
+        user.setAccountEnabled(true);
+
+        User user2 = new User();
+        user2.setId("456");
+        user2.setMail("testuser2@mail.com");
+        user2.setUserPrincipalName("testuser2@mail.com");
+        user2.setAccountEnabled(true);
+
+        List<User> userList = new ArrayList<>();
+        userList.add(user);
+        userList.add(user2);
+
+        UserCollectionResponse firstPage = new UserCollectionResponse();
+        firstPage.setValue(userList);
+        when(usersRequestBuilder.get(any())).thenReturn(firstPage);
+
+        AzureUser convertedUser = new AzureUser(user, configUser);
+
+        when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
+        when(entraIdUserCache.get(user.getId())).thenReturn(convertedUser);
+        azureClient.pullAllUsers();
+        verify(azureUserProducerService, times(1)).publish(any());
+
+    }
+
+    @Test
+    public void makeSureAzureUserFailsIfAzureUserClassGetAttributeValueIsNull()
+    {
+        when(configUser.getExternaluserattribute()).thenReturn("state");
+        //when(configUser.getEmployeeidattribute()).thenReturn(null);
+        //when(configUser.getStudentidattribute()).thenReturn(null);
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+
+        User user = new User();
+        user.setId("123");
+        user.setMail("testuser1@mail.com");
+        user.setUserPrincipalName("testuser1@mail.com");
+        user.setAccountEnabled(true);
+
+        User user2 = new User();
+        user2.setId("456");
+        user2.setMail("testuser2@mail.com");
+        user2.setUserPrincipalName("testuser2@mail.com");
+        user2.setAccountEnabled(true);
+
+        List<User> userList = new ArrayList<>();
+        userList.add(user);
+        userList.add(user2);
+
+        UserCollectionResponse firstPage = new UserCollectionResponse();
+        firstPage.setValue(userList);
+        when(usersRequestBuilder.get(any())).thenReturn(firstPage);
+
+        AzureUser convertedUser = new AzureUser(user, configUser);
+
+        when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
+        when(entraIdUserCache.get(user.getId())).thenReturn(convertedUser);
+        azureClient.pullAllUsers();
+        verify(azureUserProducerService, times(1)).publish(any());
+
+    }
+
+    @Test
     public void makeSurePageThroughGroupsDeltaPagesThroughMembers() {
 
         when(configGroup.getSuffix()).thenReturn("-suff-");
@@ -746,13 +837,10 @@ class AzureClientTest {
         lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
-
         DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
 
         // 3 groups with exactly 3 members in each group.
         deltaGetResponseTest.setValue(getTestGrouplist(3, 3));
-
-        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);

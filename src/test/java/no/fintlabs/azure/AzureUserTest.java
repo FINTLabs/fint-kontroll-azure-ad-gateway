@@ -2,17 +2,24 @@ package no.fintlabs.azure;
 
 import com.microsoft.graph.models.User;
 import no.fintlabs.ConfigUser;
+import no.fintlabs.cache.FintCache;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AzureUserTest {
     @Mock
     private ConfigUser configUser;
+
+    @Mock
+    private FintCache<String, AzureUser> entraIdUserCache;
+
+    @Mock
+    private AzureUserProducerService azureUserProducerService;
 
     @Test
     public void makeSureUserAttributeAccountEnabledIsAccountedFor() {
@@ -76,4 +83,6 @@ class AzureUserTest {
         assert(convertedUser.getStudentId() == "SomeValue3");*/
 
     }
+
+
 }
