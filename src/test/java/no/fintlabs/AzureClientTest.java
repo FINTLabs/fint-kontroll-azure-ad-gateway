@@ -241,8 +241,8 @@ class AzureClientTest {
                 .resourceId("123")
                 //.displayName("testdisplayname")
                 .identityProviderGroupObjectId("testidpgroup")
-                //.resourceName("testresourcename")
-                //.resourceType("testresourcetype")
+                .resourceName(null)
+                .resourceType(null)
                 .resourceLimit("1000")
                 .build();
 

@@ -460,7 +460,10 @@ public class AzureClient {
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
         if (resourceGroup.getResourceName() != null &&
-                resourceGroup.getResourceType() != null) {
+                !resourceGroup.getResourceName().trim().isEmpty() &&
+                resourceGroup.getResourceType() != null &&
+                !resourceGroup.getResourceType().trim().isEmpty() &&
+                resourceGroup.getResourceType().length() > 3) {
 
             Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
 
