@@ -233,6 +233,31 @@ class AzureClientTest {
          verify(groupsRequestBuilder, times(1)).post(any(Group.class));
      }
 
+    @Test
+    void confirm_addgrouptoazure_fails_if_resourceGroup_IsMissing_Attributes() {
+
+        ResourceGroup resourceGroup = ResourceGroup.builder()
+                .id("12")
+                .resourceId("123")
+                //.displayName("testdisplayname")
+                .identityProviderGroupObjectId("testidpgroup")
+                //.resourceName("testresourcename")
+                //.resourceType("testresourcetype")
+                .resourceLimit("1000")
+                .build();
+
+//        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+//        when(groupsRequestBuilder.post(any(Group.class))).thenReturn(new Group());
+//        when(configGroup.getPrefix()).thenReturn("random-prefix");
+//        when(configGroup.getSuffix()).thenReturn("random-postfix");
+//        when(config.getEntobjectid()).thenReturn("testentobjectid123");
+
+        azureClient.addGroupToAzure(resourceGroup);
+
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        verify(groupsRequestBuilder, times(0)).post(any(Group.class));
+    }
+
      // TODO: To be reimplemented after deleteGroup function has been refactored [FKS-946]
 //     @Test
 //     void makeSureHTTPDeleteIsCalledWhenDeleteGroupIsCalled() throws Exception {
