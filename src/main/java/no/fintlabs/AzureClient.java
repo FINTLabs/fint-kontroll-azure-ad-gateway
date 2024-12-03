@@ -82,6 +82,7 @@ public class AzureClient {
     private void pageThroughUsers(UserCollectionResponse userPage) throws ReflectiveOperationException {
         AtomicInteger users = new AtomicInteger();
         AtomicInteger changedUsers = new AtomicInteger();
+        AtomicInteger changedExtUsers = new AtomicInteger();
         PageIterator<User, UserCollectionResponse> pageIterator = new PageIterator.Builder<User, UserCollectionResponse>()
                 .client(graphServiceClient)
                 .collectionPage(userPage)
@@ -105,6 +106,7 @@ public class AzureClient {
                             && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
                         log.debug("Publishing external user to Kafka: {}", user.getUserPrincipalName());
                         azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+                        changedExtUsers.getAndIncrement();
                     } else {
                         AzureUser azureuser = new AzureUser(user, configUser);
                         if(azureuser.getEmployeeId()!= null || azureuser.getStudentId()!= null) {
@@ -123,9 +125,15 @@ public class AzureClient {
         pageIterator.iterate();
         if(deltaLinkCache != null) {
             log.info("Found total {} users in Entra ID. Published {} changed users to kafka", users, changedUsers);
+            if(changedExtUsers.get() > 0) {
+                log.info("Found {} users of type External users in Entra ID that was changed", changedExtUsers);
+            }
         }
         else {
             log.info("Found total {} users in Entra ID. {} published to kafka", users, changedUsers);
+            if(changedExtUsers.get() > 0) {
+                log.info("Of the total, there are {} users of type External users in Entra ID", changedExtUsers);
+            }
         }
     }
 

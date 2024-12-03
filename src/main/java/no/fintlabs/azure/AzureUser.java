@@ -4,8 +4,6 @@ import com.microsoft.graph.models.*;
 import lombok.*;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.ConfigUser;
-
-import java.lang.reflect.Field;
 import java.util.Objects;
 
 @Getter
@@ -34,39 +32,26 @@ public class AzureUser {
         }
 
         public static String getAttributeValue(User user, String attributeName) {
-                // Split the attribute name by dot to get the nested field names
-                if(attributeName == null) {
+                if (attributeName == null) {
                         return null;
                 }
 
                 String[] attributeParts = attributeName.split("\\.");
-
                 if (attributeParts[0].equals("onPremisesExtensionAttributes")) {
-                        // Set attribute values
                         OnPremisesExtensionAttributes attributeValues = user.getOnPremisesExtensionAttributes();
                         try {
-                                Field field = OnPremisesExtensionAttributes.class.getDeclaredField(attributeParts[1]);
-                                field.setAccessible(true);
-                                Object value = field.get(attributeValues);
-                                if(value != null)
-                                        return value.toString();
+                                String strVal = attributeValues.getBackingStore().get(attributeParts[1]);
+                                if (strVal != null)
+                                        return strVal;
+                        } catch (NullPointerException e) {
+                                log.debug("getAttributeValue expected {}, but this is not found: {}", attributeName, e.getMessage());
                         }
-                        catch (Exception e)
-                        {}
-                }
-                else
-                {
-                        try {
-                                Field field = User.class.getDeclaredField(attributeName);
-                                field.setAccessible(true);
-                                Object value = field.get(user);
-                                if(value != null)
-                                        return value.toString();
+                } else {
+                        String strVal = user.getBackingStore().get(attributeName);
+                        if (strVal != null) {
+                                return strVal;
                         }
-                        catch (Exception e)
-                        {}
                 }
-                // Return null if no attribute values
                 return null;
         }
 
