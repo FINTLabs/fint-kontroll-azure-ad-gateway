@@ -459,39 +459,45 @@ public class AzureClient {
     }
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
-        Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
+        if (resourceGroup.getResourceName() != null &&
+                resourceGroup.getResourceType() != null) {
 
-        //TODO: Remember to change from additionalDataManager to new function on Change of Graph to 6.*.* [FKS-883]
-        String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
-        HashMap<String, Object> additionalData = new HashMap<>();
-        LinkedList<String> ownersOdataBind = new LinkedList<>();
-        ownersOdataBind.add(owner);
-        additionalData.put("owners@odata.bind", ownersOdataBind);
-        group.setAdditionalData(additionalData);
+            Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
 
-        //TODO: Consider if uniqueName chould be set upon creation of group
-        //group.setUniqueName(resourceGroup.getId());
+            //TODO: Remember to change from additionalDataManager to new function on Change of Graph to 6.*.* [FKS-883]
+            String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
+            HashMap<String, Object> additionalData = new HashMap<>();
+            LinkedList<String> ownersOdataBind = new LinkedList<>();
+            ownersOdataBind.add(owner);
+            additionalData.put("owners@odata.bind", ownersOdataBind);
+            group.setAdditionalData(additionalData);
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                Group createdGroup = graphServiceClient
-                        .groups()
-                        .post(group);
+            //TODO: Consider if uniqueName chould be set upon creation of group
+            //group.setUniqueName(resourceGroup.getId());
 
-                if (createdGroup != null) {
-                    log.info("Added Group to Azure: {}", createdGroup.getDisplayName());
-                    azureGroupProducerService.publish(new AzureGroup(createdGroup, configGroup));
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Group createdGroup = graphServiceClient
+                            .groups()
+                            .post(group);
+
+                    if (createdGroup != null) {
+                        log.info("Added Group to Azure: {}", createdGroup.getDisplayName());
+                        azureGroupProducerService.publish(new AzureGroup(createdGroup, configGroup));
+                    }
+                } catch (ApiException e) {
+
+                    // Handling 400 Bad Request error
+                    log.warn(e.getMessage());
                 }
-            } catch (ApiException e) {
 
-                // Handling 400 Bad Request error
-                log.warn(e.getMessage());
-            }
-
-        }).exceptionally(ex -> {
-            log.error("Exception while adding group: {}", ex.getMessage(), ex);
-            return null; // Exceptionally should return a value
-        });
+            }).exceptionally(ex -> {
+                log.error("Exception while adding group: {}", ex.getMessage(), ex);
+                return null; // Exceptionally should return a value
+            });
+        } else {
+            log.error("addGroupToAzure cannot be completed as ResourceGroup with ID: {} does not have all required attributes set", resourceGroup.getId());
+        }
     }
 
     public void deleteGroup(String resourceGroupId) {
