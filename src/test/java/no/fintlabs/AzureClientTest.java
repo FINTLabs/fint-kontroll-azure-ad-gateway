@@ -31,7 +31,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 
-
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
@@ -53,9 +52,6 @@ class AzureClientTest {
     private GroupCollectionResponse groupCollectionResponse;
 
     @Mock
-    private UserCollectionResponse userCollectionResponse;
-
-    @Mock
     private GroupsRequestBuilder groupsRequestBuilder;
 
     @Mock
@@ -66,22 +62,7 @@ class AzureClientTest {
     private DeltaRequestBuilder deltaRequestBuilder;
 
     @Mock
-    private DeltaRequestBuilder lastGroupPage;
-
-    @Mock
-    private DeltaRequestBuilder lastUserPage;
-
-    @Mock
     private RequestAdapter requestAdapter;
-
-    @Mock
-    private Map<String, Object> map;
-
-    @Mock
-    private Object object;
-
-    @Mock
-    private UntypedArray untypedArray;
 
     @Mock
     GroupItemRequestBuilder groupItemRequestBuilder;
@@ -96,9 +77,6 @@ class AzureClientTest {
     private DirectoryObjectItemRequestBuilder directoryObjectItemRequestBuilder;
 
     @Mock
-    private FintCache<String, Optional> resourceGroupMembershipCache;
-
-    @Mock
     private ConfigGroup configGroup;
 
     @Mock
@@ -106,21 +84,6 @@ class AzureClientTest {
 
     @Mock
     private Config config;
-
-    @Mock
-    private Group group;
-
-    @Mock
-    private AdditionalDataHolder additionalDataHolder;
-
-    @Mock
-    private UntypedNode untypedNode;
-
-    @Mock
-    private AzureGroup azureGroup;
-
-    @Mock
-    private AzureGroupMembership azureGroupMembership;
 
     @InjectMocks
     private AzureClient azureClient;
@@ -142,41 +105,10 @@ class AzureClientTest {
     ApiException apiException;
 
     @Mock
-    NullPointerException nullPointerException;
-
-    @Mock
-    ReflectiveOperationException reflectiveOperationException;
-
-    @Mock
     RefRequestBuilder refRequestBuilder;
 
     @Mock
     com.microsoft.graph.groups.item.members.item.ref.RefRequestBuilder singleMemberRefRequestBuilder;
-
-    /*private ResourceGroup resourceGroup(){
-        // Create a mock ResourceGroup object
-        ResourceGroup resourceGroup = ResourceGroup.builder()
-                .id("12")
-                .resourceId("123")
-                .displayName("testdisplayname")
-                .identityProviderGroupObjectId("testidpgroup")
-                .resourceName("testresourcename")
-                .resourceType("testresourcetype")
-                .resourceLimit("1000")
-                .build();
-        return resourceGroup;
-    }*/
-
-    /*private Group azureGroupObject()
-    {
-        Group group = new Group();
-        group.setDisplayName("testgroup1");
-        group.setId("098393-7593-8754-93875-4983754");
-        HashMap<String, Object> additionalData = new HashMap<>();
-        additionalData.put(configGroup.getFintkontrollidattribute(), "123");
-        group.setAdditionalData(additionalData);
-        return group;
-    }*/
 
     private UntypedObject getTestUser(boolean removed) {
         Map<String, UntypedNode> userMap = new HashMap<>();
@@ -274,7 +206,6 @@ class AzureClientTest {
         assertThrows(Exception.class,
                 () -> azureClient.doesGroupExist("123")
         );
-
     }
 
      @Test
@@ -290,17 +221,14 @@ class AzureClientTest {
                  .resourceLimit("1000")
                  .build();
 
-         // Mock the graphServiceClient behavior
          when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
          when(groupsRequestBuilder.post(any(Group.class))).thenReturn(new Group());
          when(configGroup.getPrefix()).thenReturn("random-prefix");
          when(configGroup.getSuffix()).thenReturn("random-postfix");
          when(config.getEntobjectid()).thenReturn("testentobjectid123");
 
-         // Call the method under test
          azureClient.addGroupToAzure(resourceGroup);
 
-         // Verify that postAsync was called once
          assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
          verify(groupsRequestBuilder, times(1)).post(any(Group.class));
      }
@@ -350,10 +278,8 @@ class AzureClientTest {
                  .resourceLimit("1000")
                  .build();
 
-         // Call the method under test
          azureClient.updateGroup(resourceGroup);
 
-         // Verify that patchAsync is called exactly once with any Group object
          verify(groupItemRequestBuilder, times(1)).patch(any(Group.class));
      }
 
@@ -383,7 +309,6 @@ class AzureClientTest {
          when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
          when(membersRequestBuilder.ref()).thenReturn(refRequestBuilder);
 
-         // Creating test data
          String kafkaKey = "somekey";
          ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                  .id("testid")
@@ -392,11 +317,9 @@ class AzureClientTest {
                  .roleRef("exampleRoleRef")
                  .build();
 
-         // Call the method under test
          azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
          assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-         // Verify the interaction
          verify(refRequestBuilder, times(1)).post(any(ReferenceCreate.class));
      }
 
@@ -409,7 +332,6 @@ class AzureClientTest {
 
         doThrow(apiException).when(refRequestBuilder).post(any(ReferenceCreate.class));
 
-        // Creating test data
         String kafkaKey = "somekey";
         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                 .id("testid")
@@ -418,7 +340,6 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        // Call the method under test
         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
@@ -606,7 +527,6 @@ class AzureClientTest {
         azureClient.pullAllGroupsDelta();
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
         verify(azureGroupProducerService,times(0)).publish(any());
-
     }
 
     @Test
@@ -643,17 +563,14 @@ class AzureClientTest {
                 "Expected pullAllGroupsDelta to throw a NullPointerException when the delta link is missing on the last page."
         );
         assertNull(lastPage.getOdataDeltaLink(), "Last page should not have a delta link.");
-
     }
 
     @Test
     public void makeSurePageThroughGroupsDeltaReturnsDeltaOnLastPage() {
-        // Mock configuration values
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
 
-        // First page, should have next link
         DeltaGetResponse firstPage = new DeltaGetResponse();
         firstPage.setValue(getTestGrouplistAddedRemoved(3, 6, 3));
         firstPage.setOdataNextLink("LinkToSecondPage");
@@ -666,16 +583,13 @@ class AzureClientTest {
         thirdPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
         thirdPage.setOdataDeltaLink("delta link");
 
-        // First page mocks
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
         when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
 
-        // Mock requests for second and third page
         when(requestAdapter.send(any(RequestInformation.class), any(), any()))
                 .thenReturn(secondPage, thirdPage);
 
-        // Make sure last page does not have next link, and has delta link
         DeltaGetResponse lastPage = new DeltaGetResponse();
         lastPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
         lastPage.setOdataNextLink(null);
@@ -684,10 +598,8 @@ class AzureClientTest {
         when(deltaRequestBuilder.get()).thenReturn(lastPage);
         when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
 
-        // Trigger the method
         azureClient.pullAllGroupsDelta();
 
-        // Verify data
         verify(azureGroupProducerService, times(15)).publish(any());
         verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
         verify(groupsRequestBuilder, times(2)).delta();
@@ -704,12 +616,10 @@ class AzureClientTest {
 
     @Test
     public void makeSurePageThroughGroupsDeltaPagesThroughPages() {
-        // Mock configuration values
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
 
-        // First page, should have next link
         DeltaGetResponse firstPage = new DeltaGetResponse();
         firstPage.setValue(getTestGrouplistAddedRemoved(3, 6, 3));
         firstPage.setOdataNextLink("LinkToSecondPage");
@@ -722,16 +632,13 @@ class AzureClientTest {
         thirdPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
         thirdPage.setOdataDeltaLink("delta link");
 
-        // First page mocks
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
         when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
 
-        // Mock requests for second and third page
         when(requestAdapter.send(any(RequestInformation.class), any(), any()))
                 .thenReturn(secondPage, thirdPage);
 
-        // Make sure last page does not have next link, and has delta link
         DeltaGetResponse lastPage = new DeltaGetResponse();
         lastPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
         lastPage.setOdataNextLink(null);
@@ -740,10 +647,8 @@ class AzureClientTest {
         when(deltaRequestBuilder.get()).thenReturn(lastPage);
         when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
 
-        // Trigger the method
         azureClient.pullAllGroupsDelta();
 
-        // Verify data
         verify(azureGroupProducerService, times(15)).publish(any());
         verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
         verify(groupsRequestBuilder, times(2)).delta();
@@ -754,25 +659,88 @@ class AzureClientTest {
     }
 
     @Test
-    public void makeSureUserIsnotRepublishedIfUserCacheContainsUser()
+    public void makeSureUserIsnotRepublishedIfUserCacheContainsUserAndExternalUserIsPublished()
     {
-        //when(configUser.getExternaluserattribute()).thenReturn("state");
+        when(configUser.getExternaluserattribute()).thenReturn("state");
+        when(configUser.getExternaluservalue()).thenReturn("frid");
         when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
-        //when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
+        when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
 
+        OnPremisesExtensionAttributes onPremAttributes = new OnPremisesExtensionAttributes();
+        onPremAttributes.setExtensionAttribute10("123");
         User user = new User();
         user.setId("123");
         user.setMail("testuser1@mail.com");
         user.setUserPrincipalName("testuser1@mail.com");
         user.setAccountEnabled(true);
+        user.setOnPremisesExtensionAttributes(onPremAttributes);
 
+        OnPremisesExtensionAttributes onPremAttributes2 = new OnPremisesExtensionAttributes();
+        onPremAttributes2.setExtensionAttribute10("456");
         User user2 = new User();
         user2.setId("456");
         user2.setMail("testuser2@mail.com");
         user2.setUserPrincipalName("testuser2@mail.com");
         user2.setAccountEnabled(true);
+        user2.setOnPremisesExtensionAttributes(onPremAttributes2);
+
+
+        User extUser = new User();
+        extUser.setId("789");
+        extUser.setMail("testExtuser2@mail.com");
+        extUser.setUserPrincipalName("testExtuser2@mail.com");
+        extUser.setAccountEnabled(true);
+        extUser.setState("frid");
+
+        List<User> userList = new ArrayList<>();
+        userList.add(user);
+        userList.add(user2);
+        userList.add(extUser);
+
+        UserCollectionResponse firstPage = new UserCollectionResponse();
+        firstPage.setValue(userList);
+        when(usersRequestBuilder.get(any())).thenReturn(firstPage);
+
+        AzureUser convertedUser = new AzureUser(user, configUser);
+
+        when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
+        when(entraIdUserCache.get(user.getId())).thenReturn(convertedUser);
+        azureClient.pullAllUsers();
+        verify(azureUserProducerService, times(1)).publish(any());
+        verify(azureUserExternalProducerService, times(1)).publish(any());
+
+    }
+
+
+    @Test
+    public void makeSureUserIsnotRepublishedIfUserCacheContainsUser()
+    {
+        when(configUser.getExternaluserattribute()).thenReturn("state");
+        //when(configUser.getExternaluservalue()).thenReturn("frid");
+        when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
+        when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+
+        OnPremisesExtensionAttributes onPremAttributes = new OnPremisesExtensionAttributes();
+        onPremAttributes.setExtensionAttribute10("123");
+        User user = new User();
+        user.setId("123");
+        user.setMail("testuser1@mail.com");
+        user.setUserPrincipalName("testuser1@mail.com");
+        user.setAccountEnabled(true);
+        user.setOnPremisesExtensionAttributes(onPremAttributes);
+
+        OnPremisesExtensionAttributes onPremAttributes2 = new OnPremisesExtensionAttributes();
+        onPremAttributes2.setExtensionAttribute10("456");
+        User user2 = new User();
+        user2.setId("456");
+        user2.setMail("testuser2@mail.com");
+        user2.setUserPrincipalName("testuser2@mail.com");
+        user2.setAccountEnabled(true);
+        user2.setOnPremisesExtensionAttributes(onPremAttributes2);
 
         List<User> userList = new ArrayList<>();
         userList.add(user);
@@ -792,25 +760,31 @@ class AzureClientTest {
     }
 
     @Test
-    public void makeSureAzureUserFailsIfAzureUserClassGetAttributeValueIsNull()
+    public void makeSureAzureUserIsNotPublishedIfAzureUserGetAttributeValueIsNull()
     {
         when(configUser.getExternaluserattribute()).thenReturn("state");
-        //when(configUser.getEmployeeidattribute()).thenReturn(null);
-        //when(configUser.getStudentidattribute()).thenReturn(null);
+        when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
+        when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
 
+        OnPremisesExtensionAttributes onPremAttributes = new OnPremisesExtensionAttributes();
+        onPremAttributes.setExtensionAttribute10("123");
         User user = new User();
         user.setId("123");
         user.setMail("testuser1@mail.com");
         user.setUserPrincipalName("testuser1@mail.com");
         user.setAccountEnabled(true);
+        user.setOnPremisesExtensionAttributes(onPremAttributes);
 
+        //OnPremisesExtensionAttributes onPremAttributes2 = new OnPremisesExtensionAttributes();
+        //onPremAttributes2.setExtensionAttribute10("456");
         User user2 = new User();
         user2.setId("456");
         user2.setMail("testuser2@mail.com");
         user2.setUserPrincipalName("testuser2@mail.com");
         user2.setAccountEnabled(true);
+        //user2.setOnPremisesExtensionAttributes(onPremAttributes2);
 
         List<User> userList = new ArrayList<>();
         userList.add(user);
@@ -825,7 +799,7 @@ class AzureClientTest {
         when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
         when(entraIdUserCache.get(user.getId())).thenReturn(convertedUser);
         azureClient.pullAllUsers();
-        verify(azureUserProducerService, times(1)).publish(any());
+        verify(azureUserProducerService, times(0)).publish(any());
 
     }
 
