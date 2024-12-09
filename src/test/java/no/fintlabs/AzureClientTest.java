@@ -24,10 +24,14 @@ import no.fintlabs.azure.*;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -92,6 +96,9 @@ class AzureClientTest {
     private FintCache<String, AzureUser> entraIdUserCache;
 
     @Mock
+    private FintCache<String, Optional> resourceGroupMembershipCache;
+
+    @Mock
     private AzureUserProducerService azureUserProducerService;
 
     @Mock
@@ -109,6 +116,29 @@ class AzureClientTest {
 
     @Mock
     com.microsoft.graph.groups.item.members.item.ref.RefRequestBuilder singleMemberRefRequestBuilder;
+
+    @BeforeEach
+    public void reset() {
+        Mockito.reset(
+                graphServiceClient,
+                groupCollectionResponse,
+                groupsRequestBuilder,
+                usersRequestBuilder,
+                deltaRequestBuilder,
+                requestAdapter,
+                groupItemRequestBuilder,
+                azureGroupProducerService,
+                azureGroupMembershipProducerService,
+                directoryObjectItemRequestBuilder,
+                configGroup,
+                configUser,
+                config,
+                entraIdUserCache,
+                resourceGroupMembershipCache,
+                azureUserProducerService,
+                azureUserExternalProducerService
+        );
+    }
 
     private UntypedObject getTestUser(boolean removed) {
         Map<String, UntypedNode> userMap = new HashMap<>();
@@ -139,11 +169,12 @@ class AzureClientTest {
     private List<Group> getTestGrouplistAddedRemoved(int numberOfGroups, int nUsersAdded, int nUsersRemoved) {
         List<Group> retGroupList = new ArrayList<>();
         for (int i=0; i<numberOfGroups; i++) {
+            //String randomIntInRange = String.valueOf(new Random().nextInt(100) + 1);
             Group group = new Group();
-            group.setId(UUID.randomUUID().toString());
+            group.setId(String.valueOf(i));
             group.setDisplayName("testgroup" + i + "-suff-");
             HashMap<String, Object> additionalData = new HashMap<>() {{
-                put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", "123");
+                put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", group.getId());
                 put("members@delta", getDeltaMembers(nUsersAdded, nUsersRemoved));
             }};
             group.setAdditionalData(additionalData);
@@ -170,18 +201,18 @@ class AzureClientTest {
 
         return retGroupList;*/
     }
+
     @Test
     void doesGroupExist_found() throws Exception {
-        String resourceGroupID = "123";
+        List<Group> groupList = getTestGrouplist(1, 1);
+        when(groupCollectionResponse.getValue()).thenReturn(groupList);
+        String resourceGroupID = groupList.get(0).getId();
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
-
-        List<Group> groupList = getTestGrouplist(3, 3);
-        when(groupCollectionResponse.getValue()).thenReturn(groupList);
-
         assertTrue(azureClient.doesGroupExist(resourceGroupID));
     }
+
     @Test
     void doesGroupExist_notfound() throws Exception {
         String resourceGroupID = "234";
@@ -207,6 +238,44 @@ class AzureClientTest {
                 () -> azureClient.doesGroupExist("123")
         );
     }
+
+    @Test
+    void confirm_addgrouptoazure_contains_FintKontrollRoleId_Attribute() {
+
+        ResourceGroup resourceGroup = ResourceGroup.builder()
+                .id("12")
+                .resourceId("123")
+                .displayName("testdisplayname")
+                .identityProviderGroupObjectId("testidpgroup")
+                .resourceName("testresourcename")
+                .resourceType("testresourcetype")
+                .resourceLimit("1000")
+                .build();
+
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.post(any(Group.class))).thenReturn(new Group());
+        when(configGroup.getPrefix()).thenReturn("random-prefix");
+        when(configGroup.getSuffix()).thenReturn("random-postfix");
+        when(config.getEntobjectid()).thenReturn("testentobjectid123");
+        when(configGroup.getFintkontrollidattribute()).thenReturn("RoleKontrollIdAttribute");
+        ArgumentCaptor<Group> groupCaptor = ArgumentCaptor.forClass(Group.class);
+
+        // Act
+        azureClient.addGroupToAzure(resourceGroup);
+
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+
+        // Assert
+        verify(groupsRequestBuilder, times(1)).post(groupCaptor.capture());
+
+        Group capturedGroup = groupCaptor.getValue();
+        assertNotNull(capturedGroup);
+        assertNotNull(capturedGroup.getAdditionalData());
+        assertTrue(capturedGroup.getAdditionalData().containsKey("RoleKontrollIdAttribute"));
+        assertEquals("12", capturedGroup.getAdditionalData().get("RoleKontrollIdAttribute"));
+
+    }
+
 
      @Test
      void confirm_addgrouptoazure_triggers_post() {
@@ -237,10 +306,10 @@ class AzureClientTest {
     void confirm_addgrouptoazure_fails_if_resourceGroup_IsMissing_Attributes() {
 
         ResourceGroup resourceGroup = ResourceGroup.builder()
-                .id("12")
-                .resourceId("123")
+                .id("1254")
+                .resourceId("12354")
                 //.displayName("testdisplayname")
-                .identityProviderGroupObjectId("testidpgroup")
+                .identityProviderGroupObjectId("testidpgroup32")
                 .resourceName(null)
                 .resourceType(null)
                 .resourceLimit("1000")
@@ -509,7 +578,7 @@ class AzureClientTest {
     }
 
     @Test
-    public void makeSure18NewUsersAreCreatedAnd9AreRemoved()
+    public void makeSure18NewUsersAreCreatedAnd9AreRemoved_And_removed_From_Cache()
     {
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
@@ -518,17 +587,22 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
+
         DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
         deltaGetResponseTest.setValue(getTestGrouplistAddedRemoved(3,6,3));
+        //deltaGetResponseTest.setOdataDeltaLink("delta link");
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
         azureClient.pullAllGroupsDelta();
 
-        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(azureGroupProducerService,times(3)).publish(any());
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
 
+
+        verify(azureGroupProducerService, times(3)).publish(any());
         verify(azureGroupMembershipProducerService, times(18)).publishAddedMembership(any());
         verify(azureGroupMembershipProducerService, times(9)).publishDeletedMembership(any());
+
+        verify(resourceGroupMembershipCache, times(9)).remove(anyString());
     }
 
     @Test
@@ -625,7 +699,7 @@ class AzureClientTest {
 
         azureClient.pullAllGroupsDelta();
 
-        verify(azureGroupProducerService, times(15)).publish(any());
+        verify(azureGroupProducerService, times(4)).publish(any());
         verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
         verify(groupsRequestBuilder, times(2)).delta();
         verify(graphServiceClient, times(2)).groups();
@@ -674,7 +748,7 @@ class AzureClientTest {
 
         azureClient.pullAllGroupsDelta();
 
-        verify(azureGroupProducerService, times(15)).publish(any());
+        verify(azureGroupProducerService, times(4)).publish(any());
         verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
         verify(groupsRequestBuilder, times(2)).delta();
         verify(graphServiceClient, times(2)).groups();
@@ -686,7 +760,7 @@ class AzureClientTest {
     @Test
     public void makeSureUserIsnotRepublishedIfUserCacheContainsUserAndExternalUserIsPublished()
     {
-        when(configUser.getExternaluserattribute()).thenReturn("state");
+        when(configUser.getExternaluserattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute11");
         when(configUser.getExternaluservalue()).thenReturn("frid");
         when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
         when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
@@ -694,18 +768,18 @@ class AzureClientTest {
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
 
         OnPremisesExtensionAttributes onPremAttributes = new OnPremisesExtensionAttributes();
-        onPremAttributes.setExtensionAttribute10("123");
+        onPremAttributes.setExtensionAttribute10("1236");
         User user = new User();
-        user.setId("123");
+        user.setId("1234");
         user.setMail("testuser1@mail.com");
         user.setUserPrincipalName("testuser1@mail.com");
         user.setAccountEnabled(true);
         user.setOnPremisesExtensionAttributes(onPremAttributes);
 
         OnPremisesExtensionAttributes onPremAttributes2 = new OnPremisesExtensionAttributes();
-        onPremAttributes2.setExtensionAttribute10("456");
+        onPremAttributes2.setExtensionAttribute10("4566");
         User user2 = new User();
-        user2.setId("456");
+        user2.setId("4565");
         user2.setMail("testuser2@mail.com");
         user2.setUserPrincipalName("testuser2@mail.com");
         user2.setAccountEnabled(true);
@@ -713,7 +787,7 @@ class AzureClientTest {
 
 
         User extUser = new User();
-        extUser.setId("789");
+        extUser.setId("7896");
         extUser.setMail("testExtuser2@mail.com");
         extUser.setUserPrincipalName("testExtuser2@mail.com");
         extUser.setAccountEnabled(true);
@@ -733,54 +807,11 @@ class AzureClientTest {
         when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
         when(entraIdUserCache.get(user.getId())).thenReturn(convertedUser);
         azureClient.pullAllUsers();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
+
         verify(azureUserProducerService, times(1)).publish(any());
         verify(azureUserExternalProducerService, times(1)).publish(any());
 
-    }
-
-
-    @Test
-    public void makeSureUserIsnotRepublishedIfUserCacheContainsUser()
-    {
-        when(configUser.getExternaluserattribute()).thenReturn("state");
-        //when(configUser.getExternaluservalue()).thenReturn("frid");
-        when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
-        when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
-        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
-        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
-
-        OnPremisesExtensionAttributes onPremAttributes = new OnPremisesExtensionAttributes();
-        onPremAttributes.setExtensionAttribute10("123");
-        User user = new User();
-        user.setId("123");
-        user.setMail("testuser1@mail.com");
-        user.setUserPrincipalName("testuser1@mail.com");
-        user.setAccountEnabled(true);
-        user.setOnPremisesExtensionAttributes(onPremAttributes);
-
-        OnPremisesExtensionAttributes onPremAttributes2 = new OnPremisesExtensionAttributes();
-        onPremAttributes2.setExtensionAttribute10("456");
-        User user2 = new User();
-        user2.setId("456");
-        user2.setMail("testuser2@mail.com");
-        user2.setUserPrincipalName("testuser2@mail.com");
-        user2.setAccountEnabled(true);
-        user2.setOnPremisesExtensionAttributes(onPremAttributes2);
-
-        List<User> userList = new ArrayList<>();
-        userList.add(user);
-        userList.add(user2);
-
-        UserCollectionResponse firstPage = new UserCollectionResponse();
-        firstPage.setValue(userList);
-        when(usersRequestBuilder.get(any())).thenReturn(firstPage);
-
-        AzureUser convertedUser = new AzureUser(user, configUser);
-
-        when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
-        when(entraIdUserCache.get(user.getId())).thenReturn(convertedUser);
-        azureClient.pullAllUsers();
-        verify(azureUserProducerService, times(1)).publish(any());
 
     }
 
@@ -792,6 +823,7 @@ class AzureClientTest {
         when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+
 
         OnPremisesExtensionAttributes onPremAttributes = new OnPremisesExtensionAttributes();
         onPremAttributes.setExtensionAttribute10("123");
@@ -819,13 +851,15 @@ class AzureClientTest {
         firstPage.setValue(userList);
         when(usersRequestBuilder.get(any())).thenReturn(firstPage);
 
-        AzureUser convertedUser = new AzureUser(user, configUser);
-
+        AzureUser cachedUser = new AzureUser(user, configUser);
         when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
-        when(entraIdUserCache.get(user.getId())).thenReturn(convertedUser);
-        azureClient.pullAllUsers();
-        verify(azureUserProducerService, times(0)).publish(any());
+        when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
 
+
+        azureClient.pullAllUsers();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
+
+        verify(azureUserProducerService, times(0)).publish(any());
     }
 
     @Test
@@ -848,6 +882,54 @@ class AzureClientTest {
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
         verify(azureGroupMembershipProducerService,times(9)).publishAddedMembership(any());
+
+    }
+
+    @Test
+    public void makeSureUserIsnotRepublishedIfUserCacheContainsUser()
+    {
+        when(configUser.getExternaluserattribute()).thenReturn("state");
+        //when(configUser.getExternaluservalue()).thenReturn("frid");
+        when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
+        when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+
+
+        OnPremisesExtensionAttributes onPremAttributes = new OnPremisesExtensionAttributes();
+        onPremAttributes.setExtensionAttribute10("123");
+        User user = new User();
+        user.setId("123");
+        user.setMail("testuser1@mail.com");
+        user.setUserPrincipalName("testuser1@mail.com");
+        user.setAccountEnabled(true);
+        user.setOnPremisesExtensionAttributes(onPremAttributes);
+
+        OnPremisesExtensionAttributes onPremAttributes2 = new OnPremisesExtensionAttributes();
+        onPremAttributes2.setExtensionAttribute10("456");
+        User user2 = new User();
+        user2.setId("456");
+        user2.setMail("testuser2@mail.com");
+        user2.setUserPrincipalName("testuser2@mail.com");
+        user2.setAccountEnabled(true);
+        user2.setOnPremisesExtensionAttributes(onPremAttributes2);
+
+        List<User> userList = new ArrayList<>();
+        userList.add(user);
+        userList.add(user2);
+
+        UserCollectionResponse firstPage = new UserCollectionResponse();
+        firstPage.setValue(userList);
+        when(usersRequestBuilder.get(any())).thenReturn(firstPage);
+
+        AzureUser cachedUser = new AzureUser(user, configUser);
+        when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
+        when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
+
+        azureClient.pullAllUsers();
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
+
+        verify(azureUserProducerService, times(1)).publish(any());
 
     }
 
@@ -960,7 +1042,7 @@ class AzureClientTest {
 
              when(membersRequestBuilder.ref()).thenReturn(refRequestBuilder);
 
-             String kafkaKey = "somekey";
+             String kafkaKey = "somekey1";
              ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                      .id("testid")
                      .azureGroupRef("exampleGroupRef")
@@ -987,7 +1069,7 @@ class AzureClientTest {
 
          doThrow(apiException).when(refRequestBuilder).post(any(ReferenceCreate.class));
 
-         String kafkaKey = "somekey";
+         String kafkaKey = "somekey2";
          ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
                  .id("testid")
                  .azureGroupRef("exampleGroupRef")

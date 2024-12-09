@@ -466,16 +466,15 @@ public class AzureClient {
                 resourceGroup.getResourceType().length() > 3) {
 
             Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
-
-            //TODO: Remember to change from additionalDataManager to new function on Change of Graph to 6.*.* [FKS-883]
             String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
             HashMap<String, Object> additionalData = new HashMap<>();
             LinkedList<String> ownersOdataBind = new LinkedList<>();
             ownersOdataBind.add(owner);
             additionalData.put("owners@odata.bind", ownersOdataBind);
+            additionalData.put(configGroup.getFintkontrollidattribute(), resourceGroup.getId());
             group.setAdditionalData(additionalData);
 
-            //TODO: Consider if uniqueName chould be set upon creation of group
+            //TODO: Consider if uniqueName should be set upon creation of group
             //group.setUniqueName(resourceGroup.getId());
 
             CompletableFuture.runAsync(() -> {
@@ -541,8 +540,8 @@ public class AzureClient {
     public void updateGroup(ResourceGroup resourceGroup) {
 
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
-        group.setOwners(null);
-        group.setAdditionalData(null);
+        //group.setOwners(null);
+        //group.setAdditionalData(null);
 
         //LinkedList<Option> requestOptions = new LinkedList<>();
         //requestOptions.add(new HeaderOption("Prefer", "create-if-missing"));
@@ -639,6 +638,7 @@ public class AzureClient {
 
                 // Publish to Kafka after removal
                 azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
+                resourceGroupMembershipCache.remove(resourceGroupMembershipKey);
                 log.debug("Produced message to Kafka on deleted UserId: {} from GroupId: {}", userId, groupId);
 
             } catch (ApiException e) {
@@ -647,6 +647,7 @@ public class AzureClient {
 
                     // Publish to Kafka if the user is not found
                     azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
+                    resourceGroupMembershipCache.remove(resourceGroupMembershipKey);
                     log.debug("Produced message to Kafka on deleted UserId: {} from GroupId: {}", userId, groupId);
 
                 } else {

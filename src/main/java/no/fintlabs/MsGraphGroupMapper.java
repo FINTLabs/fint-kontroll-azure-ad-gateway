@@ -11,10 +11,8 @@ public class MsGraphGroupMapper {
 
     public Group toMsGraphGroup(ResourceGroup resourceGroup, ConfigGroup configGroup, Config config) {
         Group group = new Group();
-
         int groupMailEnabledMaxLen = 64;
 
-        //TODO: Change to new functions on Change of Graph to 6.*.* [FKS-883]
         group.setDisplayName(configGroup.getPrefix().toLowerCase() +
                              resourceGroup.getResourceType().substring(0, 3) +
                              "-" +
@@ -34,10 +32,6 @@ public class MsGraphGroupMapper {
             mailNickname = mailNickname.substring(0, groupMailEnabledMaxLen);
         }
         group.setMailNickname(mailNickname);
-
-        HashMap<String, Object> additionalData = new HashMap<>();
-        additionalData.put(configGroup.getFintkontrollidattribute(), resourceGroup.getId());
-        group.setAdditionalData(additionalData);
 
         return group;
     }
