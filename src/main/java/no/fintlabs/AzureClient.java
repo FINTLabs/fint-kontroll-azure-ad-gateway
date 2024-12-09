@@ -23,6 +23,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import java.util.*;
 
+
 @Component
 @Log4j2
 @RequiredArgsConstructor
@@ -109,30 +110,31 @@ public class AzureClient {
                         changedExtUsers.getAndIncrement();
                     } else {
                         AzureUser azureuser = new AzureUser(user, configUser);
-                        if(azureuser.getEmployeeId()!= null || azureuser.getStudentId()!= null) {
+                        if ((azureuser.getEmployeeId() != null && !azureuser.getEmployeeId().isEmpty()) ||
+                                (azureuser.getStudentId() != null && !azureuser.getStudentId().isEmpty())) {
                             log.debug("Publishing user to Kafka: {}", user.getUserPrincipalName());
-                            azureUserProducerService.publish(new AzureUser(user, configUser));
+                            azureUserProducerService.publish(azureuser);
+                            log.debug("Updating cache for user: {}", user.getId());
+                            changedUsers.getAndIncrement();
+                            entraIdUserCache.put(user.getId(), azureuser);
+                        } else {
+                            log.warn("UserId: {} does not contain required employeeId or studentId. Not published to kafka", user.getId());
                         }
                     }
 
-                    // Update cache
-                    log.debug("Updating cache for user: {}", user.getId());
-                    entraIdUserCache.put(user.getId(), new AzureUser(user, configUser));
-                    changedUsers.getAndIncrement();
                     return true;
                 }).build();
 
         pageIterator.iterate();
-        if(deltaLinkCache != null) {
-            log.info("Found total {} users in Entra ID. Published {} changed users to kafka", users, changedUsers);
-            if(changedExtUsers.get() > 0) {
-                log.info("Found {} users of type External users in Entra ID that was changed", changedExtUsers);
+        if (deltaLinkCache != null) {
+            log.info("Found total {} users in Entra ID. Published {} changed users to Kafka.", users, changedUsers);
+            if (changedExtUsers.get() > 0) {
+                log.info("Found {} users of type External users in Entra ID that were changed.", changedExtUsers);
             }
-        }
-        else {
-            log.info("Found total {} users in Entra ID. {} published to kafka", users, changedUsers);
-            if(changedExtUsers.get() > 0) {
-                log.info("Of the total, there are {} users of type External users in Entra ID", changedExtUsers);
+        } else {
+            log.info("Found total {} users in Entra ID. {} published to Kafka.", users, changedUsers);
+            if (changedExtUsers.get() > 0) {
+                log.info("Of the total, there are {} users of type External users in Entra ID.", changedExtUsers);
             }
         }
     }

@@ -28,6 +28,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -116,6 +117,7 @@ class AzureClientTest {
 
     @Mock
     com.microsoft.graph.groups.item.members.item.ref.RefRequestBuilder singleMemberRefRequestBuilder;
+
 
     @BeforeEach
     public void reset() {
@@ -379,7 +381,7 @@ class AzureClientTest {
 
 
     @Test
-    public void makeSureMSGraphExceptionIsHandledGracefully() {
+    void makeSureMSGraphExceptionIsHandledGracefully() {
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
 
@@ -397,7 +399,7 @@ class AzureClientTest {
         verify(azureGroupMembershipProducerService, times(0)).publishAddedMembership(any(AzureGroupMembership.class));
     }
      @Test
-     public void makeSureAddGroupMembershipCallsHTTPPostWhenMembershipIsCorrect() {
+     void makeSureAddGroupMembershipCallsHTTPPostWhenMembershipIsCorrect() {
          when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
          when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
          when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
@@ -418,7 +420,7 @@ class AzureClientTest {
      }
 
     @Test
-    public void makeSureAddGroupMembershipDoesntPopulateKafkaWhenMSGraphThrowsError() {
+    void makeSureAddGroupMembershipDoesntPopulateKafkaWhenMSGraphThrowsError() {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
         when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
@@ -441,7 +443,7 @@ class AzureClientTest {
     }
 
     @Test
-    public void makeSureHTTP400IsHandledGraceullyWhenAddingGroupMembership () {
+    void makeSureHTTP400IsHandledGraceullyWhenAddingGroupMembership () {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
         when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
@@ -481,7 +483,7 @@ class AzureClientTest {
     }
 */
     @Test
-    public void makeSureDeleteGroupMembershipCallsHTTPDelete() {
+    void makeSureDeleteGroupMembershipCallsHTTPDelete() {
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
@@ -499,7 +501,7 @@ class AzureClientTest {
     }
 
     @Test
-    public void logAndSkipDeletionWhenKafkaIDIswithoutUnderscore () {
+    void logAndSkipDeletionWhenKafkaIDIswithoutUnderscore () {
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
@@ -521,7 +523,7 @@ class AzureClientTest {
     }
 
     @Test
-    public void logAndSkipDeletionWhenKafkaIDhaveMultipleUnderscores () {
+    void logAndSkipDeletionWhenKafkaIDhaveMultipleUnderscores () {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
         when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
@@ -556,7 +558,7 @@ class AzureClientTest {
     // TODO: What are we actually testing here? Nothing is returned.
     // 3 random groups with 3 randoms produces 3 groups
     @Test
-    public void makeSureDeltaIsCalledWhenGroupsAreDefinedAndPublishesCorrectNumberOfGroupsAndMembershipsToKafka()
+    void makeSureDeltaIsCalledWhenGroupsAreDefinedAndPublishesCorrectNumberOfGroupsAndMembershipsToKafka()
     {
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
@@ -569,7 +571,10 @@ class AzureClientTest {
         deltaGetResponseTest.setValue(getTestGrouplist(3,3 ));
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
-        azureClient.pullAllGroupsDelta();
+        ForkJoinPool testPool = new ForkJoinPool(2);
+        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
+
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
         verify(azureGroupProducerService,times(3)).publish(any());
@@ -577,36 +582,38 @@ class AzureClientTest {
         verify(azureGroupMembershipProducerService, times(9)).publishAddedMembership(any());
     }
 
+
     @Test
-    public void makeSure18NewUsersAreCreatedAnd9AreRemoved_And_removed_From_Cache()
-    {
+    void makeSure18NewUsersAreCreatedAnd9AreRemoved_And_removed_From_Cache() {
+        // Mock setup
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
-        lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
-
         DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
-        deltaGetResponseTest.setValue(getTestGrouplistAddedRemoved(3,6,3));
-        //deltaGetResponseTest.setOdataDeltaLink("delta link");
+        deltaGetResponseTest.setValue(getTestGrouplistAddedRemoved(3, 6, 3));
+        deltaGetResponseTest.setOdataDeltaLink("delta link");
+
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
-        azureClient.pullAllGroupsDelta();
+        // Thread pool for isolation
+        ForkJoinPool testPool = new ForkJoinPool(4);
+        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS), "Not all tasks completed in time");
 
-        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
+        verify(azureGroupProducerService, times(3)).publish(any(AzureGroup.class));
+        verify(azureGroupMembershipProducerService, times(18)).publishAddedMembership(any(AzureGroupMembership.class));
+        verify(azureGroupMembershipProducerService, times(9)).publishDeletedMembership(anyString());
 
-
-        verify(azureGroupProducerService, times(3)).publish(any());
-        verify(azureGroupMembershipProducerService, times(18)).publishAddedMembership(any());
-        verify(azureGroupMembershipProducerService, times(9)).publishDeletedMembership(any());
-
-        verify(resourceGroupMembershipCache, times(9)).remove(anyString());
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(resourceGroupMembershipCache, times(9)).remove(captor.capture());
     }
 
+
     @Test
-    public void makeSurePageThroughGroupsDeltaHandlesZeroGroups() {
+    void makeSurePageThroughGroupsDeltaHandlesZeroGroups() {
 
         when(configGroup.getSuffix()).thenReturn("-suff-");
         lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
@@ -623,13 +630,14 @@ class AzureClientTest {
 
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
-        azureClient.pullAllGroupsDelta();
-        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+        ForkJoinPool testPool = new ForkJoinPool(2);
+        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
         verify(azureGroupProducerService,times(0)).publish(any());
     }
 
     @Test
-    public void makeSureDeltaFunctionFailsIfODataDeltaLinkIsUndefinedOnLastPage() {
+    void makeSureDeltaFunctionFailsIfODataDeltaLinkIsUndefinedOnLastPage() {
 
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
@@ -665,7 +673,7 @@ class AzureClientTest {
     }
 
     @Test
-    public void makeSurePageThroughGroupsDeltaReturnsDeltaOnLastPage() {
+    void makeSurePageThroughGroupsDeltaReturnsDeltaOnLastPage() {
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
@@ -697,7 +705,9 @@ class AzureClientTest {
         when(deltaRequestBuilder.get()).thenReturn(lastPage);
         when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
 
-        azureClient.pullAllGroupsDelta();
+        ForkJoinPool testPool = new ForkJoinPool(2);
+        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
 
         verify(azureGroupProducerService, times(4)).publish(any());
         verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
@@ -714,7 +724,7 @@ class AzureClientTest {
     }
 
     @Test
-    public void makeSurePageThroughGroupsDeltaPagesThroughPages() {
+    void makeSurePageThroughGroupsDeltaPagesThroughPages() {
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
@@ -746,7 +756,9 @@ class AzureClientTest {
         when(deltaRequestBuilder.get()).thenReturn(lastPage);
         when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
 
-        azureClient.pullAllGroupsDelta();
+        ForkJoinPool testPool = new ForkJoinPool(2);
+        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
 
         verify(azureGroupProducerService, times(4)).publish(any());
         verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
@@ -758,10 +770,10 @@ class AzureClientTest {
     }
 
     @Test
-    public void makeSureUserIsnotRepublishedIfUserCacheContainsUserAndExternalUserIsPublished()
+    void makeSureUserIsnotRepublishedIfUserCacheContainsUserAndExternalUserIsPublished()
     {
         when(configUser.getExternaluserattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute11");
-        when(configUser.getExternaluservalue()).thenReturn("frid");
+        when(configUser.getExternaluservalue()).thenReturn("novari");
         when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
         when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
@@ -791,7 +803,9 @@ class AzureClientTest {
         extUser.setMail("testExtuser2@mail.com");
         extUser.setUserPrincipalName("testExtuser2@mail.com");
         extUser.setAccountEnabled(true);
-        extUser.setState("frid");
+        OnPremisesExtensionAttributes onPremAttributes3 = new OnPremisesExtensionAttributes();
+        onPremAttributes3.setExtensionAttribute11("novari");
+        extUser.setOnPremisesExtensionAttributes(onPremAttributes3);
 
         List<User> userList = new ArrayList<>();
         userList.add(user);
@@ -802,21 +816,23 @@ class AzureClientTest {
         firstPage.setValue(userList);
         when(usersRequestBuilder.get(any())).thenReturn(firstPage);
 
-        AzureUser convertedUser = new AzureUser(user, configUser);
+        AzureUser cachedUser = new AzureUser(user, configUser);
+        AzureUser nonCachedUser = new AzureUser(user2, configUser);
+        lenient().when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
+        lenient().when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
 
-        when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
-        when(entraIdUserCache.get(user.getId())).thenReturn(convertedUser);
-        azureClient.pullAllUsers();
-        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
+        ForkJoinPool testPool = new ForkJoinPool(2);
+        testPool.submit(() -> azureClient.pullAllUsers()).join();
+        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
 
-        verify(azureUserProducerService, times(1)).publish(any());
-        verify(azureUserExternalProducerService, times(1)).publish(any());
+        verify(azureUserProducerService, times(1)).publish(nonCachedUser);
+        verify(azureUserExternalProducerService, times(1)).publish(any(AzureUserExternal.class));
 
 
     }
 
     @Test
-    public void makeSureAzureUserIsNotPublishedIfAzureUserGetAttributeValueIsNull()
+    void makeSureAzureUserIsNotPublishedIfAzureUserGetAttributeValueIsNull()
     {
         when(configUser.getExternaluserattribute()).thenReturn("state");
         when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
@@ -852,18 +868,20 @@ class AzureClientTest {
         when(usersRequestBuilder.get(any())).thenReturn(firstPage);
 
         AzureUser cachedUser = new AzureUser(user, configUser);
-        when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
-        when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
+        AzureUser notCachedUser = new AzureUser(user2, configUser);
+        lenient().when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
+        lenient().when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
+
+        ForkJoinPool testPool = new ForkJoinPool(2);
+        testPool.submit(() -> azureClient.pullAllUsers()).join();
+        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
 
 
-        azureClient.pullAllUsers();
-        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
-
-        verify(azureUserProducerService, times(0)).publish(any());
+        verify(azureUserProducerService, times(0)).publish(notCachedUser);
     }
 
     @Test
-    public void makeSurePageThroughGroupsDeltaPagesThroughMembers() {
+    void makeSurePageThroughGroupsDeltaPagesThroughMembers() {
 
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
@@ -878,15 +896,18 @@ class AzureClientTest {
 
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
-        azureClient.pullAllGroupsDelta();
+        ForkJoinPool testPool = new ForkJoinPool(2);
+        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
+
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(azureGroupMembershipProducerService,times(9)).publishAddedMembership(any());
+        verify(azureGroupMembershipProducerService,times(9)).publishAddedMembership(any(AzureGroupMembership.class));
 
     }
 
     @Test
-    public void makeSureUserIsnotRepublishedIfUserCacheContainsUser()
+    void makeSureUserIsnotRepublishedIfUserCacheContainsUser()
     {
         when(configUser.getExternaluserattribute()).thenReturn("state");
         //when(configUser.getExternaluservalue()).thenReturn("frid");
@@ -923,13 +944,14 @@ class AzureClientTest {
         when(usersRequestBuilder.get(any())).thenReturn(firstPage);
 
         AzureUser cachedUser = new AzureUser(user, configUser);
-        when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
-        when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
+        AzureUser notCachedUser = new AzureUser(user2, configUser);
+        lenient().when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
+        lenient().when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
 
-        azureClient.pullAllUsers();
-        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
-
-        verify(azureUserProducerService, times(1)).publish(any());
+        ForkJoinPool testPool = new ForkJoinPool(2);
+        testPool.submit(() -> azureClient.pullAllUsers()).join();
+        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
+        verify(azureUserProducerService, times(1)).publish(notCachedUser);
 
     }
 
@@ -1033,7 +1055,7 @@ class AzureClientTest {
 
 
     @Test
-     public void publishPostedMembershipToKafkaIfPostIsSuccessful()
+    void publishPostedMembershipToKafkaIfPostIsSuccessful()
          {
              when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
              when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
@@ -1058,7 +1080,7 @@ class AzureClientTest {
 
 
     @Test
-     public void skipPublishingMembershipToKafkaIfResourceRefIsBad()
+     void skipPublishingMembershipToKafkaIfResourceRefIsBad()
      {
          ApiException apiException = new ApiException("Testerror");
 
