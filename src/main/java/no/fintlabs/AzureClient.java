@@ -46,7 +46,8 @@ public class AzureClient {
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
         public void clearCaches() {
         deltaLinkCache = null;
-        entraIdUserCache .clear();
+        entraIdUserCache.clear();
+        entraIdExternalUserCache.clear();
             log.info("Delta caches for group and user has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
         }
 
@@ -135,14 +136,14 @@ public class AzureClient {
 
         pageIterator.iterate();
         if (deltaLinkCache != null) {
-            log.info("Found total {} users in Entra ID. Published {} changed users to Kafka.", users, changedUsers);
+            log.info("*** <<< Found total {} users in Entra ID. Published {} changed users to Kafka >>> ***", users, changedUsers);
             if (changedExtUsers.get() > 0) {
-                log.info("Found {} users of type External users in Entra ID that were changed.", changedExtUsers);
+                log.info("*** <<< Found {} users of type External users in Entra ID that were changed >>> ***", changedExtUsers);
             }
         } else {
-            log.info("Found total {} users in Entra ID. {} published to Kafka.", users, changedUsers);
+            log.info("*** <<< Found total {} users in Entra ID. {} published to Kafka >>> ***", users, changedUsers);
             if (changedExtUsers.get() > 0) {
-                log.info("Of the total, there are {} users of type External users in Entra ID.", changedExtUsers);
+                log.info("*** <<< Of the total, there are {} users of type External users in Entra ID >>> ***", changedExtUsers);
             }
         }
     }
