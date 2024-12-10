@@ -118,7 +118,6 @@ class AzureClientTest {
     @Mock
     com.microsoft.graph.groups.item.members.item.ref.RefRequestBuilder singleMemberRefRequestBuilder;
 
-
     @BeforeEach
     public void reset() {
         Mockito.reset(
@@ -582,7 +581,6 @@ class AzureClientTest {
         verify(azureGroupMembershipProducerService, times(9)).publishAddedMembership(any());
     }
 
-
     @Test
     void makeSure18NewUsersAreCreatedAnd9AreRemoved_And_removed_From_Cache() {
         // Mock setup
@@ -598,19 +596,17 @@ class AzureClientTest {
 
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
-        // Thread pool for isolation
-        ForkJoinPool testPool = new ForkJoinPool(4);
-        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
-        assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS), "Not all tasks completed in time");
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        azureClient.pullAllGroupsDelta();
 
+        verify(resourceGroupMembershipCache, times(9)).remove(captor.capture());
+        List<String> removedKeys = captor.getAllValues();
+        assertEquals(9, removedKeys.size());
         verify(azureGroupProducerService, times(3)).publish(any(AzureGroup.class));
         verify(azureGroupMembershipProducerService, times(18)).publishAddedMembership(any(AzureGroupMembership.class));
         verify(azureGroupMembershipProducerService, times(9)).publishDeletedMembership(anyString());
 
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(resourceGroupMembershipCache, times(9)).remove(captor.capture());
     }
-
 
     @Test
     void makeSurePageThroughGroupsDeltaHandlesZeroGroups() {
