@@ -36,6 +36,7 @@ public class AzureClient {
     private String deltaLinkCache;
 
     private final FintCache<String, AzureUser> entraIdUserCache;
+    private final FintCache<String, AzureUserExternal> entraIdExternalUserCache;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
@@ -92,11 +93,10 @@ public class AzureClient {
                     users.getAndIncrement();
 
                     if (entraIdUserCache != null &&
-                        entraIdUserCache.containsKey(user.getId()))
-                    {
+                            entraIdUserCache.containsKey(user.getId())) {
                         AzureUser fromCache = entraIdUserCache.get(user.getId());
                         AzureUser entraUserObject = new AzureUser(user, configUser);
-                        if(entraUserObject.equals(fromCache)) {
+                        if (entraUserObject.equals(fromCache)) {
                             log.debug("User {} is unchanged. Skipping publishing to Kafka.", user.getId());
                             return true;
                         }
@@ -105,9 +105,17 @@ public class AzureClient {
                     String externalUserAttribute = AzureUser.getAttributeValue(user, configUser.getExternaluserattribute());
                     if (externalUserAttribute != null
                             && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
-                        log.debug("Publishing external user to Kafka: {}", user.getUserPrincipalName());
-                        azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
-                        changedExtUsers.getAndIncrement();
+                        if (entraIdExternalUserCache != null &&
+                                entraIdExternalUserCache.containsKey(user.getId())) {
+                            log.debug("External User {} is unchanged. Skipping publishing to Kafka.", user.getId());
+                            return true;
+                        }
+                        else {
+                            log.debug("Publishing external user to Kafka: {}", user.getUserPrincipalName());
+                            azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+                            changedExtUsers.getAndIncrement();
+                            entraIdExternalUserCache.put(user.getId(), new AzureUserExternal(user, configUser));
+                        }
                     } else {
                         AzureUser azureuser = new AzureUser(user, configUser);
                         if ((azureuser.getEmployeeId() != null && !azureuser.getEmployeeId().isEmpty()) ||
