@@ -118,7 +118,7 @@ public class AzureClient {
                             changedUsers.getAndIncrement();
                             entraIdUserCache.put(user.getId(), azureuser);
                         } else {
-                            log.warn("UserId: {} does not contain required employeeId or studentId. Not published to kafka", user.getId());
+                            log.debug("UserId: {} does not contain required employeeId or studentId. Not published to kafka", user.getId());
                         }
                     }
 
