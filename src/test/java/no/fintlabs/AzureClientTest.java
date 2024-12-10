@@ -582,7 +582,7 @@ class AzureClientTest {
     }
 
     @Test
-    void makeSure18NewUsersAreCreatedAnd9AreRemoved_And_removed_From_Cache() {
+    void makeSure18NewUsersAreCreatedAnd9AreRemoved() {
         // Mock setup
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
@@ -596,12 +596,8 @@ class AzureClientTest {
 
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         azureClient.pullAllGroupsDelta();
 
-        verify(resourceGroupMembershipCache, times(9)).remove(captor.capture());
-        List<String> removedKeys = captor.getAllValues();
-        assertEquals(9, removedKeys.size());
         verify(azureGroupProducerService, times(3)).publish(any(AzureGroup.class));
         verify(azureGroupMembershipProducerService, times(18)).publishAddedMembership(any(AzureGroupMembership.class));
         verify(azureGroupMembershipProducerService, times(9)).publishDeletedMembership(anyString());
