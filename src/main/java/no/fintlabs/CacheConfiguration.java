@@ -3,6 +3,7 @@ import com.microsoft.graph.models.User;
 import lombok.AllArgsConstructor;
 import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.AzureUser;
+import no.fintlabs.azure.AzureUserExternal;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.cache.FintCacheManager;
@@ -35,6 +36,12 @@ public class CacheConfiguration {
     FintCache<String, AzureUser> entraIdUserCache() {
         return createResourceCache(AzureUser.class);
     }
+
+    @Bean
+    FintCache<String, AzureUserExternal> entraIdExternalUserCache() {
+        return createResourceCache(AzureUserExternal.class);
+    }
+
 
     @Bean
     FintCache<String, AzureGroup> azureGroupCache() {
