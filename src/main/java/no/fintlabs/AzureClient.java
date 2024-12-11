@@ -95,9 +95,8 @@ public class AzureClient {
 
                     if (entraIdUserCache != null &&
                             entraIdUserCache.containsKey(user.getId())) {
-                        AzureUser fromCache = entraIdUserCache.get(user.getId());
-                        AzureUser entraUserObject = new AzureUser(user, configUser);
-                        if (entraUserObject.equals(fromCache)) {
+                        AzureUser entraIdUserObject = new AzureUser(user, configUser);
+                        if (entraIdUserObject.equals(entraIdUserCache.get(user.getId()))) {
                             log.debug("User {} is unchanged. Skipping publishing to Kafka.", user.getId());
                             return true;
                         }
@@ -106,8 +105,9 @@ public class AzureClient {
                     String externalUserAttribute = AzureUser.getAttributeValue(user, configUser.getExternaluserattribute());
                     if (externalUserAttribute != null
                             && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
+                        AzureUserExternal entraUserExtObject = new AzureUserExternal(user, configUser);
                         if (entraIdExternalUserCache != null &&
-                                entraIdExternalUserCache.containsKey(user.getId())) {
+                                entraIdExternalUserCache.containsKey(user.getId()) && entraUserExtObject.equals(entraIdExternalUserCache.get(user.getId()))) {
                             log.debug("External User {} is unchanged. Skipping publishing to Kafka.", user.getId());
                             return true;
                         }

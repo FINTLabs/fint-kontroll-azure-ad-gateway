@@ -583,7 +583,6 @@ class AzureClientTest {
 
     @Test
     void makeSure18NewUsersAreCreatedAnd9AreRemoved() {
-        // Mock setup
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
@@ -602,6 +601,8 @@ class AzureClientTest {
         verify(azureGroupMembershipProducerService, times(18)).publishAddedMembership(any(AzureGroupMembership.class));
         verify(azureGroupMembershipProducerService, times(9)).publishDeletedMembership(anyString());
 
+        //TODO: this verifier is not stable and as for now commented
+        //verify(resourceGroupMembershipCache, times(9)).remove(anyString());
     }
 
     @Test
