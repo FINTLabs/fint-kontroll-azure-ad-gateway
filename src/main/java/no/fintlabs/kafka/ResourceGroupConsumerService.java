@@ -4,8 +4,11 @@ import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
 import no.fintlabs.ConfigGroup;
 import no.fintlabs.cache.FintCache;
-import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
-import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
+import no.fintlabs.kafka.consuming.ListenerConfiguration;
+import no.fintlabs.kafka.consuming.ParameterizedListenerContainerFactoryService;
+import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
+import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Sinks;
@@ -21,18 +24,15 @@ import java.util.UUID;
 
 public class ResourceGroupConsumerService {
     private final AzureClient azureClient;
-    private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final ConfigGroup configGroup;
     private final FintCache<String, Optional> resourceGroupCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
 
     public ResourceGroupConsumerService(
             AzureClient azureClient,
-            EntityConsumerFactoryService entityConsumerFactoryService,
             ConfigGroup configGroup,
             FintCache<String, Optional> resourceGroupCache) {
         this.azureClient = azureClient;
-        this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.configGroup = configGroup;
         this.resourceGroupCache = resourceGroupCache;
 
@@ -42,35 +42,43 @@ public class ResourceGroupConsumerService {
                 .runOn(Schedulers.boundedElastic())
                 .subscribe
                         (keyAndResourceGroup -> {
-                            try {
-                                updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2());
-                            } catch (Exception e) {
-                                log.error("Failed to update azure", e);
-                            }
-                        }
-                );
+                                    try {
+                                        updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2());
+                                    } catch (Exception e) {
+                                        log.error("Failed to update azure", e);
+                                    }
+                                }
+                        );
     }
+
     protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink) {
         this.resourceGroupSink = resourceGroupSink;
     }
 
     @PostConstruct
-    public void init() {
+    public ConcurrentMessageListenerContainer<String, ResourceGroup> ResourceGroupConsumer(
+            ParameterizedListenerContainerFactoryService parameterizedListenerContainerFactoryService
+    ) {
+        TopicNamePrefixParameters topicNamePrefixParameters = TopicNamePrefixParameters.builder()
+                .orgIdApplicationDefault()
+                .domainContextApplicationDefault()
+                .build();
 
-        // Initialize azoureGroupCache from Microsoft Graph
+        ListenerConfiguration listenerConfiguration = ListenerConfiguration.builder()
+                .seekingOffsetResetOnAssignment(false)
+                .maxPollRecords(100)
+                .build();
 
-        //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails [FKS-214]
-        entityConsumerFactoryService.createFactory(
-                ResourceGroup.class,
-                consumerRecord -> processEntity(
-                        consumerRecord.value(), consumerRecord.key()
-                )
-        ).createContainer(
-                EntityTopicNameParameters
-                        .builder()
-                        .resource("resource-group")
-                        .build()
-        );
+        EntityTopicNameParameters entityTopicNameParameters = EntityTopicNameParameters
+                .builder()
+                .resourceName("resource-group")
+                .topicNamePrefixParameters(topicNamePrefixParameters)
+                .build();
+        return parameterizedListenerContainerFactoryService.createRecordListenerContainerFactory(
+                        ResourceGroup.class,consumerRecord -> processEntity(
+                        consumerRecord.value(), consumerRecord.key()),
+                        listenerConfiguration)
+                .createContainer(entityTopicNameParameters);
     }
 
     void updateAzure(String kafkaKey, Optional<ResourceGroup> resourceGroupOptional) throws Exception {

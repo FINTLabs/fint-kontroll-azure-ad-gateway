@@ -3,7 +3,6 @@ package no.fintlabs.kafka;
 import net.bytebuddy.utility.RandomString;
 import no.fintlabs.AzureClient;
 import no.fintlabs.cache.FintCache;
-import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -19,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import no.fintlabs.kafka.topic.EntityTopicService;
 
 import java.util.ArrayList;
 import java.util.List;

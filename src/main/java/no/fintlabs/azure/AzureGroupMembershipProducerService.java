@@ -1,35 +1,55 @@
 package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.kafka.entity.EntityProducer;
-import no.fintlabs.kafka.entity.EntityProducerFactory;
-import no.fintlabs.kafka.entity.EntityProducerRecord;
-import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
-import no.fintlabs.kafka.entity.topic.EntityTopicService;
+import no.fintlabs.kafka.producing.ParameterizedTemplateFactory;
+import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
+import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
+import no.fintlabs.kafka.model.ParameterizedProducerRecord;
+import no.fintlabs.kafka.producing.ParameterizedTemplate;
+import no.fintlabs.kafka.topic.EntityTopicService;
+import no.fintlabs.kafka.topic.configuration.CleanupFrequency;
+import no.fintlabs.kafka.topic.configuration.EntityTopicConfiguration;
 import org.springframework.stereotype.Service;
+
+import java.time.Duration;
 
 @Service
 @Slf4j
 
-public class AzureGroupMembershipProducerService
-{
-    private final EntityProducer<AzureGroupMembership> entityProducer;
+public class AzureGroupMembershipProducerService {
+
+    private final ParameterizedTemplate<AzureGroupMembership> azureGroupMembershipTemplate;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
     public AzureGroupMembershipProducerService(
-            EntityTopicService entityTopicService,
-            EntityProducerFactory entityProducerFactory) {
+            ParameterizedTemplateFactory parameterizedTemplateFactory,
+            EntityTopicService entityTopicService)
+    {
 
-        entityProducer = entityProducerFactory.createProducer(AzureGroupMembership.class);
+        azureGroupMembershipTemplate = parameterizedTemplateFactory.createTemplate(AzureGroupMembership.class);
+
+        TopicNamePrefixParameters topicNamePrefixParameters = TopicNamePrefixParameters.builder()
+                .orgIdApplicationDefault()
+                .domainContextApplicationDefault()
+                .build();
+
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource("azuread-resource-group-membership")
+                .topicNamePrefixParameters(topicNamePrefixParameters)
+                .resourceName("azuread-resource-group-membership")
                 .build();
-        entityTopicService.ensureTopic(entityTopicNameParameters,0);
+
+        entityTopicService.createOrModifyTopic(entityTopicNameParameters,
+                EntityTopicConfiguration.builder()
+                        .lastValueRetainedForever()
+                        .nullValueRetentionTime(Duration.ofDays(7))
+                        .cleanupFrequency(CleanupFrequency.NORMAL)
+                        .build());
+
     }
     public void publishDeletedMembership(String membershipKey) {
-        entityProducer.send(
-                EntityProducerRecord.<AzureGroupMembership>builder()
+        azureGroupMembershipTemplate.send(
+                ParameterizedProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
                         .key(membershipKey)
                         .value(null)
@@ -37,8 +57,8 @@ public class AzureGroupMembershipProducerService
         );
     }
     public void publishAddedMembership(AzureGroupMembership object) {
-        entityProducer.send(
-                EntityProducerRecord.<AzureGroupMembership>builder()
+        azureGroupMembershipTemplate.send(
+                ParameterizedProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
                         .key(object.id)
                         .value(object)
