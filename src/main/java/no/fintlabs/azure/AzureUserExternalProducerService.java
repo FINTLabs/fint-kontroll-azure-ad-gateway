@@ -1,34 +1,52 @@
 package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.kafka.entity.EntityProducer;
-import no.fintlabs.kafka.entity.EntityProducerFactory;
-import no.fintlabs.kafka.entity.EntityProducerRecord;
-import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
-import no.fintlabs.kafka.entity.topic.EntityTopicService;
+import no.fintlabs.kafka.producing.ParameterizedTemplateFactory;
+import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
+import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
+import no.fintlabs.kafka.model.ParameterizedProducerRecord;
+import no.fintlabs.kafka.producing.ParameterizedTemplate;
+import no.fintlabs.kafka.topic.EntityTopicService;
+import no.fintlabs.kafka.topic.configuration.CleanupFrequency;
+import no.fintlabs.kafka.topic.configuration.EntityTopicConfiguration;
 import org.springframework.stereotype.Service;
+
+import java.time.Duration;
 
 @Service
 @Slf4j
 
 public class AzureUserExternalProducerService {
-    private final EntityProducer<AzureUserExternal> entityProducer;
+    private final ParameterizedTemplate<AzureUserExternal> azureUserExternalTemplate;
     private final EntityTopicNameParameters entityTopicNameParameters;
 
     public AzureUserExternalProducerService(
-            EntityTopicService entityTopicService,
-            EntityProducerFactory entityProducerFactory) {
+            ParameterizedTemplateFactory parameterizedTemplateFactory,
+            EntityTopicService entityTopicService) {
+        azureUserExternalTemplate = parameterizedTemplateFactory.createTemplate(AzureUserExternal.class);
 
-        entityProducer = entityProducerFactory.createProducer(AzureUserExternal.class);
+        TopicNamePrefixParameters topicNamePrefixParameters = TopicNamePrefixParameters.builder()
+                .orgIdApplicationDefault()
+                .domainContextApplicationDefault()
+                .build();
+
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
-                .resource(AzureUserExternal.class.getSimpleName())
+                .topicNamePrefixParameters(topicNamePrefixParameters)
+                .resourceName("AzureUserExternal")
                 .build();
-        entityTopicService.ensureTopic(entityTopicNameParameters,0);
+
+        entityTopicService.createOrModifyTopic(entityTopicNameParameters,
+                EntityTopicConfiguration.builder()
+                        .lastValueRetainedForever()
+                        .nullValueRetentionTime(Duration.ofDays(7))
+                        .cleanupFrequency(CleanupFrequency.NORMAL)
+                        .build());
+
     }
     public void publish(AzureUserExternal azureUserExternal) {
-        entityProducer.send(
-                EntityProducerRecord.<AzureUserExternal>builder()
+        azureUserExternalTemplate.send(
+                ParameterizedProducerRecord.<AzureUserExternal>builder()
                         .topicNameParameters(entityTopicNameParameters)
                         .key(azureUserExternal.getIdpUserObjectId())
                         .value(azureUserExternal)

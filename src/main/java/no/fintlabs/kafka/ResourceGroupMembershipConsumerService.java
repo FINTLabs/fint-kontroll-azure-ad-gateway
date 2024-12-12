@@ -6,8 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
 import no.fintlabs.Config;
 import no.fintlabs.cache.FintCache;
-import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
-import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
+import no.fintlabs.kafka.consuming.ListenerConfiguration;
+import no.fintlabs.kafka.consuming.ParameterizedListenerContainerFactoryService;
+import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
+import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
+import org.springframework.context.annotation.Bean;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.scheduler.Schedulers;
@@ -24,21 +28,17 @@ import java.util.UUID;
 public class ResourceGroupMembershipConsumerService {
     @Autowired
     private final AzureClient azureClient;
-    private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
     private final FintCache<String, Optional> resourceGroupMembershipCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
     public ResourceGroupMembershipConsumerService(
             AzureClient azureClient,
-            EntityConsumerFactoryService entityConsumerFactoryService,
             Config config,
             FintCache<String, Optional> resourceGroupMembershipCache) {
         this.azureClient = azureClient;
-        this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.config = config;
         this.resourceGroupMembershipCache = resourceGroupMembershipCache;
-        //this.resourceGroupMembersCache = resourceGroupMembersCache;
         this.resourceGroupMembershipSink = Sinks.many().unicast().onBackpressureBuffer();
         this.resourceGroupMembershipSink.asFlux()
                 .parallel(20) // Parallelism with up to 20 threads
@@ -54,16 +54,31 @@ public class ResourceGroupMembershipConsumerService {
     }
 
     @PostConstruct
-    public void init() {
-        //TODO: Fix sensible throw when parsing wrong data. Non-json-formatted data fails [FKS-214]
-        entityConsumerFactoryService.createFactory(ResourceGroupMembership.class, consumerRecord -> processEntity(consumerRecord.value(), consumerRecord.key())
-        ).createContainer(
-                EntityTopicNameParameters
-                        .builder()
-                        .resource("resource-group-membership")
-                        .build()
-        );
+    public ConcurrentMessageListenerContainer<String, ResourceGroupMembership> ResourceGroupMembershipConsumer(
+            ParameterizedListenerContainerFactoryService parameterizedListenerContainerFactoryService
+    ) {
+        TopicNamePrefixParameters topicNamePrefixParameters = TopicNamePrefixParameters.builder()
+                .orgIdApplicationDefault()
+                .domainContextApplicationDefault()
+                .build();
 
+        ListenerConfiguration listenerConfiguration = ListenerConfiguration.builder()
+                .seekingOffsetResetOnAssignment(false)
+                .maxPollRecords(100)
+                .build();
+
+        EntityTopicNameParameters entityTopicNameParameters = EntityTopicNameParameters
+                .builder()
+                .resourceName("resource-group-membership")
+                .topicNamePrefixParameters(topicNamePrefixParameters)
+                .build();
+
+        return parameterizedListenerContainerFactoryService.createRecordListenerContainerFactory(
+                        ResourceGroupMembership.class,
+                        consumerRecord -> processEntity(
+                                consumerRecord.value(), consumerRecord.key()),
+                        listenerConfiguration)
+                .createContainer(entityTopicNameParameters);
     }
 
     void updateAzureWithMembership(String kafkakKey, Optional<ResourceGroupMembership> resourceGroupMembership) {
