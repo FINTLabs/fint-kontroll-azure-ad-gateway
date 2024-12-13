@@ -9,11 +9,11 @@ logging:
     okhttp3: WARN
     #org.apache: ERROR
 
-fint:
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: ${fint.application-id}
+#fint:
+#  kafka:
+#    bootstrap-servers: localhost:9092
+#    consumer:
+#      group-id: ${fint.application-id}
 
 #server:
   #port: 8085

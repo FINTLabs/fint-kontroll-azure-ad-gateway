@@ -53,7 +53,7 @@ public class ResourceGroupMembershipConsumerService {
         this.resourceGroupMembershipSink = resourceGroupMembershipSink;
     }
 
-    @PostConstruct
+    @Bean
     public ConcurrentMessageListenerContainer<String, ResourceGroupMembership> ResourceGroupMembershipConsumer(
             ParameterizedListenerContainerFactoryService parameterizedListenerContainerFactoryService
     ) {

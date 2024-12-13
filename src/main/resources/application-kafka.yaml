@@ -1,0 +1,11 @@
+fint:
+  kafka:
+    default-replicas: 1
+    topic:
+       orgId: ${fint.kafkaOrgId}
+       domain-context: kontroll
+    application-id: ${fint.application-id}
+spring:
+  kafka:
+    consumer:
+      group-id: ${fint.application-id}

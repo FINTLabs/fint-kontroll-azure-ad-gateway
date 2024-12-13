@@ -33,7 +33,7 @@ public class AzureUserExternalProducerService {
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
                 .topicNamePrefixParameters(topicNamePrefixParameters)
-                .resourceName("AzureUserExternal")
+                .resourceName("azureuserexternal")
                 .build();
 
         entityTopicService.createOrModifyTopic(entityTopicNameParameters,
