@@ -8,6 +8,7 @@ import no.fintlabs.kafka.consuming.ListenerConfiguration;
 import no.fintlabs.kafka.consuming.ParameterizedListenerContainerFactoryService;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
 import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
+import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
@@ -55,7 +56,8 @@ public class ResourceGroupConsumerService {
         this.resourceGroupSink = resourceGroupSink;
     }
 
-    @PostConstruct
+
+    @Bean
     public ConcurrentMessageListenerContainer<String, ResourceGroup> ResourceGroupConsumer(
             ParameterizedListenerContainerFactoryService parameterizedListenerContainerFactoryService
     ) {

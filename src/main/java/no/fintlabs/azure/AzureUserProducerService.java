@@ -34,7 +34,7 @@ public class AzureUserProducerService {
         entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
                 .topicNamePrefixParameters(topicNamePrefixParameters)
-                .resourceName("AzureUser")
+                .resourceName("azureuser")
                 .build();
 
         entityTopicService.createOrModifyTopic(entityTopicNameParameters,
