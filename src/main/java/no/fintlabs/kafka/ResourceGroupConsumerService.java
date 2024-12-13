@@ -67,7 +67,7 @@ public class ResourceGroupConsumerService {
                 .build();
 
         ListenerConfiguration listenerConfiguration = ListenerConfiguration.builder()
-                .seekingOffsetResetOnAssignment(false)
+                .seekingOffsetResetOnAssignment(true)
                 .maxPollRecords(100)
                 .build();
 
