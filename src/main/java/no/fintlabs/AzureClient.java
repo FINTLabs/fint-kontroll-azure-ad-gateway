@@ -14,6 +14,7 @@ import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import okhttp3.Request;
@@ -35,6 +36,21 @@ public class AzureClient {
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
+    private final FintCache<String, AzureUser> entraIdUserCache;
+    private final FintCache<String, AzureUserExternal> entraIdExternalUserCache;
+    //private final FintCache<String, Optional> resourceGroupMembershipCache;
+    private final FintCache<String, AzureGroup> azureGroupCache;
+    private final FintCache<String, AzureGroupMembership> azureGroupMembershipCache;
+    AtomicInteger publishedMembers;
+
+    @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
+    public void clearCaches() {
+        entraIdUserCache.clear();
+        entraIdExternalUserCache.clear();
+        azureGroupCache.clear();
+        azureGroupMembershipCache.clear();
+        log.info("Caches for group, members and users has been reset to null due to scheduler. Next call will publish all users and groups from Entra ID to kafka");
+    }
 
     @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
@@ -63,31 +79,73 @@ public class AzureClient {
     }
 
     private void pageThroughUsers(UserCollectionPage inPage) {
-        //inPageFuture.thenAccept(inPage -> {
-        int users = 0;
+        AtomicInteger users = new AtomicInteger();
+        AtomicInteger changedUsers = new AtomicInteger();
+        AtomicInteger changedExtUsers = new AtomicInteger();
 
         UserCollectionPage page = inPage;
         do {
             for (User user : page.getCurrentPage()) {
-                users++;
-                if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()) != null
-                        && (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).equalsIgnoreCase(configUser.getExternaluservalue()))) {
-                    log.debug("Adding external user to Kafka, {}", user.userPrincipalName);
-                    azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
-                } else {
-                    log.debug("Adding user to Kafka, {}", user.userPrincipalName);
-                    azureUserProducerService.publish(new AzureUser(user, configUser));
+                users.getAndIncrement();
+
+                if (entraIdUserCache != null &&
+                        entraIdUserCache.containsKey(user.id)) {
+                    AzureUser entraIdUserObject = new AzureUser(user, configUser);
+                    if (entraIdUserObject.equals(entraIdUserCache.get(user.id))) {
+                        log.debug("User {} is unchanged. Skipping publishing to Kafka.", user.id);
+                        return;
+                    }
                 }
+
+                String externalUserAttribute = AzureUser.getAttributeValue(user, configUser.getExternaluserattribute());
+                if (externalUserAttribute != null
+                        && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
+                    AzureUserExternal entraUserExtObject = new AzureUserExternal(user, configUser);
+                    if (entraIdExternalUserCache != null &&
+                            entraIdExternalUserCache.containsKey(user.id) && entraUserExtObject.equals(entraIdExternalUserCache.get(user.id))) {
+                        log.debug("External User {} is unchanged. Skipping publishing to Kafka.", user.id);
+                        return;
+                    } else {
+                        log.debug("Publishing external user to Kafka: {}", user.userPrincipalName);
+                        azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+                        changedExtUsers.getAndIncrement();
+                        entraIdExternalUserCache.put(user.id, new AzureUserExternal(user, configUser));
+                    }
+                } else {
+                    AzureUser azureuser = new AzureUser(user, configUser);
+                    if ((azureuser.getEmployeeId() != null && !azureuser.getEmployeeId().isEmpty()) ||
+                            (azureuser.getStudentId() != null && !azureuser.getStudentId().isEmpty())) {
+                        log.debug("Publishing user to Kafka: {}", user.userPrincipalName);
+                        azureUserProducerService.publish(azureuser);
+                        log.debug("Updating cache for user: {}", user.id);
+                        changedUsers.getAndIncrement();
+                        entraIdUserCache.put(user.id, azureuser);
+                    } else {
+                        log.debug("UserId: {} does not contain required employeeId or studentId. Not published to kafka", user.id);
+                    }
+                }
+//                if (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()) != null
+//                        && (AzureUser.getAttributeValue(user, configUser.getExternaluserattribute()).equalsIgnoreCase(configUser.getExternaluservalue()))) {
+//                    log.debug("Adding external user to Kafka, {}", user.userPrincipalName);
+//                    azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
+//                } else {
+//                    log.debug("Adding user to Kafka, {}", user.userPrincipalName);
+//                    azureUserProducerService.publish(new AzureUser(user, configUser));
+//                }
             }
             if (page.getNextPage() == null) {
                 break;
             } else {
-                //log.info("Processing user page");
                 page = page.getNextPage().buildRequest().get();
             }
         } while (page != null);
         log.info("*** <<< {} User objects detected in Microsoft Entra >>> ***", users);
-        //});
+        if (changedUsers.get() > 0) {
+            log.info("*** <<< {} Entra users published to kafka as they where different from user cache >>> ***", changedUsers.get());
+        }
+        if (changedExtUsers.get() > 0) {
+            log.info("*** <<< {} external users published to kafka as they where where different from external user cache >>> ***", changedExtUsers.get());
+        }
     }
 
     @Scheduled(
@@ -97,6 +155,7 @@ public class AzureClient {
     public void pullAllGroups() {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
+        publishedMembers = new AtomicInteger();
 
         try {
             CompletableFuture<GroupCollectionPage> initialPageFuture = graphService.groups()
@@ -120,6 +179,7 @@ public class AzureClient {
                             long memberFetchMinutes = memberFetchElapsedTimeInSeconds / 60;
                             long memberFetchSeconds = memberFetchElapsedTimeInSeconds % 60;
 
+
                             log.info("*** <<< Done fetching all group memberships from Microsoft Entra ID in {} minutes and {} seconds >>> ***", memberFetchMinutes, memberFetchSeconds);
                             return groupCount;
                         });
@@ -130,14 +190,25 @@ public class AzureClient {
         } catch (ClientException e) {
             log.error("Failed when trying to get groups. ", e);
         }
+        if (publishedMembers.get() > 0) {
+            log.info("*** <<< {} Entra group members published to kafka as they were not in membership cache >>> ***", publishedMembers.get());
+        } else {
+            log.info("*** <<< All entra group members already in cache. No members published to kafka >>> ***");
+        }
     }
+
 
     private CompletableFuture<List<Group>> fetchAllGroups(GroupCollectionPage initialPage) {
         List<Group> allGroups = new ArrayList<>();
         AtomicInteger groupCounter = new AtomicInteger(0);  // Counter for groups
 
         return fetchAllGroupsRecursive(initialPage, allGroups, groupCounter).thenApply(v -> {
-            log.info("*** <<< Found {} groups with suffix \"{}\" >>> ***", groupCounter.get(), configGroup.getSuffix());
+            if(groupCounter.get() > 0) {
+                log.info("*** <<< Found {} groups with suffix \"{}\" not in cache, that were published to kafka >>> ***", groupCounter.get(), configGroup.getSuffix());
+            }
+            else {
+                log.info("*** <<< All groups already in cache. Not republishing to kafka >>> ***");
+            }
             return allGroups;
         });
     }
@@ -146,9 +217,18 @@ public class AzureClient {
         List<Group> currentPageGroups = currentPage.getCurrentPage().stream()
                 .filter(group -> group.displayName != null && group.displayName.endsWith(configGroup.getSuffix())&& (!group.additionalDataManager().isEmpty() && group.additionalDataManager().containsKey(configGroup.getFintkontrollidattribute())))
                 .peek(group -> {
-                    groupCounter.incrementAndGet();
                     AzureGroup newGroup = new AzureGroup(group, configGroup);
-                    azureGroupProducerService.publish(newGroup);  // Publish the group as soon as it is found
+                    if(azureGroupCache != null
+                            && azureGroupCache.containsKey(newGroup.getId())
+                            && newGroup.equals(azureGroupCache.get(newGroup.getId()))) {
+                        log.debug("{} groupID allready published and in cache. Not replublished to kafka", newGroup.getId());
+                    }
+                    else
+                    {
+                        groupCounter.incrementAndGet();
+                        azureGroupProducerService.publish(newGroup);  // Publish the group as soon as it is found
+                        azureGroupCache.put(newGroup.getId(), newGroup);
+                    }
                 })
                 .toList();
         allGroups.addAll(currentPageGroups);
@@ -185,14 +265,16 @@ public class AzureClient {
 
 
     private CompletableFuture<Void> pageThroughAzureGroupAsync(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage inPage) {
-        AtomicInteger members = new AtomicInteger(0);
+        AtomicInteger members = new AtomicInteger();
 
-        return processPageAsync(azureGroup, inPage, members)
+
+
+        return processPageAsync(azureGroup, inPage, members, publishedMembers)
                 .thenRun(() -> log.debug("{} memberships detected in groupName {} with groupId {}",
                         members.get(), azureGroup.getDisplayName(), azureGroup.getId()));
     }
 
-    private CompletableFuture<Void> processPageAsync(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage page, AtomicInteger members) {
+    private CompletableFuture<Void> processPageAsync(AzureGroup azureGroup, DirectoryObjectCollectionWithReferencesPage page, AtomicInteger members, AtomicInteger publishedMembers) {
         if (page == null) {
             return CompletableFuture.completedFuture(null);
         }
@@ -200,8 +282,19 @@ public class AzureClient {
         List<CompletableFuture<Void>> futures = page.getCurrentPage().stream()
                 .map(member -> CompletableFuture.runAsync(() -> {
                     members.incrementAndGet();
-                    azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
-                    log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.id, azureGroup.getId());
+                    AzureGroupMembership azureGroupMembership = new AzureGroupMembership(azureGroup.getId(), member);
+                    if(azureGroupMembershipCache != null
+                            && azureGroupMembershipCache.containsKey(azureGroupMembership.getId())
+                            && azureGroupMembership.equals(azureGroupMembershipCache.get(azureGroupMembership.getId())))
+                    {
+                        log.debug("Skipping message to Kafka, as userId: {} is allready published as member of groupId: {}", member.id, azureGroup.getId());
+                    }
+                    else {
+                        azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
+                        azureGroupMembershipCache.put(azureGroupMembership.getId(), azureGroupMembership);
+                        publishedMembers.getAndIncrement();
+                        log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.id, azureGroup.getId());
+                    }
                 }))
                 .toList();
 
@@ -211,7 +304,7 @@ public class AzureClient {
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenCompose(v -> nextPageFuture)
-                .thenCompose(nextPage -> processPageAsync(azureGroup, nextPage, members));
+                .thenCompose(nextPage -> processPageAsync(azureGroup, nextPage, members, publishedMembers));
     }
 //    public void pullAllGroups() {
 //        log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
