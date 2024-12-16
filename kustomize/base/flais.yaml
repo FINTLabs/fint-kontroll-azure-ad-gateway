@@ -14,6 +14,7 @@ spec:
 
   kafka:
     enabled: true
+    orgId: fintlabs-no
     acls:
       - topic: 'placeholder-fintlabs-no.kontroll.*'
         permission: read

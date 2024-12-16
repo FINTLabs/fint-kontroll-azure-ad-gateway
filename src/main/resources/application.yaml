@@ -34,8 +34,9 @@ fint:
     defaultCacheEntryTimeToLiveMillis: 518400000
     defaultCacheHeapSize: 1000000
   org-id: fintlabs.no
-  kafkaOrgId: fintlabs-no
+  kafkaOrgId: ${}
   application-id: fint-kontroll-azure-ad-gateway
+
 #  kafka:
 #    default-replicas: 1
 #    application-id: ${fint.application-id}
