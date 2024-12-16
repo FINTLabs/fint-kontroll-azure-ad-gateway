@@ -14,6 +14,9 @@ commonLabels:
 patches:
   - patch: |-
       - op: replace
+        path: "/spec/kafka/orgId"
+        value: "fintlabs-no"
+      - op: replace
         path: "/spec/kafka/acls/0/topic"
         value: "fintlabs-no.kontroll.entity.azure*"
       - op: replace
@@ -22,6 +25,7 @@ patches:
       - op: replace
         path: "/spec/kafka/acls/2/topic"
         value: "fintlabs-no.kontroll.entity.resource-group*"
+
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
