@@ -28,12 +28,11 @@ public class AzureGroupMembership {
         if (o == null || getClass() != o.getClass()) return false; // Check type compatibility
         AzureGroupMembership azureGroupMembership = (AzureGroupMembership) o; // Cast and compare
         return Objects.equals(user_id, azureGroupMembership.user_id) &&
-                Objects.equals(group_id, azureGroupMembership.group_id) &&
-                Objects.equals(id, azureGroupMembership.id);
+                Objects.equals(group_id, azureGroupMembership.group_id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(user_id, group_id, id);
+        return Objects.hash(user_id, group_id);
     }
 }
