@@ -90,6 +90,9 @@ class AzureClientTest {
     @Mock
     private Config config;
 
+    @Mock
+    private Config.Credentials configcredentials;
+
     @InjectMocks
     private AzureClient azureClient;
 
@@ -257,7 +260,8 @@ class AzureClientTest {
         when(groupsRequestBuilder.post(any(Group.class))).thenReturn(new Group());
         when(configGroup.getPrefix()).thenReturn("random-prefix");
         when(configGroup.getSuffix()).thenReturn("random-postfix");
-        when(config.getEntobjectid()).thenReturn("testentobjectid123");
+        when(config.getCredentials()).thenReturn(configcredentials);
+        when(configcredentials.getEntobjectid()).thenReturn("testentobjectid123");
         when(configGroup.getFintkontrollidattribute()).thenReturn("RoleKontrollIdAttribute");
         ArgumentCaptor<Group> groupCaptor = ArgumentCaptor.forClass(Group.class);
 
@@ -295,7 +299,8 @@ class AzureClientTest {
          when(groupsRequestBuilder.post(any(Group.class))).thenReturn(new Group());
          when(configGroup.getPrefix()).thenReturn("random-prefix");
          when(configGroup.getSuffix()).thenReturn("random-postfix");
-         when(config.getEntobjectid()).thenReturn("testentobjectid123");
+         when(config.getCredentials()).thenReturn(configcredentials);
+         when(configcredentials.getEntobjectid()).thenReturn("testentobjectid123");
 
          azureClient.addGroupToAzure(resourceGroup);
 

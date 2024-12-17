@@ -32,7 +32,7 @@ logging:
 fint:
   cache:
     defaultCacheEntryTimeToLiveMillis: 518400000
-    defaultCacheHeapSize: 1000000
+    defaultCacheHeapSize: 20000000
   org-id: fintlabs.no
   kafkaOrgId: ${}
   application-id: fint-kontroll-azure-ad-gateway
@@ -87,6 +87,7 @@ fint:
 
 #placeholders. Do not add creds
 azure:
+  timeout: 3
   credentials:
     clientid: XXXX
     clientsecret: XXXX
