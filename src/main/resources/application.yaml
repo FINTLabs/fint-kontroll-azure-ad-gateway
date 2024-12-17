@@ -83,6 +83,7 @@ fint:
 
 #placeholders. Do not add creds
 azure:
+  timeout: 3
   credentials:
     clientid: XXXX
     clientsecret: XXXX

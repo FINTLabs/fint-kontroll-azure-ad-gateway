@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -30,12 +31,21 @@ import java.util.concurrent.TimeUnit;
 @Setter
 @EnableAutoConfiguration
 @Configuration
-@ConfigurationProperties(prefix = "azure.credentials")
+@ConfigurationProperties(prefix = "azure")
 public class Config {
-    private String clientid;
-    private String clientsecret;
-    private String tenantguid;
-    private String entobjectid;
+    private int timeout; // Binds directly from 'azure.timeout'
+
+    @NestedConfigurationProperty
+    private Credentials credentials = new Credentials(); // Nested configuration for 'azure.credentials'
+
+    @Getter
+    @Setter
+    public static class Credentials {
+        private String clientid;
+        private String clientsecret;
+        private String tenantguid;
+        private String entobjectid;
+    }
 
     @Bean
     @ConfigurationProperties(prefix = "fint.kontroll.azure-ad-gateway.user")
@@ -54,17 +64,18 @@ public class Config {
         log.debug("Starting PostConstruct of GraphServiceClient");
         String[] scopes = new String[] {"https://graph.microsoft.com/.default"};
 
+
         ClientSecretCredential credential = new ClientSecretCredentialBuilder()
-                .clientId(clientid)
-                .tenantId(tenantguid)
-                .clientSecret(clientsecret)
+                .clientId(credentials.getClientid())
+                .tenantId(credentials.getTenantguid())
+                .clientSecret(credentials.getClientsecret())
                 .build();
 
         OkHttpClient okHttpClient = new OkHttpClient().newBuilder()
-                .callTimeout(3, TimeUnit.MINUTES)
-                .connectTimeout(3, TimeUnit.MINUTES)
-                .readTimeout(3, TimeUnit.MINUTES)
-                .writeTimeout(3, TimeUnit.MINUTES)
+                .callTimeout(timeout, TimeUnit.MINUTES)
+                .connectTimeout(timeout, TimeUnit.MINUTES)
+                .readTimeout(timeout, TimeUnit.MINUTES)
+                .writeTimeout(timeout, TimeUnit.MINUTES)
                 .build();
 
         if (null == scopes || null == credential) {
@@ -74,6 +85,5 @@ public class Config {
         assert credential != null;
         return new GraphServiceClient(new AzureIdentityAuthenticationProvider(credential,new String[0], scopes), okHttpClient);
 
-        //return new GraphServiceClient(credential, scopes);
     }
 }
