@@ -54,22 +54,17 @@ public class Config {
         log.debug("Starting PostConstruct of GraphServiceClient");
         String[] scopes = new String[] {"https://graph.microsoft.com/.default"};
 
-        HttpClientOptions options = new HttpClientOptions();
-        options.setConnectTimeout(Duration.ofMinutes(5));
-        options.setReadTimeout(Duration.ofMinutes(5));
-        options.setWriteTimeout(Duration.ofMinutes(5));
-
-        HttpClient httpClient = HttpClient.createDefault(options);
-
         ClientSecretCredential credential = new ClientSecretCredentialBuilder()
-                .httpClient(httpClient)
                 .clientId(clientid)
                 .tenantId(tenantguid)
                 .clientSecret(clientsecret)
                 .build();
 
         OkHttpClient okHttpClient = new OkHttpClient().newBuilder()
-                .callTimeout(1, TimeUnit.MINUTES)
+                .callTimeout(3, TimeUnit.MINUTES)
+                .connectTimeout(3, TimeUnit.MINUTES)
+                .readTimeout(3, TimeUnit.MINUTES)
+                .writeTimeout(3, TimeUnit.MINUTES)
                 .build();
 
         if (null == scopes || null == credential) {
