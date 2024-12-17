@@ -477,7 +477,7 @@ public class AzureClient {
                 resourceGroup.getResourceType().length() > 3) {
 
             Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
-            String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getEntobjectid();
+            String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getCredentials().getEntobjectid();
             HashMap<String, Object> additionalData = new HashMap<>();
             LinkedList<String> ownersOdataBind = new LinkedList<>();
             ownersOdataBind.add(owner);
