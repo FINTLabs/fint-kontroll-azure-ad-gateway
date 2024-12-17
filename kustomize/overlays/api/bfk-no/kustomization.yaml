@@ -13,6 +13,11 @@ commonLabels:
   fintlabs.no/org-id: bfk.no
 patches:
   - patch: |-
+      - op: add
+        path: "/spec/env/-"
+        value:
+          name: "fint.kafka.topic.org-id"
+          value: "bfk-no"      
       - op: replace
         path: "/spec/orgId"
         value: "bfk.no"

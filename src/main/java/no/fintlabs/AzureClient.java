@@ -28,7 +28,8 @@ import java.util.*;
 @Log4j2
 @RequiredArgsConstructor
 
-public class AzureClient {
+public class
+AzureClient {
     protected final Config config;
     protected final ConfigGroup configGroup;
     protected final ConfigUser configUser;

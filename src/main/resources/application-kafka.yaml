@@ -2,7 +2,7 @@ fint:
   kafka:
     default-replicas: 1
     topic:
-       orgId: ${fint.kafkaOrgId}
+       orgId: fintlabs-no
        domain-context: kontroll
     application-id: ${fint.application-id}
 spring:
