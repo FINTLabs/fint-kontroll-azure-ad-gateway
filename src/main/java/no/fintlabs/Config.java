@@ -33,10 +33,10 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 @ConfigurationProperties(prefix = "azure")
 public class Config {
-    private int timeout; // Binds directly from 'azure.timeout'
 
-    @NestedConfigurationProperty
-    private Credentials credentials = new Credentials(); // Nested configuration for 'azure.credentials'
+    private int timeout;
+
+    private Credentials credentials = new Credentials();
 
     @Getter
     @Setter
