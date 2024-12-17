@@ -11,4 +11,3 @@ commonLabels:
 resources:
   - flais.yaml
   - onePassword.yaml
-  - ../../application.yaml
