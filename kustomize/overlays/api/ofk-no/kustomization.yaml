@@ -19,9 +19,6 @@ patches:
           name: "fint.kafka.topic.org-id"
           value: "ofk-no"
       - op: replace
-        path: "/spec/orgId"
-        value: "ofk.no"
-      - op: replace
         path: "/spec/kafka/acls/0/topic"
         value: "ofk-no.kontroll.entity.azure*"
       - op: replace
@@ -30,9 +27,6 @@ patches:
       - op: replace
         path: "/spec/kafka/acls/2/topic"
         value: "ofk-no.kontroll.entity.resource-group*"
-      - op: replace
-        path: "/spec/kafka/orgId"
-        value: "ofk-no"
       - op: add
         path: "/spec/resources"
         value: 
