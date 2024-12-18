@@ -609,7 +609,7 @@ AzureClient {
                     }
 
                     if (e.getResponseStatusCode() == 404) {
-                        log.warn("UserId: {} cannot be added to GroupId: {} as the UserId is not found in tenant",
+                        log.warn("UserId: {} cannot be added to GroupId: {}. GroupId and/or UserId is not found in tenant",
                                 resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }
