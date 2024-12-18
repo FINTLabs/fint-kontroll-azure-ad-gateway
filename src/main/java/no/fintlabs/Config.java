@@ -64,6 +64,7 @@ public class Config {
                 .connectTimeout(timeout, TimeUnit.MINUTES)
                 .readTimeout(timeout, TimeUnit.MINUTES)
                 .writeTimeout(timeout, TimeUnit.MINUTES)
+                .retryOnConnectionFailure(true)
                 .build();
 
         if (null == scopes || null == credential) {
