@@ -577,11 +577,10 @@ AzureClient {
                 try {
                     graphServiceClient.groups()
                             .byGroupId(resourceGroupMembership.getAzureGroupRef())
-                            .members().ref().post(referenceMember); // Posting referenceMember asynchronously
+                            .members().ref().post(referenceMember);
 
                     log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
 
-                    // Publishing the added membership to Kafka
                     azureGroupMembershipProducerService.publishAddedMembership(
                             new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
 
@@ -589,7 +588,6 @@ AzureClient {
                             resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
 
                 } catch (ApiException e) {
-                    // Handling HTTP response exception here
                     if (e.getResponseStatusCode() == 400) {
                         if (e.getMessage().contains("object references already exist")) {
                             azureGroupMembershipProducerService.publishAddedMembership(
@@ -610,6 +608,11 @@ AzureClient {
                         log.warn(e.getMessage());
                     }
 
+                    if (e.getResponseStatusCode() == 404) {
+                        log.warn("UserId: {} cannot be added to GroupId: {} as the UserId is not found in tenant",
+                                resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                        return;
+                    }
                     if (e.getResponseStatusCode() == 429) {
                         log.warn("Throttling limit. Error: {}", e.getMessage());
                     } else {
@@ -620,7 +623,7 @@ AzureClient {
                 }
             }).exceptionally(ex -> {
                 log.error("Exception while adding user to group: {}", ex.getMessage(), ex);
-                return null; // Exceptionally should return a value
+                return null;
             });
         }
     }
