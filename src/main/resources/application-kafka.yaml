@@ -1,5 +1,7 @@
 fint:
   kafka:
+    maxpollrecords: 500
+    seekingOffsetResetOnAssignment: false
     default-replicas: 1
     topic:
        domain-context: kontroll

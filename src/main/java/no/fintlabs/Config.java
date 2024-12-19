@@ -47,6 +47,15 @@ public class Config {
         return new ConfigGroup();
     }
 
+    @Getter
+    @Setter
+    @ConfigurationProperties(prefix = "fint.kafka")
+    public static class KafkaConfig {
+        private int maxpollrecords;
+        private boolean seekingOffsetResetOnAssignment;
+
+    }
+
     @Bean
     public GraphServiceClient graphServiceClient(){
         log.debug("Starting PostConstruct of GraphServiceClient");

@@ -28,15 +28,18 @@ import java.util.UUID;
 public class ResourceGroupMembershipConsumerService {
     @Autowired
     private final AzureClient azureClient;
+    private final Config.KafkaConfig kafkaConfig;
     private final Config config;
     private final FintCache<String, Optional> resourceGroupMembershipCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
     public ResourceGroupMembershipConsumerService(
             AzureClient azureClient,
+            Config.KafkaConfig kafkaConfig,
             Config config,
             FintCache<String, Optional> resourceGroupMembershipCache) {
         this.azureClient = azureClient;
+        this.kafkaConfig = kafkaConfig;
         this.config = config;
         this.resourceGroupMembershipCache = resourceGroupMembershipCache;
         this.resourceGroupMembershipSink = Sinks.many().unicast().onBackpressureBuffer();
@@ -63,8 +66,8 @@ public class ResourceGroupMembershipConsumerService {
                 .build();
 
         ListenerConfiguration listenerConfiguration = ListenerConfiguration.builder()
-                .seekingOffsetResetOnAssignment(true)
-                .maxPollRecords(100)
+                .seekingOffsetResetOnAssignment(kafkaConfig.isSeekingOffsetResetOnAssignment())
+                .maxPollRecords(kafkaConfig.getMaxpollrecords())
                 .build();
 
         EntityTopicNameParameters entityTopicNameParameters = EntityTopicNameParameters

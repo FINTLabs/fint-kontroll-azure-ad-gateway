@@ -2,6 +2,7 @@ package no.fintlabs.kafka;
 
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
+import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.consuming.ListenerConfiguration;
@@ -25,14 +26,17 @@ import java.util.UUID;
 
 public class ResourceGroupConsumerService {
     private final AzureClient azureClient;
+    private final Config.KafkaConfig kafkaConfig;
     private final ConfigGroup configGroup;
     private final FintCache<String, Optional> resourceGroupCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
 
     public ResourceGroupConsumerService(
             AzureClient azureClient,
+            Config.KafkaConfig kafkaConfig,
             ConfigGroup configGroup,
             FintCache<String, Optional> resourceGroupCache) {
+        this.kafkaConfig = kafkaConfig;
         this.azureClient = azureClient;
         this.configGroup = configGroup;
         this.resourceGroupCache = resourceGroupCache;
@@ -67,8 +71,8 @@ public class ResourceGroupConsumerService {
                 .build();
 
         ListenerConfiguration listenerConfiguration = ListenerConfiguration.builder()
-                .seekingOffsetResetOnAssignment(true)
-                .maxPollRecords(100)
+                .seekingOffsetResetOnAssignment(kafkaConfig.isSeekingOffsetResetOnAssignment())
+                .maxPollRecords(kafkaConfig.getMaxpollrecords())
                 .build();
 
         EntityTopicNameParameters entityTopicNameParameters = EntityTopicNameParameters
