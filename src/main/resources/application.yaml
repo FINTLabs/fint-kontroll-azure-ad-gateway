@@ -33,21 +33,7 @@ fint:
   cache:
     defaultCacheEntryTimeToLiveMillis: 518400000
     defaultCacheHeapSize: 20000000
-#  org-id: fintlabs.no
   application-id: fint-kontroll-azure-ad-gateway
-
-#  kafka:
-#    default-replicas: 1
-#    application-id: ${fint.application-id}
-#    topic:
-#      #org-id: ${fint.org-id}
-#      domain-context: kontroll
-#      resources:
-#        resourcegrouptopic: resource-group
-#        resourcegroupmembertopic: resource-group-membership
-#  producer-max-message-size: 3145728
-#  consumer-max-message-size: 5242880
-#  consumer-partition-fetch-bytes: 3145728
 
   kontroll:
     azure-ad-gateway:
