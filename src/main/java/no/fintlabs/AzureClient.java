@@ -12,7 +12,6 @@ import java.util.concurrent.Executors;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.serialization.UntypedArray;
 import com.microsoft.kiota.serialization.UntypedObject;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.*;
@@ -43,6 +42,7 @@ AzureClient {
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final FintCache<String, Optional> resourceGroupMembershipCache;
+    ExecutorService executor = Executors.newFixedThreadPool(4);
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
         public void clearCaches() {
@@ -69,9 +69,6 @@ AzureClient {
                         requestConfiguration.queryParameters.filter = filterCriteria;
                         requestConfiguration.queryParameters.top = configUser.getUserpagingsize();
                     }));
-
-
-
         } catch (ApiException | ReflectiveOperationException ex) {
             log.error("pullAllUsers failed with message: {}", ex.getMessage());
         }
@@ -131,7 +128,6 @@ AzureClient {
                             log.debug("UserId: {} does not contain required employeeId or studentId. Not published to kafka", user.getId());
                         }
                     }
-
                     return true;
                 }).build();
 
@@ -240,21 +236,13 @@ AzureClient {
                             && processedGroupIds.add(group.getId())) { // Only process if it's new
 
                         groupCounter.getAndIncrement();
-
-                        // Create and process the AzureGroup object
                         AzureGroup newGroup = new AzureGroup(group, configGroup);
-
-                        // Publish the group
                         azureGroupProducerService.publish(newGroup);
-
-                        // Add to allGroups collection
                         allGroups.add(newGroup);
                         processMembersDelta(group);
                     }
                     return true;
                 }).build();
-
-        // Iterates through all pages and collects groups
         pageIterator.iterate();
     }
 
@@ -279,7 +267,6 @@ AzureClient {
                 }
 
                 String kafkaKey = group.getId() + "_" + memberId;
-
                 if (untypedMember.getValue().containsKey("@removed")) {
                     azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
                     resourceGroupMembershipCache.remove(kafkaKey);
@@ -289,7 +276,6 @@ AzureClient {
                     }
                     continue;
                 }
-
                 azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
                 if(deltaLinkCache != null) {
@@ -302,7 +288,7 @@ AzureClient {
         }
     }
 
-//  TODO: Consider if this should be deactivated if delta is implemented
+//  TODO: Consider if this is needed
     /*@Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
@@ -311,8 +297,6 @@ AzureClient {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
-        // Define an executor for asynchronous tasks
-        ExecutorService executor = Executors.newFixedThreadPool(4);  // Can adjust thread pool size if needed
 
         CompletableFuture.supplyAsync(() -> {
             try {
@@ -386,7 +370,7 @@ AzureClient {
                         log.error("Error fetching members for group {}: {}", group.getId(), e.getMessage());
                         return null;
                     }
-                }).thenCompose(memberPage -> {
+                }, executor).thenCompose(memberPage -> {
                     if (memberPage != null) {
                         return pageThroughAzureGroupAsync(group, memberPage);
                     }
@@ -433,7 +417,7 @@ AzureClient {
                     log.error("Error fetching next member page for group {}: {}", azureGroup.getId(), e.getMessage());
                     return null;
                 }
-            }).thenCompose(nextPage -> {
+            }, executor).thenCompose(nextPage -> {
                 if (nextPage != null) {
                     return processPageAsync(azureGroup, nextPage, membersCount);  // Process the next page asynchronously
                 }
@@ -505,7 +489,7 @@ AzureClient {
                     log.warn(e.getMessage());
                 }
 
-            }).exceptionally(ex -> {
+            }, executor).exceptionally(ex -> {
                 log.error("Exception while adding group: {}", ex.getMessage(), ex);
                 return null; // Exceptionally should return a value
             });
@@ -569,6 +553,7 @@ AzureClient {
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
         if (resourceGroupMembership.getAzureUserRef() != null && resourceGroupMembership.getAzureGroupRef() != null) {
 
+
             DirectoryObject directoryObject = new DirectoryObject();
             directoryObject.setId(resourceGroupMembership.getAzureUserRef());
             ReferenceCreate referenceMember = new com.microsoft.graph.models.ReferenceCreate();
@@ -621,7 +606,7 @@ AzureClient {
                                 resourceGroupMembership.getAzureGroupRef(), e.getMessage());
                     }
                 }
-            }).exceptionally(ex -> {
+            }, executor).exceptionally(ex -> {
                 log.error("Exception while adding user to group: {}", ex.getMessage(), ex);
                 return null;
             });
@@ -672,7 +657,7 @@ AzureClient {
             } catch (Exception e) {
                 log.error("Failed to process function deleteGroupMembership, Error: ", e);
             }
-        }).exceptionally(ex -> {
+        },executor).exceptionally(ex -> {
             // Handle any exceptions that might occur
             log.error("Exception while trying to remove user from group: {}", ex.getMessage(), ex);
             return null; // exceptionally must return a value
