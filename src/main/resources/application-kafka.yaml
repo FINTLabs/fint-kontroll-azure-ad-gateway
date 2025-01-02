@@ -9,4 +9,4 @@ fint:
 spring:
   kafka:
     consumer:
-      group-id: ${fint.application-id}
+      group-id: ${fint.kafka.topic.org-id}-${fint.application-id}
