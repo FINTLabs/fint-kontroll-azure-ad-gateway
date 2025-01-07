@@ -3,6 +3,8 @@ package no.fintlabs.kafka;
 import net.bytebuddy.utility.RandomString;
 import no.fintlabs.AzureClient;
 import no.fintlabs.cache.FintCache;
+import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
+import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,12 @@ class ResourceGroupMembershipConsumerServiceTest {
 
     @Mock
     private EntityTopicService entityTopicService;
+
+    @Mock
+    private EntityTopicNameParameters entityTopicNameParameters;
+
+    @Mock
+    private TopicNamePrefixParameters topicNamePrefixParameters;
 
     static private ResourceGroupMembership exampleGroupMembership;
     static private String exampleKafkaKey;
