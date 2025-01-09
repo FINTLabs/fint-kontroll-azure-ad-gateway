@@ -35,6 +35,11 @@ AzureClient {
     protected final GraphServiceClient graphServiceClient;
     private String deltaLinkCache;
     private AtomicInteger numMembers;
+    private AtomicInteger numGroups;
+    private Set<String> processedGroupIds;
+    private long groupStartTime;
+
+
 
     private final FintCache<String, AzureUser> entraIdUserCache;
     private final FintCache<String, AzureUserExternal> entraIdExternalUserCache;
@@ -154,6 +159,9 @@ AzureClient {
         log.info("*** <<< Fetching groups and members using delta call from Microsoft Entra >>> ***");
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
         numMembers = new AtomicInteger();
+        processedGroupIds = new HashSet<>();
+        numGroups = new AtomicInteger(0);
+        groupStartTime = System.currentTimeMillis();
 
         try {
             if (deltaLinkCache != null) {
@@ -176,38 +184,16 @@ AzureClient {
         } catch (ApiException | ReflectiveOperationException e) {
             log.error("Failed when trying to get groups. ", e);
         }
-    }
-
-    private List<AzureGroup> pageThroughGroupsDelta(DeltaGetResponse groupPage) throws ReflectiveOperationException {
-        List<AzureGroup> allGroups = new ArrayList<>();
-        AtomicInteger groupCounter = new AtomicInteger(0);
-        Set<String> processedGroupIds = new HashSet<>();
-        long startTime = System.currentTimeMillis();
-
-        while (true) {
-            // Process the current page and check for duplicates
-            deltaPageIterator(groupPage, groupCounter, allGroups, processedGroupIds);
-
-            // If @odataNextLink is present, fetch the next group page
-            if (groupPage.getOdataNextLink() != null) {
-                groupPage = graphServiceClient.groups().delta().withUrl(groupPage.getOdataNextLink()).get();
-            } else {
-                break;
-            }
-        }
         long endTime = System.currentTimeMillis();
-        long elapsedTimeInSeconds = (endTime - startTime) / 1000;
+        long elapsedTimeInSeconds = (endTime - groupStartTime) / 1000;
         long minutes = elapsedTimeInSeconds / 60;
         long seconds = elapsedTimeInSeconds % 60;
-        if (groupPage.getOdataDeltaLink() == null) {
-            log.error("Logic error: Last page doesn't contain ODataDeltaLink");
-            throw new ReflectiveOperationException("Logic error: Last page doesn't contain ODataDeltaLink");
-        }
+
         if(deltaLinkCache == null)
         {
             log.info("*** <<< Initial Delta run on Groups completed >>> ***");
-            log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, in {} minutes and {} seconds >>> ***",
-                    groupCounter.get(),
+            log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, all published to Kafka, in {} minutes and {} seconds >>> ***",
+                    numGroups.get(),
                     configGroup.getSuffix(),
                     numMembers.get(),
                     minutes,
@@ -215,11 +201,29 @@ AzureClient {
         }
         else {
             log.info("*** <<< Found {} changed groups with suffix \"{}\" that included {} memberships, in {} minutes and {} seconds since last Delta run >>> ***",
-                    groupCounter.get(),
+                    numGroups.get(),
                     configGroup.getSuffix(),
                     numMembers.get(),
                     minutes,
                     seconds);
+        }
+    }
+
+    private List<AzureGroup> pageThroughGroupsDelta(DeltaGetResponse groupPage) throws ReflectiveOperationException {
+        List<AzureGroup> allGroups = new ArrayList<>();
+
+        while (true) {
+            deltaPageIterator(groupPage, numGroups, allGroups);
+            if (groupPage != null && groupPage.getOdataNextLink() != null) {
+                groupPage = graphServiceClient.groups().delta().withUrl(groupPage.getOdataNextLink()).get();
+            } else {
+                break;
+            }
+        }
+
+        if (groupPage.getOdataDeltaLink() == null) {
+            log.error("Logic error: Last page doesn't contain ODataDeltaLink");
+            throw new ReflectiveOperationException("Logic error: Last page doesn't contain ODataDeltaLink");
         }
 
         deltaLinkCache = groupPage.getOdataDeltaLink();
@@ -227,23 +231,40 @@ AzureClient {
         return allGroups;
     }
 
-    private void deltaPageIterator(DeltaGetResponse groupPage, AtomicInteger groupCounter, List<AzureGroup> allGroups, Set<String> processedGroupIds) throws ReflectiveOperationException {
+    private void deltaPageIterator(DeltaGetResponse groupPage, AtomicInteger groupCounter, List<AzureGroup> allGroups) throws ReflectiveOperationException {
+        Set<String> currentPageProcessedGroupIds = new HashSet<>();
+
         PageIterator<Group, DeltaGetResponse> pageIterator = new PageIterator.Builder<Group, DeltaGetResponse>()
                 .client(graphServiceClient)
                 .collectionPage(groupPage)
                 .collectionPageFactory(DeltaGetResponse::createFromDiscriminatorValue)
                 .processPageItemCallback(group -> {
-                    // Ensure the group has not been processed yet
-                    if (group.getDisplayName() != null && group.getDisplayName().endsWith(configGroup.getSuffix())
-                            && (!group.getAdditionalData().isEmpty()
-                            && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute()))
-                            && processedGroupIds.add(group.getId())) { // Only process if it's new
+                    try {
+                        String groupId = group.getId();
+                        if (currentPageProcessedGroupIds.add(groupId)) {
+                            if (group.getDisplayName() != null && group.getDisplayName().endsWith(configGroup.getSuffix())
+                                    && !group.getAdditionalData().isEmpty()
+                                    && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute())) {
 
-                        groupCounter.getAndIncrement();
-                        AzureGroup newGroup = new AzureGroup(group, configGroup);
-                        azureGroupProducerService.publish(newGroup);
-                        allGroups.add(newGroup);
-                        processMembersDelta(group);
+                                if(!processedGroupIds.contains(groupId)) {
+                                    numGroups.getAndIncrement();
+                                    AzureGroup newGroup = new AzureGroup(group, configGroup);
+                                    azureGroupProducerService.publish(newGroup);
+                                    allGroups.add(newGroup);
+                                    processedGroupIds.add(groupId);
+                                }
+
+                                // Process members for this group
+                                log.debug("Processing members for group: {}", group.getDisplayName());
+                                processMembersDelta(group);
+                            } else {
+                                log.debug("Skipping group: {} due to missing suffix or attributes", groupId);
+                            }
+                        } else {
+                            log.debug("Group {} already processed in this page", groupId);
+                        }
+                    } catch (Exception e) {
+                        log.error("Error processing group: {}. Skipping to next.", group.getId(), e);
                     }
                     return true;
                 }).build();
@@ -252,9 +273,6 @@ AzureClient {
 
     private void processMembersDelta(Group group) {
         Map<String, Object> additionalData = group.getAdditionalData();
-        if (additionalData == null) {
-            return;
-        }
         if (!additionalData.containsKey("members@delta")) {
             return;
         }
@@ -593,7 +611,6 @@ AzureClient {
                             return;
                         }
 
-                        // Handling 400 Bad Request error
                         log.warn("Bad request: userRef: {} - groupRef: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         log.warn(e.getMessage());
                     }
@@ -606,7 +623,6 @@ AzureClient {
                     if (e.getResponseStatusCode() == 429) {
                         log.warn("Throttling limit. Error: {}", e.getMessage());
                     } else {
-                        // Handling other HTTP errors
                         log.error("HTTP Error while updating group {}: {} \r",
                                 resourceGroupMembership.getAzureGroupRef(), e.getMessage());
                     }
