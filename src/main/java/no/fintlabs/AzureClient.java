@@ -33,14 +33,6 @@ AzureClient {
     protected final ConfigGroup configGroup;
     protected final ConfigUser configUser;
     protected final GraphServiceClient graphServiceClient;
-    private String deltaLinkCache;
-    private AtomicInteger numMembers;
-    private AtomicInteger numGroups;
-    private Set<String> processedGroupIds;
-    private long groupStartTime;
-
-
-
     private final FintCache<String, AzureUser> entraIdUserCache;
     private final FintCache<String, AzureUserExternal> entraIdExternalUserCache;
     private final AzureUserProducerService azureUserProducerService;
@@ -49,6 +41,9 @@ AzureClient {
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final FintCache<String, Optional> resourceGroupMembershipCache;
     private final ExecutorService executor = Executors.newFixedThreadPool(4);
+    private String deltaLinkCache;
+    private AtomicInteger numMembers;
+    private Set<String> processedGroupIds;
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
         public void clearCaches() {
@@ -57,7 +52,6 @@ AzureClient {
         entraIdExternalUserCache.clear();
             log.info("Delta caches for group and user has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
         }
-
 
     @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
@@ -156,12 +150,11 @@ AzureClient {
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.delta-delay-ms}"
     )
     public void pullAllGroupsDelta() {
-        log.info("*** <<< Fetching groups and members using delta call from Microsoft Entra >>> ***");
+        log.info("*** <<< Fetching groups and members using delta call from Microsoft Entra ID >>> ***");
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
-        numMembers = new AtomicInteger();
+        numMembers = new AtomicInteger(0);
         processedGroupIds = new HashSet<>();
-        numGroups = new AtomicInteger(0);
-        groupStartTime = System.currentTimeMillis();
+        long groupStartTime = System.currentTimeMillis();
 
         try {
             if (deltaLinkCache != null) {
@@ -180,7 +173,6 @@ AzureClient {
                         });
                 pageThroughGroupsDelta(groupPage);
             }
-
         } catch (ApiException | ReflectiveOperationException e) {
             log.error("Failed when trying to get groups. ", e);
         }
@@ -193,7 +185,7 @@ AzureClient {
         {
             log.info("*** <<< Initial Delta run on Groups completed >>> ***");
             log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, all published to Kafka, in {} minutes and {} seconds >>> ***",
-                    numGroups.get(),
+                    processedGroupIds.size(),
                     configGroup.getSuffix(),
                     numMembers.get(),
                     minutes,
@@ -201,7 +193,7 @@ AzureClient {
         }
         else {
             log.info("*** <<< Found {} changed groups with suffix \"{}\" that included {} memberships, in {} minutes and {} seconds since last Delta run >>> ***",
-                    numGroups.get(),
+                    processedGroupIds.size(),
                     configGroup.getSuffix(),
                     numMembers.get(),
                     minutes,
@@ -209,11 +201,10 @@ AzureClient {
         }
     }
 
-    private List<AzureGroup> pageThroughGroupsDelta(DeltaGetResponse groupPage) throws ReflectiveOperationException {
-        List<AzureGroup> allGroups = new ArrayList<>();
+    private void pageThroughGroupsDelta(DeltaGetResponse groupPage) throws ReflectiveOperationException {
 
         while (true) {
-            deltaPageIterator(groupPage, numGroups, allGroups);
+            deltaPageIterator(groupPage);
             if (groupPage != null && groupPage.getOdataNextLink() != null) {
                 groupPage = graphServiceClient.groups().delta().withUrl(groupPage.getOdataNextLink()).get();
             } else {
@@ -228,10 +219,9 @@ AzureClient {
 
         deltaLinkCache = groupPage.getOdataDeltaLink();
         log.debug("Delta link updated in deltaLinkCache");
-        return allGroups;
     }
 
-    private void deltaPageIterator(DeltaGetResponse groupPage, AtomicInteger groupCounter, List<AzureGroup> allGroups) throws ReflectiveOperationException {
+    private void deltaPageIterator(DeltaGetResponse groupPage) throws ReflectiveOperationException {
         Set<String> currentPageProcessedGroupIds = new HashSet<>();
 
         PageIterator<Group, DeltaGetResponse> pageIterator = new PageIterator.Builder<Group, DeltaGetResponse>()
@@ -247,14 +237,11 @@ AzureClient {
                                     && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute())) {
 
                                 if(!processedGroupIds.contains(groupId)) {
-                                    numGroups.getAndIncrement();
                                     AzureGroup newGroup = new AzureGroup(group, configGroup);
                                     azureGroupProducerService.publish(newGroup);
-                                    allGroups.add(newGroup);
                                     processedGroupIds.add(groupId);
                                 }
 
-                                // Process members for this group
                                 log.debug("Processing members for group: {}", group.getDisplayName());
                                 processMembersDelta(group);
                             } else {
