@@ -58,7 +58,7 @@ AzureClient {
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
     )
     public void pullAllUsers() {
-        log.info("*** <<< Starting to pull users from Microsoft Entra >>> ***");
+        log.info("*** <<< Starting to pull users from Microsoft Graph >>> ***");
         long startTime = System.currentTimeMillis();
         String[] selectionCriteria = new String[]{String.join(",", configUser.AllAttributes())};
         String filterCriteria = "usertype eq 'member'";
@@ -77,7 +77,7 @@ AzureClient {
         long minutes = elapsedTimeInSeconds / 60;
         long seconds = elapsedTimeInSeconds % 60;
 
-        log.info("*** <<< Finished pulling users from Microsoft Entra in {} minutes and {} seconds >>> *** ", minutes, seconds);
+        log.info("*** <<< Finished pulling users from Microsoft Graph in {} minutes and {} seconds >>> *** ", minutes, seconds);
     }
 
     private void pageThroughUsers(UserCollectionResponse userPage) throws ReflectiveOperationException {
@@ -133,14 +133,21 @@ AzureClient {
 
         pageIterator.iterate();
         if (deltaLinkCache != null) {
-            log.info("*** <<< Found total {} users in Entra ID. Published {} changed users to Kafka >>> ***", users, changedUsers);
+            if(changedUsers.get() > 0) {
+                log.info("*** <<< Found total {} users in Entra ID. Published {} changed users to Kafka >>> ***", users.get(), changedUsers.get());
+            }
+            else {
+                    log.info("*** <<< No changes since last call on users from graph >>> ***");
+                }
             if (changedExtUsers.get() > 0) {
-                log.info("*** <<< Found {} users of type External users in Entra ID that were changed >>> ***", changedExtUsers);
+                log.info("*** <<< Found {} users of type External users in Entra ID that were changed >>> ***", changedExtUsers.get());
             }
         } else {
-            log.info("*** <<< Found total {} users in Entra ID. {} published to Kafka >>> ***", users, changedUsers);
+            if(changedUsers.get() > 0) {
+                log.info("*** <<< Found total {} users in Entra ID. {} published to Kafka >>> ***", users.get(), changedUsers.get());
+            }
             if (changedExtUsers.get() > 0) {
-                log.info("*** <<< Of the total, there are {} users of type External users in Entra ID >>> ***", changedExtUsers);
+                log.info("*** <<< Of the total, there are {} users of type External users in Entra ID >>> ***", changedExtUsers.get());
             }
         }
     }
@@ -150,7 +157,7 @@ AzureClient {
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.delta-delay-ms}"
     )
     public void pullAllGroupsDelta() {
-        log.info("*** <<< Fetching groups and members using delta call from Microsoft Entra ID >>> ***");
+        log.info("*** <<< Fetching groups and members using delta call from Microsoft Graph >>> ***");
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
         numMembers = new AtomicInteger(0);
         processedGroupIds = new HashSet<>();
@@ -181,24 +188,20 @@ AzureClient {
         long minutes = elapsedTimeInSeconds / 60;
         long seconds = elapsedTimeInSeconds % 60;
 
-        if(deltaLinkCache == null)
-        {
-            log.info("*** <<< Initial Delta run on Groups completed >>> ***");
-            log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, all published to Kafka, in {} minutes and {} seconds >>> ***",
+
+        if (processedGroupIds.size() > 0 || numMembers.get() > 0) {
+            log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, published to Kafka, in {} minutes and {} seconds  >>> ***",
                     processedGroupIds.size(),
                     configGroup.getSuffix(),
                     numMembers.get(),
                     minutes,
                     seconds);
-        }
-        else {
-            log.info("*** <<< Found {} changed groups with suffix \"{}\" that included {} memberships, in {} minutes and {} seconds since last Delta run >>> ***",
-                    processedGroupIds.size(),
-                    configGroup.getSuffix(),
-                    numMembers.get(),
+        } else {
+            log.info("*** <<< No changes since last delta call on groups from Graph. Finished in {} minutes and {} seconds >>> ***",
                     minutes,
                     seconds);
         }
+
     }
 
     private void pageThroughGroupsDelta(DeltaGetResponse groupPage) throws ReflectiveOperationException {
@@ -217,6 +220,9 @@ AzureClient {
             throw new ReflectiveOperationException("Logic error: Last page doesn't contain ODataDeltaLink");
         }
 
+        if(deltaLinkCache == null) {
+            log.info("*** <<< Initial Delta run on Groups completed >>> ***");
+        }
         deltaLinkCache = groupPage.getOdataDeltaLink();
         log.debug("Delta link updated in deltaLinkCache");
     }
@@ -304,7 +310,7 @@ AzureClient {
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
     )*/
     public void pullAllGroupsAsync() {
-        log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
+        log.info("*** <<< Fetching groups from Microsoft Graph >>> ***");
         long startTime = System.currentTimeMillis();
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
 
