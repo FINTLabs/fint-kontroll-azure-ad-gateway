@@ -242,10 +242,9 @@ AzureClient {
                                     && !group.getAdditionalData().isEmpty()
                                     && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute())) {
 
-                                if(!processedGroupIds.contains(groupId)) {
+                                if(processedGroupIds.add(groupId)) {
                                     AzureGroup newGroup = new AzureGroup(group, configGroup);
                                     azureGroupProducerService.publish(newGroup);
-                                    processedGroupIds.add(groupId);
                                 }
 
                                 log.debug("Processing members for group: {}", group.getDisplayName());
