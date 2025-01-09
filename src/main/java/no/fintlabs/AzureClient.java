@@ -34,6 +34,7 @@ AzureClient {
     protected final ConfigUser configUser;
     protected final GraphServiceClient graphServiceClient;
     private String deltaLinkCache;
+    private AtomicInteger numMembers;
 
     private final FintCache<String, AzureUser> entraIdUserCache;
     private final FintCache<String, AzureUserExternal> entraIdExternalUserCache;
@@ -152,6 +153,7 @@ AzureClient {
     public void pullAllGroupsDelta() {
         log.info("*** <<< Fetching groups and members using delta call from Microsoft Entra >>> ***");
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
+        numMembers = new AtomicInteger();
 
         try {
             if (deltaLinkCache != null) {
@@ -204,16 +206,18 @@ AzureClient {
         if(deltaLinkCache == null)
         {
             log.info("*** <<< Initial Delta run on Groups completed >>> ***");
-            log.info("*** <<< Found {} groups with suffix \"{}\", in {} minutes and {} seconds >>> ***",
+            log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, in {} minutes and {} seconds >>> ***",
                     groupCounter.get(),
                     configGroup.getSuffix(),
+                    numMembers.get(),
                     minutes,
                     seconds);
         }
         else {
-            log.info("*** <<< Found {} changed groups with suffix \"{}\", in {} minutes and {} seconds since last Delta run >>> ***",
+            log.info("*** <<< Found {} changed groups with suffix \"{}\" that included {} memberships, in {} minutes and {} seconds since last Delta run >>> ***",
                     groupCounter.get(),
                     configGroup.getSuffix(),
+                    numMembers.get(),
                     minutes,
                     seconds);
         }
@@ -277,6 +281,7 @@ AzureClient {
                     continue;
                 }
                 azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
+                numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
                 if(deltaLinkCache != null) {
                     log.info("UserId: {} is member of GroupId: {}", memberId, group.getId());
