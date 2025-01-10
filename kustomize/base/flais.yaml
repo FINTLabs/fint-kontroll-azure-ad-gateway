@@ -4,6 +4,7 @@ metadata:
   name: fint-kontroll-azure-ad-gateway
   namespace: fintlabs-no
 spec:
+  orgId: fintlabs.no
   image: ghcr.io/fintlabs/fint-kontroll-azure-ad-gateway:latest
   imagePullPolicy: Always
   env: []

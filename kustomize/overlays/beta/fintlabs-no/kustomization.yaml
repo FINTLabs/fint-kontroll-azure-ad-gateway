@@ -14,6 +14,9 @@ commonLabels:
 patches:
   - patch: |-
       - op: replace
+        path: "/spec/orgId"
+        value: "fintlabs.no"
+      - op: replace
         path: "/spec/kafka/acls/0/topic"
         value: "fintlabs-no.kontroll.entity.azure*"
       - op: replace
