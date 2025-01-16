@@ -40,9 +40,12 @@ AzureClient {
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final FintCache<String, Optional> resourceGroupMembershipCache;
-    private final ExecutorService executor = Executors.newFixedThreadPool(4);
+    private final FintCache<String, AzureGroup> azureGroupCache;
+    private final Set<String> azureGroupMembershipCache;
+    private final ExecutorService executor = Executors.newFixedThreadPool(40);
     private String deltaLinkCache;
     private AtomicInteger numMembers;
+    private AtomicInteger groupCounter;
     private Set<String> processedGroupIds;
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
@@ -50,6 +53,8 @@ AzureClient {
         deltaLinkCache = null;
         entraIdUserCache.clear();
         entraIdExternalUserCache.clear();
+        azureGroupCache.clear();
+        azureGroupMembershipCache.clear();
             log.info("Delta caches for group and user has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
         }
 
@@ -146,16 +151,22 @@ AzureClient {
             if(changedUsers.get() > 0) {
                 log.info("*** <<< Found total {} users in Entra ID. {} published to Kafka >>> ***", users.get(), changedUsers.get());
             }
+            else {
+                log.info("*** <<< No changes since last call on users from graph >>> ***");
+            }
             if (changedExtUsers.get() > 0) {
                 log.info("*** <<< Of the total, there are {} users of type External users in Entra ID >>> ***", changedExtUsers.get());
+            }
+            else {
+                log.info("*** <<< No changes on external users since last call on users from graph >>> ***");
             }
         }
     }
 
-    @Scheduled(
-            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.initial-delay-ms}",
-            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.delta-delay-ms}"
-    )
+//    @Scheduled(
+//            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.initial-delay-ms}",
+//            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.delta-delay-ms}"
+//    )
     public void pullAllGroupsDelta() {
         log.info("*** <<< Fetching groups and members using delta call from Microsoft Graph >>> ***");
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
@@ -244,7 +255,7 @@ AzureClient {
 
                                 if(processedGroupIds.add(groupId)) {
                                     AzureGroup newGroup = new AzureGroup(group, configGroup);
-                                    azureGroupProducerService.publish(newGroup);
+                                    azureGroupProducerService.processGroup(newGroup);
                                 }
 
                                 log.debug("Processing members for group: {}", group.getDisplayName());
@@ -282,7 +293,8 @@ AzureClient {
 
                 String kafkaKey = group.getId() + "_" + memberId;
                 if (untypedMember.getValue().containsKey("@removed")) {
-                    azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
+                    azureGroupMembershipProducerService.processMembership("removed", new AzureGroupMembership(memberId,group.getId(),kafkaKey));
+                    //azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
                     resourceGroupMembershipCache.remove(kafkaKey);
                     log.debug("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
                     if(deltaLinkCache != null) {
@@ -290,7 +302,8 @@ AzureClient {
                     }
                     continue;
                 }
-                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
+                azureGroupMembershipProducerService.processMembership("add", new AzureGroupMembership(memberId,group.getId(),kafkaKey));
+                //azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
                 if(deltaLinkCache != null) {
@@ -304,13 +317,15 @@ AzureClient {
     }
 
 //  TODO: Consider if this is needed
-    /*@Scheduled(
+    @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
             fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
-    )*/
+    )
     public void pullAllGroupsAsync() {
         log.info("*** <<< Fetching groups from Microsoft Graph >>> ***");
         long startTime = System.currentTimeMillis();
+        numMembers = new AtomicInteger(0);
+        groupCounter = new AtomicInteger(0);
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
 
         CompletableFuture.supplyAsync(() -> {
@@ -329,7 +344,7 @@ AzureClient {
             long elapsedTimeInSeconds = (endTime - startTime) / 1000;
             long minutes = elapsedTimeInSeconds / 60;
             long seconds = elapsedTimeInSeconds % 60;
-            log.info("*** <<< {} groups processed in {} minutes and {} seconds. Continuing processing memberships >>> ***", allGroups.size(), minutes, seconds);
+            log.info("*** <<< {} groups with suffix \"{}\" processed in {} minutes and {} seconds. Continuing processing memberships >>> ***", groupCounter, configGroup.getSuffix(), minutes, seconds);
             fetchAndPublishMembersForAllGroupsAsync(allGroups);
 
         }).exceptionally(ex -> {
@@ -340,33 +355,44 @@ AzureClient {
             long elapsedTimeInSeconds = (endTime - startTime) / 1000;
             long minutes = elapsedTimeInSeconds / 60;
             long seconds = elapsedTimeInSeconds % 60;
-            log.info("*** <<< Done processing groups and memberships in {} minutes and {} seconds >>> ***", minutes, seconds);
+            log.info("*** <<< Done processing memberships in {} minutes and {} seconds >>> ***", minutes, seconds);
+
+            if (numMembers.get() > 0) {
+                log.info("*** <<< {} Entra group memberships published to kafka as they were not in membership cache >>> ***", numMembers.get());
+            } else {
+                log.info("*** <<< All entra group members already in cache. No members published to kafka >>> ***");
+            }
         }).join();
     }
 
     private List<AzureGroup> pageThroughGroups(GroupCollectionResponse groupPage) throws ReflectiveOperationException {
         List<AzureGroup> allGroups = new ArrayList<>();
-        AtomicInteger groupCounter = new AtomicInteger(0);
 
         PageIterator<Group, GroupCollectionResponse> pageIterator = new PageIterator.Builder<Group, GroupCollectionResponse>()
                 .client(graphServiceClient)
                 .collectionPage(groupPage)
                 .collectionPageFactory(GroupCollectionResponse::createFromDiscriminatorValue)
-                .processPageItemCallback(group -> {
-                    if (group.getDisplayName() != null && group.getDisplayName().endsWith(configGroup.getSuffix())
-                            && (!group.getAdditionalData().isEmpty() && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute()))) {
-                        groupCounter.getAndIncrement();
-                        AzureGroup newGroup = new AzureGroup(group, configGroup);
-                        azureGroupProducerService.publish(newGroup);
+                .processPageItemCallback(group -> group.getDisplayName() != null && group.getDisplayName().endsWith(configGroup.getSuffix())
+                && (!group.getAdditionalData().isEmpty() && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute())))
+                .processPageItemCallback(group ->
+                {
+                    AzureGroup newGroup = new AzureGroup(group, configGroup);
+                    if (azureGroupCache != null
+                            && azureGroupCache.containsKey(newGroup.getId())
+                            && newGroup.equals(azureGroupCache.get(newGroup.getId()))) {
+                        log.debug("{} groupID allready published and in cache. Not replublished to kafka", newGroup.getId());
+                    } else {
+                        groupCounter.incrementAndGet();
+                        azureGroupProducerService.processGroup(newGroup);  // Publish the group as soon as it is found
+                        azureGroupCache.put(newGroup.getId(), newGroup);
                         allGroups.add(newGroup);
                     }
-                    return true;
-                }).build();
+
+                return true;
+
+        }).build();
 
         pageIterator.iterate();
-
-        log.info("*** <<< Found {} groups with suffix \"{}\" >>> ***", groupCounter.get(), configGroup.getSuffix());
-
         return allGroups;
     }
 
@@ -400,11 +426,11 @@ AzureClient {
 
     private CompletableFuture<Void> pageThroughAzureGroupAsync(AzureGroup azureGroup,
                                                                DirectoryObjectCollectionResponse inPage) {
-        AtomicInteger membersCount = new AtomicInteger(0);
+        AtomicInteger membersPerGroupCount = new AtomicInteger(0);
 
-        return processPageAsync(azureGroup, inPage, membersCount)
+        return processPageAsync(azureGroup, inPage, membersPerGroupCount)
                 .thenRun(() -> log.debug("{} memberships detected in groupName \"{}\" with groupId {}",
-                        membersCount.get(), azureGroup.getDisplayName(), azureGroup.getId()));
+                        membersPerGroupCount.get(), azureGroup.getDisplayName(), azureGroup.getId()));
     }
 
     private CompletableFuture<Void> processPageAsync(AzureGroup azureGroup,
@@ -414,10 +440,20 @@ AzureClient {
         }
 
         page.getValue().forEach(member -> {
-            membersCount.incrementAndGet();
-            log.debug("Processing member with UserID: {}", member.getId());
-            azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(azureGroup.getId(), member));
-            log.info("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
+            AzureGroupMembership azureGroupMembership = new AzureGroupMembership(azureGroup.getId(), member);
+            if(azureGroupMembershipCache != null
+                    && azureGroupMembershipCache.contains(azureGroupMembership.getId()))
+            {
+                log.debug("Skipping message to Kafka, as userId: {} is allready published as member of groupId: {}", member.getId(), azureGroup.getId());
+            }
+            else {
+                azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
+                azureGroupMembershipCache.add(azureGroupMembership.getId());
+                membersCount.getAndIncrement();
+                numMembers.getAndIncrement();
+                log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
+            }
+
         });
 
         if (page.getOdataNextLink() != null) {
@@ -496,7 +532,7 @@ AzureClient {
 
                     if (createdGroup != null) {
                         log.info("Added Group to Azure: {}", createdGroup.getDisplayName());
-                        azureGroupProducerService.publish(new AzureGroup(createdGroup, configGroup));
+                        azureGroupProducerService.processGroup(new AzureGroup(createdGroup, configGroup));
                     }
                 } catch (ApiException e) {
 
@@ -581,7 +617,7 @@ AzureClient {
 
                     log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
 
-                    azureGroupMembershipProducerService.publishAddedMembership(
+                    azureGroupMembershipProducerService.processMembership("added",
                             new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
 
                     log.debug("Produced message to Kafka on added UserId {} to GroupId {}",
@@ -590,7 +626,7 @@ AzureClient {
                 } catch (ApiException e) {
                     if (e.getResponseStatusCode() == 400) {
                         if (e.getMessage().contains("object references already exist")) {
-                            azureGroupMembershipProducerService.publishAddedMembership(
+                            azureGroupMembershipProducerService.processMembership("added",
                                     new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
 
                             log.debug("Republished to Kafka, UserId {} already added to GroupId {}",
