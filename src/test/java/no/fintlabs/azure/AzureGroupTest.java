@@ -4,7 +4,6 @@ package no.fintlabs.azure;
 import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.Group;
 
-import groovy.util.logging.Slf4j;
 import no.fintlabs.ConfigGroup;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
@@ -16,7 +15,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 
-@Slf4j
 @ExtendWith(MockitoExtension.class)
 class AzureGroupTest {
     @Mock

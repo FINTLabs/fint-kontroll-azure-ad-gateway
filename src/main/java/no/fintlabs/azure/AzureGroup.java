@@ -4,6 +4,8 @@ import com.microsoft.graph.requests.ExtensionCollectionPage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
 import com.microsoft.graph.models.Group;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,7 +27,6 @@ public class AzureGroup {
 
         this.id = group.id;
         this.displayName = group.displayName;
-        //this.members = new ArrayList<>();
 
         //TODO: Implement tests to verify ResourceID as LONG from kafka [FKS-216]
         if (!group.additionalDataManager().isEmpty() && group.additionalDataManager().containsKey(configGroup.getFintkontrollidattribute()))
@@ -37,6 +38,21 @@ public class AzureGroup {
                 throw e;
             }
         }
+
+
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true; // If the references are the same
+        if (o == null || getClass() != o.getClass()) return false; // Check type compatibility
+        AzureGroup azureGroup = (AzureGroup) o; // Cast and compare
+        return Objects.equals(id, azureGroup.id) &&
+                Objects.equals(displayName, azureGroup.displayName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, displayName);
     }
 }
 
