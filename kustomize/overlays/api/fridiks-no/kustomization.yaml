@@ -1,50 +1,50 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: afk-no
+namespace: fridiks-no
 resources:
   - ../../../base
 commonLabels:
   app.kubernetes.io/name: fint-kontroll-azure-ad-gateway
-  app.kubernetes.io/instance: fint-kontroll-azure-ad-gateway_afk-no
+  app.kubernetes.io/instance: fint-kontroll-azure-ad-gateway_fridiks-no
   app.kubernetes.io/version: latest
   app.kubernetes.io/component: backend
   app.kubernetes.io/part-of: fint-kontroll
   fintlabs.no/team: bas
-  fintlabs.no/org-id: afk.no
+  fintlabs.no/org-id: fridiks.no
 patches:
   - patch: |-
       - op: replace
         path: "/spec/orgId"
-        value: "afk.no"
+        value: "fridiks.no"
       - op: replace
         path: "/spec/kafka/acls/0/topic"
-        value: "afk-no.kontroll.entity.azure*"
+        value: "fridiks-no.kontroll.entity.azure*"
       - op: replace
         path: "/spec/kafka/acls/1/topic"
-        value: "afk-no.kontroll.entity.azure*"
+        value: "fridiks-no.kontroll.entity.azure*"
       - op: replace
         path: "/spec/kafka/acls/2/topic"
-        value: "afk-no.kontroll.entity.resource-group*"
+        value: "fridiks-no.kontroll.entity.resource-group*"
       - op: add
         path: "/spec/resources"
-        value:
+        value: 
           limits:
-            memory: "8Gi"
+            memory: "2Gi"
           requests:
             cpu: "500m"
-            memory: "6Gi"
+            memory: "1Gi"
       - op: add
         path: "/spec/env/0"
         value:
           name: "JAVA_TOOL_OPTIONS"
-          value: "-XX:+ExitOnOutOfMemoryError -Xmx5824m"
+          value: "-XX:+ExitOnOutOfMemoryError -Xmx2048m"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
   - patch: |-
       - op: replace
         path: "/spec/itemPath"
-        value: "vaults/aks-api-vault/items/kontroll-afk-azure-ad-gateway"
+        value: "vaults/aks-api-vault/items/kontroll-frid-iks-azure-ad-gateway"
     target:
       kind: OnePasswordItem
       name: fint-kontroll-azure-ad-gateway
