@@ -36,6 +36,7 @@ public class ConfigUser {
     private String studentidattribute;
     private String externaluserattribute;
     private String externaluservalue;
+    private Boolean enableExternalUsers;
     public List<String> AllAttributes(){
         List<String> AllAttribs = new ArrayList<>();
         AllAttribs.add(this.getStudentidattribute());
