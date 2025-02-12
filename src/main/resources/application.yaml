@@ -30,6 +30,7 @@ fint:
         studentidattribute: onPremisesExtensionAttributes.extensionAttribute9
         mainorgunitidattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitId
         mainorgunitnameattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitName
+        enableexternalusers: false
         externaluserattribute: onPremisesExtensionAttributes.extensionAttribute11
         externaluservalue: novari
         userpagingsize: 999
