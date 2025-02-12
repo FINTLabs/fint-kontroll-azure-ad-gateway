@@ -106,7 +106,7 @@ AzureClient {
                     }
 
                     String externalUserAttribute = AzureUser.getAttributeValue(user, configUser.getExternaluserattribute());
-                    if (externalUserAttribute != null
+                    if (configUser.getEnableExternalUsers() && externalUserAttribute != null
                             && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
                         AzureUserExternal entraUserExtObject = new AzureUserExternal(user, configUser);
                         if (entraIdExternalUserCache != null &&
