@@ -37,7 +37,13 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-    implementation 'io.netty:netty-resolver-dns-native-macos:4.1.90.Final:osx-aarch_64'
+    implementation 'io.netty:netty-resolver-dns-native-macos:4.1.113.Final:osx-aarch_64'
+    implementation "io.netty:netty-common:4.1.118.final"
+    implementation "org.xmlunit:xmlunit-core:2.10.0"
+    implementation "org.springframework:spring-webflux:6.1.14"
+    implementation "org.springframework:spring-webmvc:6.1.14"
+    implementation "org.springframework:spring-context:6.1.14"
+    implementation "org.apache.tomcat.embed:tomcat-embed-core:11.0.2"
 
     implementation 'com.azure:azure-identity:1.13.2'
     implementation 'com.microsoft.graph:microsoft-graph:6.15.0'
