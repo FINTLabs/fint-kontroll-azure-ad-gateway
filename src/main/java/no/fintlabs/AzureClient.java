@@ -650,18 +650,23 @@ public class AzureClient {
             try {
                 DirectoryObjectCollectionReferenceRequestBuilder references = graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references();
 
-                if(references == null) {
+                if (references == null) {
                     log.error("Member references is null for group {}", resourceGroupMembership.getAzureGroupRef());
                     return;
                 }
 
-                references
-                        .buildRequest()
+                if (azureGroupMembershipCache.containsKey(resourceGroupMembershipKey)) {
+                    log.info("Membership already in EntraID {}", resourceGroupMembershipKey);
+                    return;
+                }
+
+                references.buildRequest()
                         .postAsync(directoryObject)
                         .thenAccept(acceptedMember -> {
                             log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                             azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
                             log.info("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                            azureGroupMembershipCache.put(resourceGroupMembershipKey, new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
                         });
             } catch (GraphServiceException e) {
                 // Handle the HTTP response exception here
@@ -719,6 +724,9 @@ public class AzureClient {
                     .deleteAsync()
                     .thenAccept(deletedGroup -> {
                         log.info("UserId: {} removed from GroupId: {}", user, group);
+                        if(azureGroupMembershipCache.containsKey(resourceGroupMembershipKey)){
+                            azureGroupMembershipCache.remove(resourceGroupMembershipKey);
+                        }
                         azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
                         log.info("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
                     });
