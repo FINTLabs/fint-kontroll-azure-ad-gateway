@@ -11,6 +11,7 @@ import com.microsoft.graph.models.Group;
 import com.microsoft.graph.requests.*;
 import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
+import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import okhttp3.Request;
@@ -40,6 +41,9 @@ class AzureClientTest {
     private CompletableFuture<GroupCollectionPage> groupCollectionPageFuture;
     @Mock
     private GroupCollectionRequestBuilder groupCollectionRequestBuilder;
+
+    @Mock
+    private FintCache<String, AzureGroupMembership> azureGroupMembershipCache;
 
     @Mock
     private ConfigGroup configGroup;
@@ -294,6 +298,7 @@ class AzureClientTest {
          when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
          when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
          when(directoryObjectCollectionReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
+         when(azureGroupMembershipCache.containsKey(anyString())).thenReturn(false);
 
          // Create a mock DirectoryObject
          DirectoryObject mockDirectoryObject = new DirectoryObject();
