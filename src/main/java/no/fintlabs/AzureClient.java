@@ -195,6 +195,7 @@ public class AzureClient {
         } else {
             log.info("*** <<< All entra group members already in cache. No members published to kafka >>> ***");
         }
+
     }
 
 
@@ -287,7 +288,7 @@ public class AzureClient {
                             && azureGroupMembershipCache.containsKey(azureGroupMembership.getId())
                             && azureGroupMembership.equals(azureGroupMembershipCache.get(azureGroupMembership.getId())))
                     {
-                        log.debug("Skipping message to Kafka, as userId: {} is allready published as member of groupId: {}", member.id, azureGroup.getId());
+                        log.debug("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.id, azureGroup.getId());
                     }
                     else {
                         azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
@@ -657,6 +658,8 @@ public class AzureClient {
 
                 if (azureGroupMembershipCache.containsKey(resourceGroupMembershipKey)) {
                     log.info("Membership already in EntraID {}", resourceGroupMembershipKey);
+                    azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                    log.info("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                     return;
                 }
 
