@@ -100,7 +100,7 @@ AzureClient {
                             entraIdUserCache.containsKey(user.getId())) {
                         AzureUser entraIdUserObject = new AzureUser(user, configUser);
                         if (entraIdUserObject.equals(entraIdUserCache.get(user.getId()))) {
-                            log.debug("User {} is unchanged. Skipping publishing to Kafka.", user.getId());
+                            log.info("User {} is unchanged from Entra Cache. Skipping publishing to Kafka.", user.getId());
                             return true;
                         }
                     }
@@ -111,11 +111,11 @@ AzureClient {
                         AzureUserExternal entraUserExtObject = new AzureUserExternal(user, configUser);
                         if (entraIdExternalUserCache != null &&
                                 entraIdExternalUserCache.containsKey(user.getId()) && entraUserExtObject.equals(entraIdExternalUserCache.get(user.getId()))) {
-                            log.debug("External User {} is unchanged. Skipping publishing to Kafka.", user.getId());
+                            log.info("External User {} is unchanged. Skipping publishing to Kafka.", user.getId());
                             return true;
                         }
                         else {
-                            log.debug("Publishing external user to Kafka: {}", user.getUserPrincipalName());
+                            log.info("Publishing external user to Kafka: {}", user.getUserPrincipalName());
                             azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
                             changedExtUsers.getAndIncrement();
                             entraIdExternalUserCache.put(user.getId(), new AzureUserExternal(user, configUser));
@@ -124,13 +124,13 @@ AzureClient {
                         AzureUser azureuser = new AzureUser(user, configUser);
                         if ((azureuser.getEmployeeId() != null && !azureuser.getEmployeeId().isEmpty()) ||
                                 (azureuser.getStudentId() != null && !azureuser.getStudentId().isEmpty())) {
-                            log.debug("Publishing user to Kafka: {}", user.getUserPrincipalName());
+                            log.info("Publishing user to Kafka: {}", user.getUserPrincipalName());
                             azureUserProducerService.publish(azureuser);
-                            log.debug("Updating cache for user: {}", user.getId());
+                            log.info("Updating cache for user: {}", user.getId());
                             changedUsers.getAndIncrement();
                             entraIdUserCache.put(user.getId(), azureuser);
                         } else {
-                            log.debug("UserId: {} does not contain required employeeId or studentId. Not published to kafka", user.getId());
+                            log.warn("UserId: {} does not contain required employeeId or studentId. Not published to kafka", user.getId());
                         }
                     }
                     return true;
@@ -235,7 +235,7 @@ AzureClient {
             log.info("*** <<< Initial Delta run on Groups completed >>> ***");
         }
         deltaLinkCache = groupPage.getOdataDeltaLink();
-        log.debug("Delta link updated in deltaLinkCache");
+        log.info("Delta link updated in deltaLinkCache. Finished pullAllGroupsDelta");
     }
 
     private void deltaPageIterator(DeltaGetResponse groupPage) throws ReflectiveOperationException {
@@ -258,10 +258,10 @@ AzureClient {
                                     azureGroupProducerService.processGroup(newGroup);
                                 }
 
-                                log.debug("Processing members for group: {}", group.getDisplayName());
+                                log.info("Processing members for group: {}", group.getDisplayName());
                                 processMembersDelta(group);
                             } else {
-                                log.debug("Skipping group: {} due to missing suffix or attributes", groupId);
+                                log.warn("Skipping group: {} due to missing suffix or attributes", groupId);
                             }
                         } else {
                             log.debug("Group {} already processed in this page", groupId);
@@ -296,7 +296,7 @@ AzureClient {
                     azureGroupMembershipProducerService.processMembership("removed", new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                     //azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
                     resourceGroupMembershipCache.remove(kafkaKey);
-                    log.debug("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
+                    log.info("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
                     if(deltaLinkCache != null) {
                         log.info("UserId: {} is removed as member from GroupId: {}", memberId, group.getId());
                     }
@@ -305,7 +305,7 @@ AzureClient {
                 azureGroupMembershipProducerService.processMembership("add", new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 //azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 numMembers.getAndIncrement();
-                log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
+                log.info("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
                 if(deltaLinkCache != null) {
                     log.info("UserId: {} is member of GroupId: {}", memberId, group.getId());
                 }
@@ -380,7 +380,7 @@ AzureClient {
                     if (azureGroupCache != null
                             && azureGroupCache.containsKey(newGroup.getId())
                             && newGroup.equals(azureGroupCache.get(newGroup.getId()))) {
-                        log.debug("{} groupID allready published and in cache. Not replublished to kafka", newGroup.getId());
+                        log.info("{} groupID allready published and in cache. Not replublished to kafka", newGroup.getId());
                     } else {
                         groupCounter.incrementAndGet();
                         azureGroupProducerService.processGroup(newGroup);  // Publish the group as soon as it is found
@@ -429,7 +429,7 @@ AzureClient {
         AtomicInteger membersPerGroupCount = new AtomicInteger(0);
 
         return processPageAsync(azureGroup, inPage, membersPerGroupCount)
-                .thenRun(() -> log.debug("{} memberships detected in groupName \"{}\" with groupId {}",
+                .thenRun(() -> log.info("{} memberships detected in groupName \"{}\" with groupId {}",
                         membersPerGroupCount.get(), azureGroup.getDisplayName(), azureGroup.getId()));
     }
 
@@ -444,14 +444,14 @@ AzureClient {
             if(azureGroupMembershipCache != null
                     && azureGroupMembershipCache.contains(azureGroupMembership.getId()))
             {
-                log.debug("Skipping message to Kafka, as userId: {} is allready published as member of groupId: {}", member.getId(), azureGroup.getId());
+                log.info("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.getId(), azureGroup.getId());
             }
             else {
                 azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
                 azureGroupMembershipCache.add(azureGroupMembership.getId());
                 membersCount.getAndIncrement();
                 numMembers.getAndIncrement();
-                log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
+                log.info("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
             }
 
         });
@@ -620,7 +620,7 @@ AzureClient {
                     azureGroupMembershipProducerService.processMembership("added",
                             new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
 
-                    log.debug("Produced message to Kafka on added UserId {} to GroupId {}",
+                    log.info("Produced message to Kafka on added UserId {} to GroupId {}",
                             resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
 
                 } catch (ApiException e) {
@@ -629,7 +629,7 @@ AzureClient {
                             azureGroupMembershipProducerService.processMembership("added",
                                     new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
 
-                            log.debug("Republished to Kafka, UserId {} already added to GroupId {}",
+                            log.info("Republished to Kafka, UserId {} already added to GroupId {}",
                                     resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                             return;
                         }
@@ -673,7 +673,7 @@ AzureClient {
 
         CompletableFuture.runAsync(() -> {
             try {
-                log.debug("Trying to remove UserId: {} from GroupId: {} in Graph", userId, groupId);
+                log.info("Trying to remove UserId: {} from GroupId: {} in Graph", userId, groupId);
 
                 // Asynchronously delete the user from the group
                 graphServiceClient.groups()
@@ -688,7 +688,7 @@ AzureClient {
                 // Publish to Kafka after removal
                 azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
                 resourceGroupMembershipCache.remove(resourceGroupMembershipKey);
-                log.debug("Produced message to Kafka on deleted UserId: {} from GroupId: {}", userId, groupId);
+                log.info("Produced message to Kafka on deleted UserId: {} from GroupId: {}", userId, groupId);
 
             } catch (ApiException e) {
                 if (e.getResponseStatusCode() == 404) {
@@ -697,7 +697,7 @@ AzureClient {
                     // Publish to Kafka if the user is not found
                     azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
                     resourceGroupMembershipCache.remove(resourceGroupMembershipKey);
-                    log.debug("Produced message to Kafka on deleted UserId: {} from GroupId: {}", userId, groupId);
+                    log.warn("Produced message to Kafka on deleted UserId: {} from GroupId: {} as user not found in group", userId, groupId);
 
                 } else {
                     log.error("HTTP Error while trying to remove user {} from group {}. Exception: {} \r{}",
