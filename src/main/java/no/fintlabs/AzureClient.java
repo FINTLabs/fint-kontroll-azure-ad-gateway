@@ -705,15 +705,23 @@ public class AzureClient {
         try {
             log.debug("trying to remove UserId: {} from GroupId: {} in Graph", user, group);
 
-            graphService.groups(group)
+            DirectoryObjectReferenceRequestBuilder reference = graphService.groups(group)
                     .members(user)
-                    .reference()
-                    .buildRequest()
-                    .deleteAsync();
+                    .reference();
 
-            log.info("UserId: {} removed from GroupId: {}", user, group);
-            azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
-            log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
+            if(reference == null) {
+                log.error("Member reference is null for group {}", group);
+                return;
+            }
+
+            reference
+                    .buildRequest()
+                    .deleteAsync()
+                    .thenAccept(deletedGroup -> {
+                        log.info("UserId: {} removed from GroupId: {}", user, group);
+                        azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
+                        log.info("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
+                    });
         } catch (GraphServiceException e) {
             if(e.getResponseCode() == 404)
             {
