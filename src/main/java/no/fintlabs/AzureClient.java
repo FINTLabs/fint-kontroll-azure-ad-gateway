@@ -651,10 +651,11 @@ public class AzureClient {
                 graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references()
                         .buildRequest()
                         .postAsync(directoryObject)
-                        .thenAccept(acceptedMember -> log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef()));
-
-                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-                log.info("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                        .thenAccept(acceptedMember -> {
+                            log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                            azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                            log.info("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                        });
             } catch (GraphServiceException e) {
                 // Handle the HTTP response exception here
                 if (e.getResponseCode() == 400) {
@@ -676,10 +677,11 @@ public class AzureClient {
                     log.warn("Throttling limit. Error: {}", e.getError().error.message);
                 }
                 else {
-
                     // Handle other HTTP errors
                     log.error("HTTP Error while updating group {}: {} \r", resourceGroupMembership.getAzureGroupRef(), e.getError().error.message);
                 }
+            } catch (Exception e) {
+                log.error("Failed to process addGroupMembership for resourceGroupId {}: {}", resourceGroupMembership.getAzureGroupRef(), e);
             }
         }
     }
