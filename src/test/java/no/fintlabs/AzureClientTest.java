@@ -281,9 +281,10 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        assertThrows(NullPointerException.class,
-                () -> azureClient.addGroupMembership(resourceGroupMembership, kafkaKey)
-        );
+
+        azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+
+        verify(directoryObjectCollectionWithReferencesRequestBuilder, times(1)).references();
     }
 
      @Test

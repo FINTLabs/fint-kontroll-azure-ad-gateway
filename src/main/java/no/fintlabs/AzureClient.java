@@ -648,7 +648,14 @@ public class AzureClient {
             directoryObject.id = resourceGroupMembership.getAzureUserRef();
 
             try {
-                graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references()
+                DirectoryObjectCollectionReferenceRequestBuilder references = graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references();
+
+                if(references == null) {
+                    log.error("Member references is null for group {}", resourceGroupMembership.getAzureGroupRef());
+                    return;
+                }
+
+                references
                         .buildRequest()
                         .postAsync(directoryObject)
                         .thenAccept(acceptedMember -> {
