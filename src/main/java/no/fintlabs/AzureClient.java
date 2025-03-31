@@ -679,12 +679,11 @@ public class AzureClient {
                         log.info("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }
-                    if(e.getError().error.code.contains("Request_ResourceNotFound")){
-                        log.warn("AzureGroupRef is not correct on user ObjectId {} and group ObjectId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                    if(e.getError().error.message.contains("ResourceNotFound")){
+                        log.warn("Unknown user ObjectId: {} or group ObjectId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }
 
-                    // Handle the 400 Bad Request error
                     log.warn("Bad request: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                     log.warn(e.getError().error.message);
                 }
