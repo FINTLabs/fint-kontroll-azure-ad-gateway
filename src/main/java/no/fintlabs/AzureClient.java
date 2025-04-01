@@ -679,12 +679,12 @@ public class AzureClient {
                         log.info("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }
-                    if(e.getError().error.message.contains("ResourceNotFound")){
+                    if(e.getError().error.message.contains("does not exist")){
                         log.warn("Unknown user ObjectId: {} or group ObjectId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }
 
-                    log.warn("Bad request: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                    log.warn("Bad request:  user ObjectId: {}, group ObjectId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                     log.warn(e.getError().error.message);
                 }
                 if (e.getResponseCode() == 429) {
@@ -692,7 +692,7 @@ public class AzureClient {
                 }
                 else {
                     // Handle other HTTP errors
-                    log.error("HTTP Error while updating group {}: {} \r", resourceGroupMembership.getAzureGroupRef(), e.getError().error.message);
+                    log.error("HTTP Error while updating groupID: {}. Error: {} \r", resourceGroupMembership.getAzureGroupRef(), e.getError().error.message);
                 }
             } catch (Exception e) {
                 log.error("Failed to process addGroupMembership for resourceGroupId {}: {}", resourceGroupMembership.getAzureGroupRef(), e);
