@@ -163,41 +163,36 @@ public class AzureClient {
                     .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
                     .getAsync();
 
-            initialPageFuture.thenCompose(this::fetchAllGroups)
-                    .thenCompose(groups -> {
+            List<Group> allGroups = initialPageFuture
+                    .thenCompose(this::fetchAllGroups)
+                    .thenApply(groups -> {
                         long groupFetchEndTime = System.currentTimeMillis();
-                        long groupFetchElapsedTimeInSeconds = (groupFetchEndTime - startTime) / 1000;
-                        long groupFetchMinutes = groupFetchElapsedTimeInSeconds / 60;
-                        long groupFetchSeconds = groupFetchElapsedTimeInSeconds % 60;
-                        log.info("*** <<< Done fetching all groups from Microsoft Entra ID in {} minutes and {} seconds >>> ***", groupFetchMinutes, groupFetchSeconds);
-
-                        log.info("*** <<< Fetching group memberships from Microsoft Entra >>> ***");
-                        long memberFetchStartTime = System.currentTimeMillis();
-                        return fetchMembersForAllGroups(groups).thenApply(groupCount -> {
-                            long memberFetchEndTime = System.currentTimeMillis();
-                            long memberFetchElapsedTimeInSeconds = (memberFetchEndTime - memberFetchStartTime) / 1000;
-                            long memberFetchMinutes = memberFetchElapsedTimeInSeconds / 60;
-                            long memberFetchSeconds = memberFetchElapsedTimeInSeconds % 60;
-
-
-                            log.info("*** <<< Done fetching all group memberships from Microsoft Entra ID in {} minutes and {} seconds >>> ***", memberFetchMinutes, memberFetchSeconds);
-                            return groupCount;
-                        });
+                        long elapsed = (groupFetchEndTime - startTime) / 1000;
+                        log.info("*** <<< Done fetching all groups in {} minutes and {} seconds >>> ***", elapsed / 60, elapsed % 60);
+                        return groups;
                     })
-                    //.thenAccept(groupCount -> log.info("{} Group objects fetched from Microsoft Entra ID with suffix {}", groupCount, configGroup.getSuffix()))
-                    .join();  // Wait for completion
+                    .join();
+
+            log.info("*** <<< Fetching group memberships from Microsoft Entra >>> ***");
+            long memberFetchStartTime = System.currentTimeMillis();
+            fetchMembersForAllGroups(allGroups)
+                    .thenAccept(groupCount -> {
+                        long memberFetchEndTime = System.currentTimeMillis();
+                        long elapsed = (memberFetchEndTime - memberFetchStartTime) / 1000;
+                        log.info("*** <<< Done fetching all group memberships in {} minutes and {} seconds >>> ***", elapsed / 60, elapsed % 60);
+                    })
+                    .join();
 
         } catch (ClientException e) {
             log.error("Failed when trying to get groups. ", e);
         }
+
         if (publishedMembers.get() > 0) {
             log.info("*** <<< {} Entra group members published to kafka as they were not in membership cache >>> ***", publishedMembers.get());
         } else {
-            log.info("*** <<< All entra group members already in cache. No members published to kafka >>> ***");
+            log.info("*** <<< All Entra group members already in cache. No members published to kafka >>> ***");
         }
-
     }
-
 
     private CompletableFuture<List<Group>> fetchAllGroups(GroupCollectionPage initialPage) {
         List<Group> allGroups = new ArrayList<>();
@@ -547,18 +542,17 @@ public class AzureClient {
                 JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
 
                 if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
-                    return true; // Group with the specified ResourceID found
+                    return true;
                 }
             }
 
-            // Move to the next page if available
             groupCollectionPage = groupCollectionPage.getNextPage() == null ? null :
                     groupCollectionPage.getNextPage()
                             .buildRequest()
                             .get();
         }
 
-        return false; // Group with resourceID not found
+        return false;
     }
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
