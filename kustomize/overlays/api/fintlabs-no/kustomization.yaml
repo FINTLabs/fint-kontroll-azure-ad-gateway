@@ -15,16 +15,16 @@ patches:
   - patch: |-
       - op: replace
         path: "/spec/orgId"
-        value: "vigo.no"
+        value: "fintlabs.no"
       - op: replace
         path: "/spec/kafka/acls/0/topic"
-        value: "vigo-no.kontroll.entity.azure*"
+        value: "fintlabs-no.kontroll.entity.azure*"
       - op: replace
         path: "/spec/kafka/acls/1/topic"
-        value: "vigo-no.kontroll.entity.azure*"
+        value: "fintlabs-no.kontroll.entity.azure*"
       - op: replace
         path: "/spec/kafka/acls/2/topic"
-        value: "vigo-no.kontroll.entity.resource-group*"
+        value: "fintlabs-no.kontroll.entity.resource-group*"
       - op: add
         path: "/spec/resources"
         value: 
@@ -42,7 +42,7 @@ patches:
         path: "/spec/env/1"
         value:
           name: "fint.org-id"
-          value: "vigo.no"
+          value: "fintlabs.no"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
