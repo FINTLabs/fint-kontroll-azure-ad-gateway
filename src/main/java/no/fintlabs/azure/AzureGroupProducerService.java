@@ -1,7 +1,6 @@
 package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.producing.ParameterizedTemplateFactory;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
 import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
@@ -13,11 +12,8 @@ import no.fintlabs.kafka.topic.configuration.EntityTopicConfiguration;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
-
 import java.time.Duration;
-import java.util.Optional;
+
 
 @Service
 @Slf4j
@@ -25,7 +21,7 @@ public class AzureGroupProducerService {
 
     private final ParameterizedTemplate<AzureGroup> azureGroupTemplate;
     private final EntityTopicNameParameters entityTopicNameParameters;
-    private Sinks.Many<AzureGroup> azureGroupSink;
+    private final Sinks.Many<AzureGroup> azureGroupSink;
 
     public AzureGroupProducerService (
             ParameterizedTemplateFactory parameterizedTemplateFactory,
