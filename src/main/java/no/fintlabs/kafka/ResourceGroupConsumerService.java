@@ -13,7 +13,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.stereotype.Service;
-import jakarta.annotation.PostConstruct;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
@@ -21,7 +20,6 @@ import reactor.util.function.Tuples;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -128,11 +126,7 @@ public class ResourceGroupConsumerService {
         if (resourceGroupOptional.isPresent()) {
             resourceGroup = resourceGroupOptional.get();
             boolean groupexists;
-            try {
-                groupexists = azureClient.doesGroupExist(resourceGroup.getId());
-            } catch (Exception e) {
-                throw e;
-            }
+            groupexists = azureClient.doesGroupExist(resourceGroup.getId());
             if (resourceGroup.getResourceName() != null && !groupexists) {
                 log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
                 azureClient.addGroupToAzure(resourceGroup);
@@ -157,26 +151,4 @@ public class ResourceGroupConsumerService {
         }
         log.debug("Stopping updateAzure function {}.", randomUUID);
     }
-
-//    public void processEntity(ResourceGroup resourceGroup, String kafkaKey) {
-//        synchronized (resourceGroupCache) {
-//            // Check resourceGroupCache if object is known from before
-//            if (resourceGroupCache.containsKey(kafkaKey)) {
-//                Optional<ResourceGroup> fromCache = resourceGroupCache.get(kafkaKey);
-//                // Detect if cache contains deletion of resourceGroup from before
-//                if (fromCache.isEmpty() && resourceGroup == null) {
-//                    log.debug("Skip processing of entity as cache already contains deleted group on resourceGroupId: {}", kafkaKey);
-//                    return;
-//                }
-//                // Detect if last entry in cache is identical to new entity
-//                if (resourceGroup != null && fromCache.isPresent() && resourceGroup.equals(fromCache.get())){
-//                    // New kafka message, but unchanged resourceGroup from last time
-//                    log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
-//                    return;
-//                }
-//            }
-//            resourceGroupCache.put(kafkaKey, Optional.ofNullable(resourceGroup));
-//            resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroup)));
-//        }
-//    }
 }
