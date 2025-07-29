@@ -819,6 +819,9 @@ class AzureClientTest {
         UserCollectionResponse firstPage = new UserCollectionResponse();
         firstPage.setValue(userList);
         when(usersRequestBuilder.get(any())).thenReturn(firstPage);
+        when(configUser.getEnableExternalUsers()).thenReturn(true);
+        when(configUser.getUserpagingsize()).thenReturn(1000);
+
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser nonCachedUser = new AzureUser(user2, configUser);
@@ -834,6 +837,7 @@ class AzureClientTest {
 
 
     }
+
 
     @Test
     void makeSureAzureUserIsNotPublishedIfAzureUserGetAttributeValueIsNull()
