@@ -372,25 +372,27 @@ AzureClient {
                 .client(graphServiceClient)
                 .collectionPage(groupPage)
                 .collectionPageFactory(GroupCollectionResponse::createFromDiscriminatorValue)
-                .processPageItemCallback(group -> group.getDisplayName() != null && group.getDisplayName().endsWith(configGroup.getSuffix())
-                && (!group.getAdditionalData().isEmpty() && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute())))
-                .processPageItemCallback(group ->
-                {
+                .processPageItemCallback(group -> {
+                    boolean shouldProcess = group.getDisplayName() != null
+                            && group.getDisplayName().endsWith(configGroup.getSuffix())
+                            && group.getAdditionalData() != null
+                            && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute());
+
+                    if (!shouldProcess) return true;
+
                     AzureGroup newGroup = new AzureGroup(group, configGroup);
                     if (azureGroupCache != null
                             && azureGroupCache.containsKey(newGroup.getId())
                             && newGroup.equals(azureGroupCache.get(newGroup.getId()))) {
-                        log.info("{} groupID allready published and in cache. Not replublished to kafka", newGroup.getId());
+                        log.info("{} groupID already published and in cache. Not republished to kafka", newGroup.getId());
                     } else {
                         groupCounter.incrementAndGet();
-                        azureGroupProducerService.processGroup(newGroup);  // Publish the group as soon as it is found
+                        azureGroupProducerService.processGroup(newGroup);
                         azureGroupCache.put(newGroup.getId(), newGroup);
                         allGroups.add(newGroup);
                     }
-
-                return true;
-
-        }).build();
+                    return true;
+                }).build();
 
         pageIterator.iterate();
         return allGroups;
@@ -436,7 +438,7 @@ AzureClient {
     private CompletableFuture<Void> processPageAsync(AzureGroup azureGroup,
                                                      DirectoryObjectCollectionResponse page, AtomicInteger membersCount) {
         if (page == null) {
-            return CompletableFuture.completedFuture(null);  // If there's no page, complete immediately
+            return CompletableFuture.completedFuture(null);
         }
 
         page.getValue().forEach(member -> {
@@ -462,7 +464,7 @@ AzureClient {
                     return graphServiceClient.groups()
                             .byGroupId(azureGroup.getId())
                             .members()
-                            .withUrl(page.getOdataNextLink())  // Follow the next link
+                            .withUrl(page.getOdataNextLink())
                             .get();
                 } catch (Exception e) {
                     log.error("Error fetching next member page for group {}: {}", azureGroup.getId(), e.getMessage());
@@ -470,13 +472,13 @@ AzureClient {
                 }
             }, executor).thenCompose(nextPage -> {
                 if (nextPage != null) {
-                    return processPageAsync(azureGroup, nextPage, membersCount);  // Process the next page asynchronously
+                    return processPageAsync(azureGroup, nextPage, membersCount);
                 }
                 return CompletableFuture.completedFuture(null);
             });
         }
 
-        return CompletableFuture.completedFuture(null);  // If there's no next page, return completed future
+        return CompletableFuture.completedFuture(null);
     }
 
     public boolean doesGroupExist(String resourceGroupId) throws Exception {
@@ -498,11 +500,11 @@ AzureClient {
             String attributeValue = group.getAdditionalData().get(configGroup.getFintkontrollidattribute()).toString();
 
             if (attributeValue != null && attributeValue.equals(resourceGroupId)) {
-                return true; // Group with the specified ResourceID found
+                return true;
             }
         }
 
-        return false; // Group with resourceID not found
+        return false;
     }
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
@@ -535,14 +537,12 @@ AzureClient {
                         azureGroupProducerService.processGroup(new AzureGroup(createdGroup, configGroup));
                     }
                 } catch (ApiException e) {
-
-                    // Handling 400 Bad Request error
                     log.warn(e.getMessage());
                 }
 
             }, executor).exceptionally(ex -> {
                 log.error("Exception while adding group: {}", ex.getMessage(), ex);
-                return null; // Exceptionally should return a value
+                return null;
             });
         } else {
             log.error("addGroupToAzure cannot be completed as ResourceGroup with ID: {} does not have all required attributes set", resourceGroup.getId());
@@ -561,7 +561,6 @@ AzureClient {
                     });
         } catch (ApiException e) {
             log.error("Failed find the group in graph to be deleted using resourceGroupId {}: {}", resourceGroupId, e.getMessage());
-            // Handle the exception as necessary, such as throwing it up the stack or logging it.
         }
 
         while (groupCollectionPage != null) {
@@ -675,7 +674,6 @@ AzureClient {
             try {
                 log.info("Trying to remove UserId: {} from GroupId: {} in Graph", userId, groupId);
 
-                // Asynchronously delete the user from the group
                 graphServiceClient.groups()
                         .byGroupId(groupId)
                         .members()
@@ -685,7 +683,6 @@ AzureClient {
 
                 log.info("UserId: {} removed from GroupId: {}", userId, groupId);
 
-                // Publish to Kafka after removal
                 azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
                 resourceGroupMembershipCache.remove(resourceGroupMembershipKey);
                 log.info("Produced message to Kafka on deleted UserId: {} from GroupId: {}", userId, groupId);
@@ -694,7 +691,6 @@ AzureClient {
                 if (e.getResponseStatusCode() == 404) {
                     log.warn("User {} not found in group {}", userId, groupId);
 
-                    // Publish to Kafka if the user is not found
                     azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
                     resourceGroupMembershipCache.remove(resourceGroupMembershipKey);
                     log.warn("Produced message to Kafka on deleted UserId: {} from GroupId: {} as user not found in group", userId, groupId);
@@ -707,9 +703,8 @@ AzureClient {
                 log.error("Failed to process function deleteGroupMembership, Error: ", e);
             }
         },executor).exceptionally(ex -> {
-            // Handle any exceptions that might occur
             log.error("Exception while trying to remove user from group: {}", ex.getMessage(), ex);
-            return null; // exceptionally must return a value
+            return null;
         });
     }
 }
