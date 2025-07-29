@@ -41,9 +41,9 @@ dependencies {
     implementation("io.netty:netty-handler:4.2.3.Final")
     implementation "io.netty:netty-common"
     implementation "org.xmlunit:xmlunit-core:2.10.0"
-    implementation "org.springframework:spring-webflux:6.1.14"
-    implementation "org.springframework:spring-webmvc:6.1.14"
-    implementation "org.springframework:spring-context:6.1.14"
+    implementation "org.springframework:spring-webflux:6.2.9"
+    implementation "org.springframework:spring-webmvc:6.2.9"
+    implementation "org.springframework:spring-context:6.2.9"
     implementation "org.apache.tomcat.embed:tomcat-embed-core"
 
     implementation 'com.azure:azure-identity:1.16.3'
