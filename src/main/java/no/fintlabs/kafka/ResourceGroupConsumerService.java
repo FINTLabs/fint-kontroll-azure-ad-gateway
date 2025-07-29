@@ -9,6 +9,7 @@ import no.fintlabs.kafka.consuming.ListenerConfiguration;
 import no.fintlabs.kafka.consuming.ParameterizedListenerContainerFactoryService;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
 import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,8 @@ import reactor.util.function.Tuples;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -80,11 +83,42 @@ public class ResourceGroupConsumerService {
                 .resourceName("resource-group")
                 .topicNamePrefixParameters(topicNamePrefixParameters)
                 .build();
-        return parameterizedListenerContainerFactoryService.createRecordListenerContainerFactory(
-                        ResourceGroup.class,consumerRecord -> processEntity(
-                        consumerRecord.value(), consumerRecord.key()),
-                        listenerConfiguration)
-                .createContainer(entityTopicNameParameters);
+
+        ConcurrentMessageListenerContainer<String, ResourceGroup> container =
+                parameterizedListenerContainerFactoryService
+                        .createBatchListenerContainerFactory(
+                                ResourceGroup.class,
+                                this::processEntityBatch,
+                                listenerConfiguration)
+                        .createContainer(entityTopicNameParameters);
+        container.setAutoStartup(true);
+        return container;
+    }
+
+    public void processEntityBatch(List<ConsumerRecord<String, ResourceGroup>> records) {
+        synchronized (resourceGroupCache) {
+            for (ConsumerRecord<String, ResourceGroup> record : records) {
+                String kafkaKey = record.key();
+                ResourceGroup resourceGroup = record.value();
+
+                if (resourceGroupCache.containsKey(kafkaKey)) {
+                    Optional<ResourceGroup> fromCache = resourceGroupCache.get(kafkaKey);
+
+                    if (fromCache.isEmpty() && resourceGroup == null) {
+                        log.debug("Skip processing of entity as cache already contains deleted group on resourceGroupId: {}", kafkaKey);
+                        continue;
+                    }
+
+                    if (resourceGroup != null && fromCache.isPresent() && resourceGroup.equals(fromCache.get())) {
+                        log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
+                        continue;
+                    }
+                }
+
+                resourceGroupCache.put(kafkaKey, Optional.ofNullable(resourceGroup));
+                resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroup)));
+            }
+        }
     }
 
     void updateAzure(String kafkaKey, Optional<ResourceGroup> resourceGroupOptional) throws Exception {
@@ -124,25 +158,25 @@ public class ResourceGroupConsumerService {
         log.debug("Stopping updateAzure function {}.", randomUUID);
     }
 
-    public void processEntity(ResourceGroup resourceGroup, String kafkaKey) {
-        synchronized (resourceGroupCache) {
-            // Check resourceGroupCache if object is known from before
-            if (resourceGroupCache.containsKey(kafkaKey)) {
-                Optional<ResourceGroup> fromCache = resourceGroupCache.get(kafkaKey);
-                // Detect if cache contains deletion of resourceGroup from before
-                if (fromCache.isEmpty() && resourceGroup == null) {
-                    log.debug("Skip processing of entity as cache already contains deleted group on resourceGroupId: {}", kafkaKey);
-                    return;
-                }
-                // Detect if last entry in cache is identical to new entity
-                if (resourceGroup != null && fromCache.isPresent() && resourceGroup.equals(fromCache.get())){
-                    // New kafka message, but unchanged resourceGroup from last time
-                    log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
-                    return;
-                }
-            }
-            resourceGroupCache.put(kafkaKey, Optional.ofNullable(resourceGroup));
-            resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroup)));
-        }
-    }
+//    public void processEntity(ResourceGroup resourceGroup, String kafkaKey) {
+//        synchronized (resourceGroupCache) {
+//            // Check resourceGroupCache if object is known from before
+//            if (resourceGroupCache.containsKey(kafkaKey)) {
+//                Optional<ResourceGroup> fromCache = resourceGroupCache.get(kafkaKey);
+//                // Detect if cache contains deletion of resourceGroup from before
+//                if (fromCache.isEmpty() && resourceGroup == null) {
+//                    log.debug("Skip processing of entity as cache already contains deleted group on resourceGroupId: {}", kafkaKey);
+//                    return;
+//                }
+//                // Detect if last entry in cache is identical to new entity
+//                if (resourceGroup != null && fromCache.isPresent() && resourceGroup.equals(fromCache.get())){
+//                    // New kafka message, but unchanged resourceGroup from last time
+//                    log.debug("Skip entity as it is unchanged: {}", resourceGroup.getResourceName());
+//                    return;
+//                }
+//            }
+//            resourceGroupCache.put(kafkaKey, Optional.ofNullable(resourceGroup));
+//            resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroup)));
+//        }
+//    }
 }

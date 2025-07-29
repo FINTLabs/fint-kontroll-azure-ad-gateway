@@ -1,9 +1,10 @@
 package no.fintlabs.kafka;
 
 import no.fintlabs.AzureClient;
+import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
 import no.fintlabs.cache.FintCache;
-//import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,20 +14,18 @@ import org.apache.commons.lang3.RandomStringUtils;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 
-//@SpringBootTest
+@SuppressWarnings({"unchecked", "deprecation"})
 @ExtendWith(MockitoExtension.class)
-//@RunWith(SpringRunner.class)
 public class ResourceGroupConsumerServiceTest {
     @Mock
     private AzureClient azureClient;
-
-    /*@Mock
-    private EntityConsumerFactoryService entityConsumerFactoryService;*/
 
     @Mock
     private ConfigGroup configGroup;
@@ -39,18 +38,6 @@ public class ResourceGroupConsumerServiceTest {
 
     @InjectMocks
     private ResourceGroupConsumerService resourceGroupConsumerService;
-
-    //private ResourceGroup exampleResourceGroup;
-
-    public ResourceGroupConsumerServiceTest() {
-    /*    exampleResourceGroup = ResourceGroup.builder()
-                .id("123")
-                .resourceId("123")
-                .resourceType("licenseResource")
-                .resourceName("testResourceName")
-                .resourceLimit("1000")
-                .build();*/
-    }
 
     ResourceGroup newResourceGroupFromResourceName(String inResourceName) {
         return ResourceGroup.builder()
@@ -81,28 +68,80 @@ public class ResourceGroupConsumerServiceTest {
     @Test
     void processEntityGroupIsNewAndCacheIsUpdated() {
         String kafkaKeyID = "TestKafkaKeyID";
-
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
 
-        resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
-        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+        AzureClient azureClient = mock(AzureClient.class);
+        Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
+        ConfigGroup configGroup = mock(ConfigGroup.class);
+        FintCache<String, Optional> resourceGroupCache = mock(FintCache.class);
+        Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink = mock(Sinks.Many.class);
 
-        verify(resourceGroupCache, times(1)).put(anyString(),any());
+        when(resourceGroupCache.containsKey(eq(kafkaKeyID))).thenReturn(false);
+
+        ResourceGroupConsumerService service = new ResourceGroupConsumerService(
+                azureClient,
+                kafkaConfig,
+                configGroup,
+                resourceGroupCache
+        );
+        service.setResourceGroupSink(resourceGroupSink); // critical for test injection
+
+        ConsumerRecord<String, ResourceGroup> record =
+                new ConsumerRecord<>("test-topic", 0, 0L, kafkaKeyID, resourceGroup);
+
+        service.processEntityBatch(List.of(record));
+
+        verify(resourceGroupCache, times(1)).put(eq(kafkaKeyID), any());
         verify(resourceGroupSink, times(1)).tryEmitNext(any());
     }
+
+    @Test
+    void processLargeBatchOf2000NewRecords() {
+        int batchSize = 2000;
+        List<ConsumerRecord<String, ResourceGroup>> records = new ArrayList<>();
+
+        AzureClient azureClient = mock(AzureClient.class);
+        Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
+        ConfigGroup configGroup = mock(ConfigGroup.class);
+        FintCache<String, Optional> resourceGroupCache = mock(FintCache.class);
+        Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink = mock(Sinks.Many.class);
+
+        ResourceGroupConsumerService service = new ResourceGroupConsumerService(
+                azureClient,
+                kafkaConfig,
+                configGroup,
+                resourceGroupCache
+        );
+        service.setResourceGroupSink(resourceGroupSink);
+
+        for (int i = 0; i < batchSize; i++) {
+            String key = "key-" + i;
+            ResourceGroup resourceGroup = newResourceGroupFromResourceName("Group-" + i);
+            records.add(new ConsumerRecord<>("test-topic", 0, i, key, resourceGroup));
+
+            when(resourceGroupCache.containsKey(eq(key))).thenReturn(false);
+        }
+
+        service.processEntityBatch(records);
+
+        verify(resourceGroupCache, times(batchSize)).put(anyString(), any());
+        verify(resourceGroupSink, times(batchSize)).tryEmitNext(any());
+    }
+
+
     @Test
     void processEntityEntryAlreadyInCacheGeneratesNothing() {
         String kafkaKeyID = "TestKafkaKeyID";
-
         ResourceGroup resourceGroup = newResourceGroupFromResourceNameStatic();
-        resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
 
         when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
         when(resourceGroupCache.get(anyString())).thenReturn(Optional.ofNullable(resourceGroup));
 
-        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+        ConsumerRecord<String, ResourceGroup> record = new ConsumerRecord<>("topic", 0, 0L, kafkaKeyID, resourceGroup);
 
-        verify(resourceGroupCache, times(0)).put(anyString(),any());
+        resourceGroupConsumerService.processEntityBatch(List.of(record));
+
+        verify(resourceGroupCache, times(0)).put(anyString(), any());
         verify(resourceGroupSink, times(0)).tryEmitNext(any());
     }
 
@@ -110,15 +149,14 @@ public class ResourceGroupConsumerServiceTest {
     void processEntity_That_Is_Empty_And_Already_In_Cache_Generates_Nothing() {
         String kafkaKeyID = "TestKafkaKeyID";
 
-        ResourceGroup resourceGroup = null;
-        resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
-
         when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
-        when(resourceGroupCache.get(anyString())).thenReturn(Optional.ofNullable(resourceGroup));
+        when(resourceGroupCache.get(anyString())).thenReturn(Optional.empty());
 
-        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+        ConsumerRecord<String, ResourceGroup> record = new ConsumerRecord<>("topic", 0, 0L, kafkaKeyID, null);
 
-        verify(resourceGroupCache, times(0)).put(anyString(),any());
+        resourceGroupConsumerService.processEntityBatch(List.of(record));
+
+        verify(resourceGroupCache, times(0)).put(anyString(), any());
         verify(resourceGroupSink, times(0)).tryEmitNext(any());
     }
 
@@ -126,15 +164,31 @@ public class ResourceGroupConsumerServiceTest {
     void processEntity_That_Is_Empty_ResourceGroup_But_Not_In_Cache_Continues_Operation() {
         String kafkaKeyID = "TestKafkaKeyID";
 
-        resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
+        AzureClient azureClient = mock(AzureClient.class);
+        Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
+        ConfigGroup configGroup = mock(ConfigGroup.class);
+        FintCache<String, Optional> resourceGroupCache = mock(FintCache.class);
+        Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink = mock(Sinks.Many.class);
 
-        when(resourceGroupCache.containsKey(anyString())).thenReturn(false);
+        when(resourceGroupCache.containsKey(eq(kafkaKeyID))).thenReturn(false);
 
-        resourceGroupConsumerService.processEntity(null, kafkaKeyID);
+        ResourceGroupConsumerService service = new ResourceGroupConsumerService(
+                azureClient,
+                kafkaConfig,
+                configGroup,
+                resourceGroupCache
+        );
+        service.setResourceGroupSink(resourceGroupSink);
 
-        verify(resourceGroupCache, times(1)).put(anyString(),any());
+        ConsumerRecord<String, ResourceGroup> record = new ConsumerRecord<>("topic", 0, 0L, kafkaKeyID, null);
+
+        service.processEntityBatch(List.of(record));
+
+        verify(resourceGroupCache, times(1)).put(eq(kafkaKeyID), eq(Optional.empty()));
         verify(resourceGroupSink, times(1)).tryEmitNext(any());
     }
+
+
 
     @Test
     void updateAzure_NewGroupCallsAzureCreate() throws Exception {
