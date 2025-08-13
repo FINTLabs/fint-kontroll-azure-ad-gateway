@@ -73,6 +73,7 @@ dependencies {
 }
 
 test {
+    maxHeapSize = "20G"
     useJUnitPlatform()
     jvmArgs '-XX:+EnableDynamicAgentLoading'
 }

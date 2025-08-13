@@ -2,8 +2,14 @@ package no.fintlabs.azure;
 
 
 import com.google.gson.JsonPrimitive;
+import com.microsoft.graph.models.DirectoryObject;
+import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
+
 import com.microsoft.graph.models.Group;
 
+import com.microsoft.graph.models.GroupCollectionResponse;
+import com.microsoft.graph.serviceclient.GraphServiceClient;
+import lombok.RequiredArgsConstructor;
 import no.fintlabs.ConfigGroup;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
@@ -11,14 +17,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class AzureGroupTest {
+
     @Mock
     private ConfigGroup configGroup;
     @Test
