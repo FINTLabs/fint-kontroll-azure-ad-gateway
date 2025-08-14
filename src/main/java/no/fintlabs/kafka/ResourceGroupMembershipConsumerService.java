@@ -66,15 +66,20 @@ public class ResourceGroupMembershipConsumerService {
 
     }
 
-    void updateAzureWithMembership(String kafkakKey, Optional<ResourceGroupMembership> resourceGroupMembership) {
-        log.info("Starting updateAzureWithMembership function with kafka key: {}.", kafkakKey);
-
-        if (resourceGroupMembership.isEmpty()) {
-            azureClient.deleteGroupMembership(kafkakKey);
-        } else {
-            azureClient.addGroupMembership(resourceGroupMembership.get(), kafkakKey);
+    void updateAzureWithMembership(String kafkaKey, Optional<ResourceGroupMembership> membershipOpt) {
+        log.info("Starting updateAzureWithMembership key={}.", kafkaKey);
+        try {
+            if (membershipOpt.isEmpty()) {
+                azureClient.deleteGroupMembership(kafkaKey);
+            } else {
+                azureClient.addGroupMembership(membershipOpt.get(), kafkaKey);
+            }
+            log.debug("updateAzureWithMembership OK key={}", kafkaKey);
+        } catch (Exception e) {
+            log.error("updateAzureWithMembership FAILED key={}", kafkaKey, e);
+        } finally {
+            log.debug("Stopping updateAzureWithMembership key={}", kafkaKey);
         }
-        log.debug("Stopping updateAzureWithMembership function {}.", kafkakKey);
     }
 
     public void processEntity(ResourceGroupMembership resourceGroupMembership, String kafkaKey) {
