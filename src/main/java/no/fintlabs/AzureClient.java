@@ -666,7 +666,6 @@ public class AzureClient {
                             azureGroupMembershipCache.put(resourceGroupMembershipKey, new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
                         });
             } catch (GraphServiceException e) {
-                // Handle the HTTP response exception here
                 if (e.getResponseCode() == 400) {
                     if(e.getError().error.message.contains("object references already exist")) {
                         azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
@@ -715,8 +714,7 @@ public class AzureClient {
                 return;
             }
 
-            reference
-                    .buildRequest()
+            reference.buildRequest()
                     .deleteAsync()
                     .thenAccept(deletedGroup -> {
                         log.info("UserId: {} removed from GroupId: {}", user, group);
