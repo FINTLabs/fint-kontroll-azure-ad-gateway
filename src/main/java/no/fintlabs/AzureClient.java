@@ -98,7 +98,7 @@ public class AzureClient {
                 }
 
                 String externalUserAttribute = AzureUser.getAttributeValue(user, configUser.getExternaluserattribute());
-                if (externalUserAttribute != null
+                if (configUser.getEnableExternalUsers() &&  externalUserAttribute != null
                         && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
                     AzureUserExternal entraUserExtObject = new AzureUserExternal(user, configUser);
                     if (entraIdExternalUserCache != null &&
@@ -163,40 +163,36 @@ public class AzureClient {
                     .select(String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute()))
                     .getAsync();
 
-            initialPageFuture.thenCompose(this::fetchAllGroups)
-                    .thenCompose(groups -> {
+            List<Group> allGroups = initialPageFuture
+                    .thenCompose(this::fetchAllGroups)
+                    .thenApply(groups -> {
                         long groupFetchEndTime = System.currentTimeMillis();
-                        long groupFetchElapsedTimeInSeconds = (groupFetchEndTime - startTime) / 1000;
-                        long groupFetchMinutes = groupFetchElapsedTimeInSeconds / 60;
-                        long groupFetchSeconds = groupFetchElapsedTimeInSeconds % 60;
-                        log.info("*** <<< Done fetching all groups from Microsoft Entra ID in {} minutes and {} seconds >>> ***", groupFetchMinutes, groupFetchSeconds);
-
-                        log.info("*** <<< Fetching group memberships from Microsoft Entra >>> ***");
-                        long memberFetchStartTime = System.currentTimeMillis();
-                        return fetchMembersForAllGroups(groups).thenApply(groupCount -> {
-                            long memberFetchEndTime = System.currentTimeMillis();
-                            long memberFetchElapsedTimeInSeconds = (memberFetchEndTime - memberFetchStartTime) / 1000;
-                            long memberFetchMinutes = memberFetchElapsedTimeInSeconds / 60;
-                            long memberFetchSeconds = memberFetchElapsedTimeInSeconds % 60;
-
-
-                            log.info("*** <<< Done fetching all group memberships from Microsoft Entra ID in {} minutes and {} seconds >>> ***", memberFetchMinutes, memberFetchSeconds);
-                            return groupCount;
-                        });
+                        long elapsed = (groupFetchEndTime - startTime) / 1000;
+                        log.info("*** <<< Done fetching all groups in {} minutes and {} seconds >>> ***", elapsed / 60, elapsed % 60);
+                        return groups;
                     })
-                    //.thenAccept(groupCount -> log.info("{} Group objects fetched from Microsoft Entra ID with suffix {}", groupCount, configGroup.getSuffix()))
-                    .join();  // Wait for completion
+                    .join();
+
+            log.info("*** <<< Fetching group memberships from Microsoft Entra >>> ***");
+            long memberFetchStartTime = System.currentTimeMillis();
+            fetchMembersForAllGroups(allGroups)
+                    .thenAccept(groupCount -> {
+                        long memberFetchEndTime = System.currentTimeMillis();
+                        long elapsed = (memberFetchEndTime - memberFetchStartTime) / 1000;
+                        log.info("*** <<< Done fetching all group memberships in {} minutes and {} seconds >>> ***", elapsed / 60, elapsed % 60);
+                    })
+                    .join();
 
         } catch (ClientException e) {
             log.error("Failed when trying to get groups. ", e);
         }
+
         if (publishedMembers.get() > 0) {
             log.info("*** <<< {} Entra group members published to kafka as they were not in membership cache >>> ***", publishedMembers.get());
         } else {
-            log.info("*** <<< All entra group members already in cache. No members published to kafka >>> ***");
+            log.info("*** <<< All Entra group members already in cache. No members published to kafka >>> ***");
         }
     }
-
 
     private CompletableFuture<List<Group>> fetchAllGroups(GroupCollectionPage initialPage) {
         List<Group> allGroups = new ArrayList<>();
@@ -287,7 +283,7 @@ public class AzureClient {
                             && azureGroupMembershipCache.containsKey(azureGroupMembership.getId())
                             && azureGroupMembership.equals(azureGroupMembershipCache.get(azureGroupMembership.getId())))
                     {
-                        log.debug("Skipping message to Kafka, as userId: {} is allready published as member of groupId: {}", member.id, azureGroup.getId());
+                        log.debug("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.id, azureGroup.getId());
                     }
                     else {
                         azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
@@ -546,18 +542,17 @@ public class AzureClient {
                 JsonElement attributeValue = group.additionalDataManager().get(configGroup.getFintkontrollidattribute());
 
                 if (attributeValue != null && attributeValue.getAsString().equals(resourceGroupId)) {
-                    return true; // Group with the specified ResourceID found
+                    return true;
                 }
             }
 
-            // Move to the next page if available
             groupCollectionPage = groupCollectionPage.getNextPage() == null ? null :
                     groupCollectionPage.getNextPage()
                             .buildRequest()
                             .get();
         }
 
-        return false; // Group with resourceID not found
+        return false;
     }
 
     public void addGroupToAzure(ResourceGroup resourceGroup) {
@@ -648,39 +643,52 @@ public class AzureClient {
             directoryObject.id = resourceGroupMembership.getAzureUserRef();
 
             try {
-                graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references()
-                        .buildRequest()
-                        .postAsync(directoryObject)
-                        .thenAccept(acceptedMember -> log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef()));
+                DirectoryObjectCollectionReferenceRequestBuilder references = graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references();
 
-                //log.debug("UserId {} added to GroupId {}: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-                log.debug("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                if (references == null) {
+                    log.error("Member references is null for group {}", resourceGroupMembership.getAzureGroupRef());
+                    return;
+                }
+
+                if (azureGroupMembershipCache.containsKey(resourceGroupMembershipKey)) {
+                    log.info("Membership already in EntraID {}", resourceGroupMembershipKey);
+                    azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                    log.info("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                    return;
+                }
+
+                references.buildRequest()
+                        .postAsync(directoryObject)
+                        .thenAccept(acceptedMember -> {
+                            log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                            azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                            log.info("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                            azureGroupMembershipCache.put(resourceGroupMembershipKey, new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                        });
             } catch (GraphServiceException e) {
-                // Handle the HTTP response exception here
                 if (e.getResponseCode() == 400) {
                     if(e.getError().error.message.contains("object references already exist")) {
                         azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-                        log.debug("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                        log.info("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }
-                    if(e.getError().error.code.contains("Request_ResourceNotFound")){
-                        log.warn("AzureGroupRef is not correct on user ObjectId {} and group ObjectId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                    if(e.getError().error.message.contains("does not exist")){
+                        log.warn("Unknown user ObjectId: {} or group ObjectId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         return;
                     }
 
-                    // Handle the 400 Bad Request error
-                    log.warn("Bad request: ", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                    log.warn("Bad request:  user ObjectId: {}, group ObjectId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                     log.warn(e.getError().error.message);
                 }
                 if (e.getResponseCode() == 429) {
                     log.warn("Throttling limit. Error: {}", e.getError().error.message);
                 }
                 else {
-
                     // Handle other HTTP errors
-                    log.error("HTTP Error while updating group {}: {} \r", resourceGroupMembership.getAzureGroupRef(), e.getError().error.message);
+                    log.error("HTTP Error while updating groupID: {}. Error: {} \r", resourceGroupMembership.getAzureGroupRef(), e.getError().error.message);
                 }
+            } catch (Exception e) {
+                log.error("Failed to process addGroupMembership for resourceGroupId {}: {}", resourceGroupMembership.getAzureGroupRef(), e);
             }
         }
     }
@@ -697,15 +705,25 @@ public class AzureClient {
         try {
             log.debug("trying to remove UserId: {} from GroupId: {} in Graph", user, group);
 
-            graphService.groups(group)
+            DirectoryObjectReferenceRequestBuilder reference = graphService.groups(group)
                     .members(user)
-                    .reference()
-                    .buildRequest()
-                    .deleteAsync();
+                    .reference();
 
-            log.info("UserId: {} removed from GroupId: {}", user, group);
-            azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
-            log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
+            if(reference == null) {
+                log.error("Member reference is null for group {}", group);
+                return;
+            }
+
+            reference.buildRequest()
+                    .deleteAsync()
+                    .thenAccept(deletedGroup -> {
+                        log.info("UserId: {} removed from GroupId: {}", user, group);
+                        if(azureGroupMembershipCache.containsKey(resourceGroupMembershipKey)){
+                            azureGroupMembershipCache.remove(resourceGroupMembershipKey);
+                        }
+                        azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
+                        log.info("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
+                    });
         } catch (GraphServiceException e) {
             if(e.getResponseCode() == 404)
             {

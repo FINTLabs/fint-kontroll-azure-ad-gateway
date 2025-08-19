@@ -58,13 +58,17 @@ jobs:
         include:
           - org: fintlabs-no
             cluster: aks-beta-fint-2021-11-23
-          - org: ofk-no
+          - org: fintlabs-no
             cluster: aks-api-fint-2022-02-08
           - org: afk-no
             cluster: aks-api-fint-2022-02-08
           - org: bfk-no
             cluster: aks-api-fint-2022-02-08
+          - org: ofk-no
+            cluster: aks-api-fint-2022-02-08
           - org: fridiks-no
+            cluster: aks-api-fint-2022-02-08
+          - org: nfk-no
             cluster: aks-api-fint-2022-02-08
     steps:
       - name: Checkout repository
@@ -100,7 +104,7 @@ jobs:
           use-kubelogin: 'true'
 
       - name: Deploy
-        uses: azure/k8s-deploy@v5
+        uses: azure/k8s-deploy@v5.0.3
         with:
           action: deploy
           manifests: ${{ steps.bake.outputs.manifestsBundle }}
