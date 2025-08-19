@@ -305,7 +305,7 @@ AzureClient {
                 azureGroupMembershipProducerService.processMembership("add", new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 //azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 numMembers.getAndIncrement();
-                log.info("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
+                log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
                 if(deltaLinkCache != null) {
                     log.info("UserId: {} is member of GroupId: {}", memberId, group.getId());
                 }
@@ -453,7 +453,7 @@ AzureClient {
                 azureGroupMembershipCache.add(azureGroupMembership.getId());
                 membersCount.getAndIncrement();
                 numMembers.getAndIncrement();
-                log.info("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
+                log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
             }
 
         });
