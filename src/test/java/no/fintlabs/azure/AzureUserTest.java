@@ -2,11 +2,13 @@ package no.fintlabs.azure;
 
 import com.microsoft.graph.models.User;
 import no.fintlabs.ConfigUser;
-import no.fintlabs.cache.FintCache;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.concurrent.ConcurrentMap;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -16,7 +18,7 @@ class AzureUserTest {
     private ConfigUser configUser;
 
     @Mock
-    private FintCache<String, AzureUser> entraIdUserCache;
+    private ConcurrentMap<String, AzureUser> entraIdUserCache;
 
     @Mock
     private AzureUserProducerService azureUserProducerService;

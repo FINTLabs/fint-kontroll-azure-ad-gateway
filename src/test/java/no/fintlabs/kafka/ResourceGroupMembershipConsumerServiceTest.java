@@ -2,7 +2,6 @@ package no.fintlabs.kafka;
 
 import net.bytebuddy.utility.RandomString;
 import no.fintlabs.AzureClient;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
 import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -13,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
 import static org.awaitility.Awaitility.await;
@@ -22,9 +22,12 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import no.fintlabs.kafka.topic.EntityTopicService;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
@@ -35,7 +38,7 @@ class ResourceGroupMembershipConsumerServiceTest {
     @Mock
     private AzureClient azureClient;
     @Mock
-    private FintCache<String, Optional> resourceGroupMembershipCache;
+    private ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     @Mock
     private Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
@@ -77,6 +80,29 @@ class ResourceGroupMembershipConsumerServiceTest {
                     .build();
     }
 
+    private void wireMockSinkAndInit(
+            ResourceGroupMembershipConsumerService service,
+            Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> sink
+    ) throws Exception {
+        lenient().when(sink.asFlux()).thenReturn(Flux.never());
+        lenient().when(sink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+
+        Field f = ResourceGroupMembershipConsumerService.class
+                .getDeclaredField("resourceGroupMembershipSink");
+        f.setAccessible(true);
+        f.set(service, sink);
+
+        Method init = ResourceGroupMembershipConsumerService.class.getDeclaredMethod("init");
+        init.setAccessible(true);
+        init.invoke(service);
+    }
+
+    private void ensureInit(ResourceGroupMembershipConsumerService service) throws Exception {
+        Method init = ResourceGroupMembershipConsumerService.class.getDeclaredMethod("init");
+        init.setAccessible(true);
+        init.invoke(service);
+    }
+
     @BeforeAll()
     static void setUpFirst() {
         exampleGroupMembership = ResourceGroupMembership.builder()
@@ -94,13 +120,34 @@ class ResourceGroupMembershipConsumerServiceTest {
 //    }
 
     @Test
-    void processEntityNewGroupmemberhipDetected() {
+    void processEntityNewGroupmemberhipDetected() throws Exception {
+        // Build membership with required refs (no setters on the model anymore)
+        ResourceGroupMembership m = exampleGroupMembershipRandom()
+                .toBuilder()
+                .azureUserRef("user-123")
+                .azureGroupRef("group-456")
+                .build();
 
-        resourceGroupMembershipConsumerService.processEntity(exampleGroupMembershipRandom(), "exampleID");
+        try {
+            var init = ResourceGroupMembershipConsumerService.class.getDeclaredMethod("init");
+            init.setAccessible(true);
+            init.invoke(resourceGroupMembershipConsumerService);
+        } catch (NoSuchMethodException ignored) {
+        }
 
-        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> verify(azureClient, times(1)).addGroupMembership(any(), anyString()));
-        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> verify(azureClient, times(0)).deleteGroupMembership(anyString()));
+        resourceGroupMembershipConsumerService.processEntity(m, "exampleID");
+
+        await().atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() ->
+                        verify(azureClient, times(1))
+                                .addGroupMembership(any(ResourceGroupMembership.class), eq("exampleID")));
+
+        await().atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() ->
+                        verify(azureClient, never())
+                                .deleteGroupMembership(anyString()));
     }
+
 
     @Test
     void makeSureNullParametersDoesntCallAzureClient() {
@@ -203,55 +250,69 @@ class ResourceGroupMembershipConsumerServiceTest {
 
 
     @Test
-    void makeSureObjectIsCreatedAndDeleted() {
+    void makeSureObjectIsCreatedAndDeleted() throws Exception {
+        // Ensure the internal sink is subscribed
+        ensureInit(resourceGroupMembershipConsumerService);
+
         String kafkaKey1 = "1kafka_key";
         String kafkaKey2 = "2kafka_key";
-        ResourceGroupMembership resourceGroupMembership1 = exampleGroupMembershipRandom();
-        ResourceGroupMembership resourceGroupMembership2 = exampleGroupMembershipRandom();
 
+        // Build memberships with refs (no setters)
+        ResourceGroupMembership m1 = exampleGroupMembershipRandom()
+                .toBuilder().azureUserRef("user-1").azureGroupRef("group-1").build();
+        ResourceGroupMembership m2 = exampleGroupMembershipRandom()
+                .toBuilder().azureUserRef("user-2").azureGroupRef("group-2").build();
 
-        resourceGroupMembershipConsumerService.processEntity(resourceGroupMembership1, kafkaKey1);
+        resourceGroupMembershipConsumerService.processEntity(m1, kafkaKey1);
         resourceGroupMembershipConsumerService.processEntity(null, kafkaKey1);
-        resourceGroupMembershipConsumerService.processEntity(resourceGroupMembership2, kafkaKey2);
+        resourceGroupMembershipConsumerService.processEntity(m2, kafkaKey2);
         resourceGroupMembershipConsumerService.processEntity(null, kafkaKey2);
 
-        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> verify(azureClient, times(2)).addGroupMembership(any(ResourceGroupMembership.class), anyString()));
+        await().atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() -> verify(azureClient, times(2))
+                        .addGroupMembership(any(ResourceGroupMembership.class), anyString()));
 
-        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> verify(azureClient, times(2)).deleteGroupMembership(anyString()));
+        await().atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() -> verify(azureClient, times(2))
+                        .deleteGroupMembership(anyString()));
     }
 
     @Test
-    void processEntityIsNewAndCacheIsUpdated() {
-        resourceGroupMembershipConsumerService.setResourceGroupMembershipSink(this.resourceGroupMembershipSink);
+    void processEntityIsNewAndCacheIsUpdated() throws Exception {
+        // Inject mock sink (since we verify tryEmitNext) and subscribe
+        wireMockSinkAndInit(resourceGroupMembershipConsumerService, this.resourceGroupMembershipSink);
 
         resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, exampleKafkaKey);
 
-        verify(resourceGroupMembershipCache, times(1)).put(anyString(),any());
+        verify(resourceGroupMembershipCache, times(1)).put(anyString(), any());
         verify(resourceGroupMembershipSink, times(1)).tryEmitNext(any());
     }
-    @Test
-    void processEntity_Membership_AlreadyInCacheGeneratesNothing() {
-        resourceGroupMembershipConsumerService.setResourceGroupMembershipSink(this.resourceGroupMembershipSink);
 
-        when(resourceGroupMembershipCache.containsKey(anyString())).thenReturn(true);
-        when(resourceGroupMembershipCache.get(anyString())).thenReturn(Optional.of(exampleGroupMembership));
+    @Test
+    void processEntity_Membership_AlreadyInCacheGeneratesNothing() throws Exception {
+        wireMockSinkAndInit(resourceGroupMembershipConsumerService, this.resourceGroupMembershipSink);
+
+        lenient().when(resourceGroupMembershipCache.containsKey(anyString())).thenReturn(true);
+        lenient().when(resourceGroupMembershipCache.get(anyString()))
+                .thenReturn(Optional.of(exampleGroupMembership));
 
         resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, exampleKafkaKey);
 
-        verify(resourceGroupMembershipCache, times(0)).put(anyString(),any());
+        verify(resourceGroupMembershipCache, times(0)).put(anyString(), any());
         verify(resourceGroupMembershipSink, times(0)).tryEmitNext(any());
     }
 
     @Test
-    void processEntity_Membership_SkipDeletionIfAlreadyDeleted() {
-        resourceGroupMembershipConsumerService.setResourceGroupMembershipSink(this.resourceGroupMembershipSink);
+    void processEntity_Membership_SkipDeletionIfAlreadyDeleted() throws Exception {
+        wireMockSinkAndInit(resourceGroupMembershipConsumerService, this.resourceGroupMembershipSink);
 
-        when(resourceGroupMembershipCache.containsKey(anyString())).thenReturn(true);
-        when(resourceGroupMembershipCache.get(anyString())).thenReturn(Optional.empty());
+        lenient().when(resourceGroupMembershipCache.containsKey(anyString())).thenReturn(true);
+        lenient().when(resourceGroupMembershipCache.get(anyString()))
+                .thenReturn(Optional.empty());
 
         resourceGroupMembershipConsumerService.processEntity(null, exampleKafkaKey);
 
-        verify(resourceGroupMembershipCache, times(0)).put(anyString(),any());
+        verify(resourceGroupMembershipCache, times(0)).put(anyString(), any());
         verify(resourceGroupMembershipSink, times(0)).tryEmitNext(any());
     }
 

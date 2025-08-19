@@ -3,7 +3,6 @@ package no.fintlabs.kafka;
 import no.fintlabs.AzureClient;
 import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
-import no.fintlabs.cache.FintCache;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,10 +12,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.apache.commons.lang3.RandomStringUtils;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
-
+import reactor.core.publisher.Flux;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentMap;
 
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
@@ -31,7 +31,7 @@ public class ResourceGroupConsumerServiceTest {
     private ConfigGroup configGroup;
 
     @Mock
-    private FintCache<String, Optional> resourceGroupCache;
+    private ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache;
 
     @Mock
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
@@ -73,10 +73,13 @@ public class ResourceGroupConsumerServiceTest {
         AzureClient azureClient = mock(AzureClient.class);
         Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
         ConfigGroup configGroup = mock(ConfigGroup.class);
-        FintCache<String, Optional> resourceGroupCache = mock(FintCache.class);
+        ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentMap.class);
+        @SuppressWarnings("unchecked")
         Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink = mock(Sinks.Many.class);
 
         when(resourceGroupCache.containsKey(eq(kafkaKeyID))).thenReturn(false);
+        when(resourceGroupSink.asFlux()).thenReturn(Flux.never());
+        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         ResourceGroupConsumerService service = new ResourceGroupConsumerService(
                 azureClient,
@@ -103,8 +106,12 @@ public class ResourceGroupConsumerServiceTest {
         AzureClient azureClient = mock(AzureClient.class);
         Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
         ConfigGroup configGroup = mock(ConfigGroup.class);
-        FintCache<String, Optional> resourceGroupCache = mock(FintCache.class);
+        ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentMap.class);
+        @SuppressWarnings("unchecked")
         Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink = mock(Sinks.Many.class);
+
+        when(resourceGroupSink.asFlux()).thenReturn(Flux.never());
+        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         ResourceGroupConsumerService service = new ResourceGroupConsumerService(
                 azureClient,
@@ -167,8 +174,12 @@ public class ResourceGroupConsumerServiceTest {
         AzureClient azureClient = mock(AzureClient.class);
         Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
         ConfigGroup configGroup = mock(ConfigGroup.class);
-        FintCache<String, Optional> resourceGroupCache = mock(FintCache.class);
+        ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentMap.class);
+        @SuppressWarnings("unchecked")
         Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink = mock(Sinks.Many.class);
+
+        when(resourceGroupSink.asFlux()).thenReturn(Flux.never());
+        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         when(resourceGroupCache.containsKey(eq(kafkaKeyID))).thenReturn(false);
 

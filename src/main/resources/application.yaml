@@ -32,7 +32,7 @@ fint:
         mainorgunitnameattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitName
         enableexternalusers: false
         externaluserattribute: onPremisesExtensionAttributes.extensionAttribute11
-        externaluservalue: novari
+        externaluservalue: ----
         userpagingsize: 999
       group:
         fintkontrollidattribute: extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
@@ -40,7 +40,7 @@ fint:
         suffix: "-suff-"
         allowgroupupdate: false
         allowgroupdelete: false
-        uniquenameprefix: "FKRID"
+        uniquenameprefix: ----
         grouppagingsize: 999
       group-scheduler:
         pull:

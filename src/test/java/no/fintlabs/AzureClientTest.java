@@ -18,7 +18,6 @@ import com.microsoft.kiota.serialization.UntypedNode;
 import com.microsoft.kiota.serialization.UntypedObject;
 import com.microsoft.kiota.serialization.UntypedString;
 import no.fintlabs.azure.*;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +32,7 @@ import reactor.core.publisher.Sinks;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -97,10 +97,10 @@ class AzureClientTest {
     private AzureClient azureClient;
 
     @Mock
-    private FintCache<String, AzureUser> entraIdUserCache;
+    private ConcurrentMap<String, AzureUser> entraIdUserCache;
 
     @Mock
-    private FintCache<String, Optional> resourceGroupMembershipCache;
+    private ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
 
     @Mock
     private AzureUserProducerService azureUserProducerService;

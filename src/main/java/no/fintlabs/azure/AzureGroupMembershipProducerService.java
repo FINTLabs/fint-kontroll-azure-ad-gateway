@@ -1,8 +1,6 @@
 package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.cache.FintCache;
-import no.fintlabs.kafka.ResourceGroupMembership;
 import no.fintlabs.kafka.producing.ParameterizedTemplateFactory;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
 import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
@@ -16,11 +14,8 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
-
 import java.time.Duration;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Slf4j

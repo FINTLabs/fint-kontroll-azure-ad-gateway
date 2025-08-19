@@ -1,10 +1,11 @@
 package no.fintlabs.kafka;
 
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
 import no.fintlabs.Config;
 import no.fintlabs.ConfigGroup;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.consuming.ListenerConfiguration;
 import no.fintlabs.kafka.consuming.ParameterizedListenerContainerFactoryService;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
@@ -21,44 +22,43 @@ import reactor.util.function.Tuples;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 @Service
 @Slf4j
-
+@RequiredArgsConstructor
 public class ResourceGroupConsumerService {
     private final AzureClient azureClient;
     private final Config.KafkaConfig kafkaConfig;
     private final ConfigGroup configGroup;
-    private final FintCache<String, Optional> resourceGroupCache;
+    private final ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
 
-    public ResourceGroupConsumerService(
-            AzureClient azureClient,
-            Config.KafkaConfig kafkaConfig,
-            ConfigGroup configGroup,
-            FintCache<String, Optional> resourceGroupCache) {
-        this.kafkaConfig = kafkaConfig;
-        this.azureClient = azureClient;
-        this.configGroup = configGroup;
-        this.resourceGroupCache = resourceGroupCache;
-
-        resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
-        resourceGroupSink.asFlux()
-                .parallel(20) // Parallelism with up to 20 threads
-                .runOn(Schedulers.boundedElastic())
-                .subscribe
-                        (keyAndResourceGroup -> {
-                                    try {
-                                        updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2());
-                                    } catch (Exception e) {
-                                        log.error("Failed to update azure", e);
-                                    }
-                                }
-                        );
+    @PostConstruct
+    void init() {
+        if (resourceGroupSink == null) {
+            resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
+        }
+        subscribeToSink();
     }
 
-    protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink) {
-        this.resourceGroupSink = resourceGroupSink;
+    /** Allow tests to inject a mock sink; rewire the subscription. */
+    protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> sink) {
+        this.resourceGroupSink = sink;
+        subscribeToSink();
+    }
+
+    private void subscribeToSink() {
+        resourceGroupSink.asFlux()
+                .parallel(20)
+                .runOn(Schedulers.boundedElastic())
+                .subscribe(kv -> {
+                    try {
+                        updateAzure(kv.getT1(), kv.getT2());
+                    } catch (Exception e) {
+                        log.error("Failed to update Azure", e);
+                    }
+                });
     }
 
 

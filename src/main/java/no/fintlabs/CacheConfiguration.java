@@ -5,54 +5,46 @@ import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.AzureUser;
 import no.fintlabs.azure.AzureUserExternal;
 import no.fintlabs.kafka.ResourceGroup;
-import no.fintlabs.cache.FintCache;
-import no.fintlabs.cache.FintCacheManager;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import java.util.Locale;
-import java.util.Optional;
 
-@AllArgsConstructor
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentMap;
+
 @Configuration
 public class CacheConfiguration {
-    private final FintCacheManager fintCacheManager;
 
     @Bean
-    FintCache<String, ResourceGroup> resourceGroupCache() {
-        return createResourceCache(ResourceGroup.class);
+    public ConcurrentMap<String, ResourceGroup> resourceGroupCache() {
+        return new ConcurrentHashMap<>();
     }
 
     @Bean
-    FintCache<String, Optional> resourceGroupMembershipCache() {
-        return fintCacheManager.createCache(
-                ResourceGroupMembership.class.getName().toLowerCase(Locale.ROOT),
-                String.class,
-                Optional.class
-        );
+    public ConcurrentMap<String, Optional<ResourceGroup>> optionalResourceGroupCache() {
+        return new ConcurrentHashMap<>();
     }
 
     @Bean
-    FintCache<String, AzureUser> entraIdUserCache() {
-        return createResourceCache(AzureUser.class);
+    public ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache() {
+        return new ConcurrentHashMap<>();
     }
 
     @Bean
-    FintCache<String, AzureUserExternal> entraIdExternalUserCache() {
-        return createResourceCache(AzureUserExternal.class);
+    public ConcurrentMap<String, AzureUser> entraIdUserCache() {
+        return new ConcurrentHashMap<>();
     }
-
 
     @Bean
-    FintCache<String, AzureGroup> azureGroupCache() {
-        return createResourceCache(AzureGroup.class);
+    public ConcurrentMap<String, AzureUserExternal> entraIdExternalUserCache() {
+        return new ConcurrentHashMap<>();
     }
 
-    private <V> FintCache<String, V> createResourceCache(Class<V> resourceClass) {
-        return fintCacheManager.createCache(
-                resourceClass.getName().toLowerCase(Locale.ROOT),
-                String.class,
-                resourceClass
-        );
+    @Bean
+    public ConcurrentMap<String, AzureGroup> azureGroupCache() {
+        return new ConcurrentHashMap<>();
     }
 }
