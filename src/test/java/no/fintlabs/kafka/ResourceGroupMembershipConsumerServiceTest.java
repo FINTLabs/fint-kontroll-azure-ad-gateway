@@ -26,6 +26,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
@@ -36,7 +37,7 @@ class ResourceGroupMembershipConsumerServiceTest {
     @Mock
     private AzureClient azureClient;
     @Mock
-    private ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
+    private ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     @Mock
     private Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 

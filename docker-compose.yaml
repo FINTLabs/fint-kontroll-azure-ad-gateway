@@ -22,6 +22,8 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      CLUSTER_ID: vhoiaudhaliuhf
 
   kafdrop:
     image: obsidiandynamics/kafdrop:3.31.0

@@ -16,7 +16,7 @@ import reactor.core.publisher.Flux;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
@@ -31,7 +31,7 @@ public class ResourceGroupConsumerServiceTest {
     private ConfigGroup configGroup;
 
     @Mock
-    private ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache;
+    private ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache;
 
     @Mock
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
@@ -73,7 +73,7 @@ public class ResourceGroupConsumerServiceTest {
         AzureClient azureClient = mock(AzureClient.class);
         Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
         ConfigGroup configGroup = mock(ConfigGroup.class);
-        ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentMap.class);
+        ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentHashMap.class);
         @SuppressWarnings("unchecked")
         Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink = mock(Sinks.Many.class);
 
@@ -106,7 +106,7 @@ public class ResourceGroupConsumerServiceTest {
         AzureClient azureClient = mock(AzureClient.class);
         Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
         ConfigGroup configGroup = mock(ConfigGroup.class);
-        ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentMap.class);
+        ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentHashMap.class);
         @SuppressWarnings("unchecked")
         Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink = mock(Sinks.Many.class);
 
@@ -174,7 +174,7 @@ public class ResourceGroupConsumerServiceTest {
         AzureClient azureClient = mock(AzureClient.class);
         Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
         ConfigGroup configGroup = mock(ConfigGroup.class);
-        ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentMap.class);
+        ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentHashMap.class);
         @SuppressWarnings("unchecked")
         Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink = mock(Sinks.Many.class);
 

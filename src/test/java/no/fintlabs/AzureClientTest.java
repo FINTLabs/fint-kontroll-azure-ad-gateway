@@ -28,11 +28,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Sinks;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -46,12 +45,6 @@ class AzureClientTest {
 
     @Mock
     private GraphServiceClient graphServiceClient;
-
-    @Mock
-    private AzureGroup azureGroup;
-
-    @Mock
-    private Sinks.Many<AzureGroup> mockSink;
 
     @Mock
     private GroupCollectionResponse groupCollectionResponse;
@@ -97,10 +90,10 @@ class AzureClientTest {
     private AzureClient azureClient;
 
     @Mock
-    private ConcurrentMap<String, AzureUser> entraIdUserCache;
+    private ConcurrentHashMap<String, AzureUser> entraIdUserCache;
 
     @Mock
-    private ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
+    private ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
 
     @Mock
     private AzureUserProducerService azureUserProducerService;
@@ -213,7 +206,7 @@ class AzureClientTest {
     void doesGroupExist_found() throws Exception {
         List<Group> groupList = getTestGrouplist(1, 1);
         when(groupCollectionResponse.getValue()).thenReturn(groupList);
-        String resourceGroupID = groupList.get(0).getId();
+        String resourceGroupID = groupList.getFirst().getId();
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);

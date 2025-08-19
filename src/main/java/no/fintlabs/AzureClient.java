@@ -5,11 +5,9 @@ import com.microsoft.graph.groups.delta.DeltaGetResponse;
 import com.microsoft.graph.models.*;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.serialization.UntypedArray;
 import com.microsoft.kiota.serialization.UntypedObject;
@@ -33,10 +31,10 @@ AzureClient {
     protected final ConfigGroup configGroup;
     protected final ConfigUser configUser;
     protected final GraphServiceClient graphServiceClient;
-    private final ConcurrentMap<String, AzureUser> entraIdUserCache;
-    private final ConcurrentMap<String, AzureUserExternal> entraIdExternalUserCache;
-    private final ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
-    private final ConcurrentMap<String, AzureGroup> azureGroupCache;
+    private final ConcurrentHashMap<String, AzureUser> entraIdUserCache;
+    private final ConcurrentHashMap<String, AzureUserExternal> entraIdExternalUserCache;
+    private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
+    private final ConcurrentHashMap<String, AzureGroup> azureGroupCache;
     private final Set<String> azureGroupMembershipCache;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;

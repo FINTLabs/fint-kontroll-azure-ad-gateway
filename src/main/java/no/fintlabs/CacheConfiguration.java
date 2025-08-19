@@ -16,32 +16,32 @@ import java.util.concurrent.ConcurrentMap;
 public class CacheConfiguration {
 
     @Bean
-    public ConcurrentMap<String, ResourceGroup> resourceGroupCache() {
+    public ConcurrentHashMap<String, ResourceGroup> resourceGroupCache() {
         return new ConcurrentHashMap<>();
     }
 
     @Bean
-    public ConcurrentMap<String, Optional<ResourceGroup>> optionalResourceGroupCache() {
+    public ConcurrentHashMap<String, Optional<ResourceGroup>> optionalResourceGroupCache() {
         return new ConcurrentHashMap<>();
     }
 
     @Bean
-    public ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache() {
+    public ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache() {
         return new ConcurrentHashMap<>();
     }
 
     @Bean
-    public ConcurrentMap<String, AzureUser> entraIdUserCache() {
+    public ConcurrentHashMap<String, AzureUser> entraIdUserCache() {
         return new ConcurrentHashMap<>();
     }
 
     @Bean
-    public ConcurrentMap<String, AzureUserExternal> entraIdExternalUserCache() {
+    public ConcurrentHashMap<String, AzureUserExternal> entraIdExternalUserCache() {
         return new ConcurrentHashMap<>();
     }
 
     @Bean
-    public ConcurrentMap<String, AzureGroup> azureGroupCache() {
+    public ConcurrentHashMap<String, AzureGroup> azureGroupCache() {
         return new ConcurrentHashMap<>();
     }
 }

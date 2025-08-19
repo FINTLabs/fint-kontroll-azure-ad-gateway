@@ -20,6 +20,7 @@ import reactor.util.function.Tuples;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Service
@@ -29,7 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 public class ResourceGroupMembershipConsumerService {
     private final AzureClient azureClient;
     private final Config.KafkaConfig kafkaConfig;
-    private final ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
+    private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private final Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink =
             Sinks.many().unicast().onBackpressureBuffer();
 

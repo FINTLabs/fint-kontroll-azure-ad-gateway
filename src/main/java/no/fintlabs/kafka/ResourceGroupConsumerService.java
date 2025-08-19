@@ -22,6 +22,7 @@ import reactor.util.function.Tuples;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Service
@@ -31,7 +32,7 @@ public class ResourceGroupConsumerService {
     private final AzureClient azureClient;
     private final Config.KafkaConfig kafkaConfig;
     private final ConfigGroup configGroup;
-    private final ConcurrentMap<String, Optional<ResourceGroup>> resourceGroupCache;
+    private final ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
 
     @PostConstruct

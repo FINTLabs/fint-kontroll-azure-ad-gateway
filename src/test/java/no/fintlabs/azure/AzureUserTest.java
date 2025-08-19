@@ -6,7 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import java.util.concurrent.ConcurrentMap;
+
+import java.util.concurrent.ConcurrentHashMap;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -15,7 +16,7 @@ class AzureUserTest {
     private ConfigUser configUser;
 
     @Mock
-    private ConcurrentMap<String, AzureUser> entraIdUserCache;
+    private ConcurrentHashMap<String, AzureUser> entraIdUserCache;
 
     @Mock
     private AzureUserProducerService azureUserProducerService;
@@ -35,10 +36,10 @@ class AzureUserTest {
 
         AzureUser convertedUser = new AzureUser(user, configUser);
 
-        assert(convertedUser.getId() == user.getId() );
-        assert(convertedUser.getIdpUserObjectId() == user.getId());
-        assert(convertedUser.getUserPrincipalName() == user.getUserPrincipalName());
-        assert(convertedUser.getAccountEnabled() == true);
+        assert(convertedUser.getId().equals(user.getId() ));
+        assert(convertedUser.getIdpUserObjectId().equals(user.getId()));
+        assert(convertedUser.getUserPrincipalName().equals(user.getUserPrincipalName()));
+        assert(convertedUser.getAccountEnabled());
 
     }
 
@@ -54,9 +55,9 @@ class AzureUserTest {
 
         AzureUserExternal convertedUser = new AzureUserExternal(user, configUser);
 
-        assert(convertedUser.getIdpUserObjectId() == user.getId());
-        assert(convertedUser.getUserPrincipalName() == user.getUserPrincipalName());
-        assert(convertedUser.getAccountEnabled() == true);
+        assert(convertedUser.getIdpUserObjectId().equals(user.getId()));
+        assert(convertedUser.getUserPrincipalName().equals(user.getUserPrincipalName()));
+        assert(convertedUser.getAccountEnabled());
 
     }
 
