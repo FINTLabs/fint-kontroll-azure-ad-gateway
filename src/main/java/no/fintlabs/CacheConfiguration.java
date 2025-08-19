@@ -1,6 +1,5 @@
 package no.fintlabs;
-import com.microsoft.graph.models.User;
-import lombok.AllArgsConstructor;
+
 import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.AzureUser;
 import no.fintlabs.azure.AzureUserExternal;
@@ -9,10 +8,8 @@ import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentMap;
 
 @Configuration

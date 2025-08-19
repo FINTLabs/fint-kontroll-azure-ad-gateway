@@ -17,9 +17,6 @@ logging:
     org.springframework.web.servlet.DispatcherServlet: WARN
 
 fint:
-  cache:
-    defaultCacheEntryTimeToLiveMillis: 518400000
-    defaultCacheHeapSize: 20000000
   application-id: fint-kontroll-azure-ad-gateway
 
   kontroll:

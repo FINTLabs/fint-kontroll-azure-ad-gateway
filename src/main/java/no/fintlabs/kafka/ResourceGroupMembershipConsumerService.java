@@ -12,7 +12,6 @@ import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
 import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.scheduler.Schedulers;
 import reactor.core.publisher.Sinks;
@@ -30,29 +29,9 @@ import java.util.concurrent.ConcurrentMap;
 public class ResourceGroupMembershipConsumerService {
     private final AzureClient azureClient;
     private final Config.KafkaConfig kafkaConfig;
-    private final Config config;
     private final ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private final Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink =
             Sinks.many().unicast().onBackpressureBuffer();
-//
-//    public ResourceGroupMembershipConsumerService(
-//            AzureClient azureClient,
-//            Config.KafkaConfig kafkaConfig,
-//            Config config,
-//            ConcurrentMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache) {
-//        this.azureClient = azureClient;
-//        this.kafkaConfig = kafkaConfig;
-//        this.config = config;
-//        this.resourceGroupMembershipCache = resourceGroupMembershipCache;
-//        this.resourceGroupMembershipSink = Sinks.many().unicast().onBackpressureBuffer();
-//        this.resourceGroupMembershipSink.asFlux()
-//                .parallel(20) // Parallelism with up to 20 threads
-//                .runOn(Schedulers.boundedElastic())
-//                .subscribe
-//                        (keyAndResourceGroupMembership ->
-//                                updateAzureWithMembership(keyAndResourceGroupMembership.getT1(), keyAndResourceGroupMembership.getT2())
-//                );
-//    }
 
     @PostConstruct
     void init() {
