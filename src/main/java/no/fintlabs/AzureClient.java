@@ -291,7 +291,7 @@ AzureClient {
 
                 String kafkaKey = group.getId() + "_" + memberId;
                 if (untypedMember.getValue().containsKey("@removed")) {
-                    azureGroupMembershipProducerService.processMembership("removed", new AzureGroupMembership(memberId,group.getId(),kafkaKey));
+                    azureGroupMembershipProducerService.removeMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                     //azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
                     resourceGroupMembershipCache.remove(kafkaKey);
                     log.info("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
@@ -300,7 +300,7 @@ AzureClient {
                     }
                     continue;
                 }
-                azureGroupMembershipProducerService.processMembership("add", new AzureGroupMembership(memberId,group.getId(),kafkaKey));
+                azureGroupMembershipProducerService.addMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 //azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
@@ -601,7 +601,6 @@ AzureClient {
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
         if (resourceGroupMembership.getAzureUserRef() != null && resourceGroupMembership.getAzureGroupRef() != null) {
 
-
             DirectoryObject directoryObject = new DirectoryObject();
             directoryObject.setId(resourceGroupMembership.getAzureUserRef());
             ReferenceCreate referenceMember = new com.microsoft.graph.models.ReferenceCreate();
@@ -614,8 +613,7 @@ AzureClient {
 
                     log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
 
-                    azureGroupMembershipProducerService.processMembership("added",
-                            new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                    azureGroupMembershipProducerService.addMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
 
                     log.info("Produced message to Kafka on added UserId {} to GroupId {}",
                             resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
@@ -623,8 +621,7 @@ AzureClient {
                 } catch (ApiException e) {
                     if (e.getResponseStatusCode() == 400) {
                         if (e.getMessage().contains("object references already exist")) {
-                            azureGroupMembershipProducerService.processMembership("added",
-                                    new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                            azureGroupMembershipProducerService.addMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
 
                             log.info("Republished to Kafka, UserId {} already added to GroupId {}",
                                     resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());

@@ -35,7 +35,7 @@ public class AzureGroupMembershipProducerService {
                 .parallel(20) // Parallelism with up to 20 threads
                 .runOn(Schedulers.boundedElastic())
                 .subscribe(keyAndAzureMembership ->
-                        publishMemberships(keyAndAzureMembership.getT1(), keyAndAzureMembership.getT2()));
+                        publishMembership(keyAndAzureMembership.getT1(), keyAndAzureMembership.getT2()));
 
         azureGroupMembershipTemplate = parameterizedTemplateFactory.createTemplate(AzureGroupMembership.class);
 
@@ -56,14 +56,21 @@ public class AzureGroupMembershipProducerService {
                         .nullValueRetentionTime(Duration.ofDays(7))
                         .cleanupFrequency(CleanupFrequency.NORMAL)
                         .build());
-
     }
 
-    public void processMembership(String action, AzureGroupMembership azureMembership) {
+    public void addMembership(AzureGroupMembership azureMembership) {
+        azureGroupMembershipSink.tryEmitNext(Tuples.of("add", azureMembership));
+    }
+
+    public void removeMembership(AzureGroupMembership azureMembership) {
+        azureGroupMembershipSink.tryEmitNext(Tuples.of("removed", azureMembership));
+    }
+
+    /*public void processMembership(String action, AzureGroupMembership azureMembership) {
         azureGroupMembershipSink.tryEmitNext(Tuples.of(action, azureMembership));
-    }
+    }*/
 
-    private void publishMemberships(String action, AzureGroupMembership azureMembership) {
+    private void publishMembership(String action, AzureGroupMembership azureMembership) {
         log.debug("Starting publishMemberships function {}.", azureMembership.getId());
         String kafkaKey = azureMembership.getId();
         if (Objects.equals(action, "removed")) {

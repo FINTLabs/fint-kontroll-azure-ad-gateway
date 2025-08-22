@@ -28,9 +28,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import reactor.core.publisher.Sinks;
+import reactor.util.function.Tuple2;
+
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -67,6 +71,9 @@ class AzureClientTest {
 
     @Mock
     private AzureGroupProducerService azureGroupProducerService;
+
+    /*@Mock
+    private Sinks.Many<Tuple2<String,AzureGroupMembership>> azureGroupMembershipSink;*/
 
     @Mock
     private AzureGroupMembershipProducerService azureGroupMembershipProducerService;
@@ -186,30 +193,18 @@ class AzureClientTest {
 
     private List<Group> getTestGrouplist(int numberOfGroups, int numberOfUsers) {
         return getTestGrouplistAddedRemoved(numberOfGroups, numberOfUsers, 0);
-        /*List<Group> retGroupList = new ArrayList<>();
-        for (int i=0; i<numberOfGroups; i++) {
-            Group group = new Group();
-            group.setId(UUID.randomUUID().toString());
-            group.setDisplayName("testgroup" + i + "-suff-");
-            HashMap<String, Object> additionalData = new HashMap<>() {{
-                put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", "123");
-                put("members@delta", getDeltaMembers(numberOfUsers));
-            }};
-            group.setAdditionalData(additionalData);
-            retGroupList.add(group);
-        }
-
-        return retGroupList;*/
     }
 
     @Test
     void doesGroupExist_found() throws Exception {
         List<Group> groupList = getTestGrouplist(1, 1);
         when(groupCollectionResponse.getValue()).thenReturn(groupList);
+
         String resourceGroupID = groupList.getFirst().getId();
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
+
         assertTrue(azureClient.doesGroupExist(resourceGroupID));
     }
 
@@ -267,14 +262,14 @@ class AzureClientTest {
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
 
         // Assert
-        verify(groupsRequestBuilder, timeout(5000).times(1)).post(groupCaptor.capture());
+        verify(groupsRequestBuilder, times(1)).post(groupCaptor.capture());
 
         Group capturedGroup = groupCaptor.getValue();
+
         assertNotNull(capturedGroup);
         assertNotNull(capturedGroup.getAdditionalData());
         assertTrue(capturedGroup.getAdditionalData().containsKey("RoleKontrollIdAttribute"));
         assertEquals("12", capturedGroup.getAdditionalData().get("RoleKontrollIdAttribute"));
-
     }
 
     @Test
@@ -300,7 +295,8 @@ class AzureClientTest {
          azureClient.addGroupToAzure(resourceGroup);
 
          assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-         verify(groupsRequestBuilder, timeout(5000).times(1)).post(any(Group.class));
+
+         verify(groupsRequestBuilder, times(1)).post(any(Group.class));
      }
 
     @Test
@@ -316,15 +312,10 @@ class AzureClientTest {
                 .resourceLimit("1000")
                 .build();
 
-//        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
-//        when(groupsRequestBuilder.post(any(Group.class))).thenReturn(new Group());
-//        when(configGroup.getPrefix()).thenReturn("random-prefix");
-//        when(configGroup.getSuffix()).thenReturn("random-postfix");
-//        when(config.getEntobjectid()).thenReturn("testentobjectid123");
-
         azureClient.addGroupToAzure(resourceGroup);
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+
         verify(groupsRequestBuilder, times(0)).post(any(Group.class));
     }
 
@@ -367,13 +358,19 @@ class AzureClientTest {
                 .build();
 
         azureClient.addGroupMembership(resourceGroupMembership, "resourcekey");
+
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
 
-        verify(azureGroupMembershipProducerService, timeout(5000).times(0)).processMembership(anyString(), any(AzureGroupMembership.class));
+        verify(azureGroupMembershipProducerService, times(0)).addMembership(any(AzureGroupMembership.class));
+        verify(azureGroupMembershipProducerService, times(0)).removeMembership(any(AzureGroupMembership.class));
+
+        assertTrue(false);
+
     }
 
     @Test
     void makeSureAddGroupMembershipCallsHTTPPostWhenMembershipIsCorrect() {
+
          when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
          when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
          when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
@@ -390,7 +387,8 @@ class AzureClientTest {
          azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
          assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-         verify(refRequestBuilder, timeout(5000).times(1)).post(any(ReferenceCreate.class));
+
+         verify(refRequestBuilder, times(1)).post(any(ReferenceCreate.class));
      }
 
     @Test
@@ -413,7 +411,8 @@ class AzureClientTest {
         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
-        verify(azureGroupMembershipProducerService, timeout(5000).times(0)).processMembership(anyString(),any(AzureGroupMembership.class));
+
+        verify(azureGroupMembershipProducerService, times(0)).addMembership(any(AzureGroupMembership.class));
     }
 
     @Test
@@ -440,9 +439,8 @@ class AzureClientTest {
         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
-        //verify(azureGroupMembershipProducerService, times(1)).publishAddedMembership(any(AzureGroupMembership.class));
-        verify(azureGroupMembershipProducerService, timeout(5000).times(1))
-                .processMembership(anyString(),any(AzureGroupMembership.class));
+
+        verify(azureGroupMembershipProducerService, times(1)).addMembership(any(AzureGroupMembership.class));
     }
 
     @Test
@@ -502,18 +500,20 @@ class AzureClientTest {
 
         String kafkaKey = "example_with_multiple_underscores";
         azureClient.deleteGroupMembership(kafkaKey);
+
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(singleMemberRefRequestBuilder, timeout(5000).times(0) ).delete();
+
+        verify(singleMemberRefRequestBuilder, times(0) ).delete();
 
         kafkaKey = "exampleGroupID_exampleUserID";
         azureClient.deleteGroupMembership(kafkaKey);
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(singleMemberRefRequestBuilder, timeout(5000).times(1) ).delete();
+        verify(singleMemberRefRequestBuilder, times(1) ).delete();
 
         kafkaKey = "exampleGroupID_exampleUserID2";
         azureClient.deleteGroupMembership(kafkaKey);
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(singleMemberRefRequestBuilder, timeout(5000).times(2) ).delete();
+        verify(singleMemberRefRequestBuilder, times(2) ).delete();
     }
 
     // TODO: Refactor when delta is implemented [FKS-944]
@@ -541,7 +541,8 @@ class AzureClientTest {
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
         verify(azureGroupProducerService,times(3)).processGroup(any());
         // Verify correct number of publish is called for membership
-        verify(azureGroupMembershipProducerService, times(9)).processMembership(anyString(),any());
+        //verify(azureGroupMembershipProducerService, times(9)).processMembership(anyString(),any());
+        verify(azureGroupMembershipProducerService, times(9)).addMembership(any());
     }
 
     @Test
@@ -561,9 +562,9 @@ class AzureClientTest {
         azureClient.pullAllGroupsDelta();
 
         verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
-        verify(azureGroupMembershipProducerService, times(27)).processMembership(anyString(),any(AzureGroupMembership.class));
-        //verify(azureGroupMembershipProducerService, times(18)).publishAddedMembership(any(AzureGroupMembership.class));
-        //verify(azureGroupMembershipProducerService, times(9)).publishDeletedMembership(anyString());
+
+        verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
+        verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
 
         //TODO: this verifier is not stable and as for now commented
         //verify(resourceGroupMembershipCache, times(9)).remove(anyString());
@@ -862,7 +863,7 @@ class AzureClientTest {
 
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(azureGroupMembershipProducerService,times(9)).processMembership(anyString(),any(AzureGroupMembership.class));
+        verify(azureGroupMembershipProducerService,times(9)).addMembership(any(AzureGroupMembership.class));
 
     }
 
@@ -936,7 +937,7 @@ class AzureClientTest {
              azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
              assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-             verify(azureGroupMembershipProducerService, timeout(5000).times(1)).processMembership(anyString(),any(AzureGroupMembership.class));
+             verify(azureGroupMembershipProducerService, timeout(5000).times(1)).addMembership(any(AzureGroupMembership.class));
          }
 
     @Test
@@ -962,7 +963,9 @@ class AzureClientTest {
          azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
          assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-         verify(azureGroupMembershipProducerService, timeout(5000).times(0)).processMembership(anyString(),any(AzureGroupMembership.class));
+
+         verify(azureGroupMembershipProducerService, timeout(5000).times(0)).addMembership(any(AzureGroupMembership.class));
+         verify(azureGroupMembershipProducerService, timeout(5000).times(0)).removeMembership(any(AzureGroupMembership.class));
      }
 
 
