@@ -197,6 +197,7 @@ class AzureClientTest {
 
     @Test
     void doesGroupExist_found() throws Exception {
+        // TEST OK
         List<Group> groupList = getTestGrouplist(1, 1);
         when(groupCollectionResponse.getValue()).thenReturn(groupList);
 
@@ -210,6 +211,7 @@ class AzureClientTest {
 
     @Test
     void doesGroupExist_notfound() throws Exception {
+        // TEST OK
         String resourceGroupID = "234";
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
 
@@ -224,9 +226,9 @@ class AzureClientTest {
 
     @Test
     void doesGroupExist_throwswhennextpageisindicated() {
+        // TEST OK
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
-
         when(groupCollectionResponse.getOdataNextLink()).thenReturn("somefakeurl");
 
         assertThrows(Exception.class,
@@ -236,7 +238,7 @@ class AzureClientTest {
 
     @Test
     void confirm_addgrouptoazure_contains_FintKontrollRoleId_Attribute() {
-
+        // TEST OK
         ResourceGroup resourceGroup = ResourceGroup.builder()
                 .id("12")
                 .resourceId("123")
@@ -274,7 +276,7 @@ class AzureClientTest {
 
     @Test
     void confirm_addgrouptoazure_triggers_post() {
-
+        // TEST OK
          ResourceGroup resourceGroup = ResourceGroup.builder()
                  .id("12")
                  .resourceId("123")
@@ -301,7 +303,7 @@ class AzureClientTest {
 
     @Test
     void confirm_addgrouptoazure_fails_if_resourceGroup_IsMissing_Attributes() {
-
+        // TEST OK
         ResourceGroup resourceGroup = ResourceGroup.builder()
                 .id("1254")
                 .resourceId("12354")
@@ -321,7 +323,7 @@ class AzureClientTest {
 
     @Test
     void makeSurePatchIsCalledWhenUpdateIsCalled() {
-
+        // TEST OK
          when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
          when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
          when(groupItemRequestBuilder.patch(any(Group.class))).thenReturn(new Group());
@@ -346,7 +348,7 @@ class AzureClientTest {
 
     @Test
     void makeSureMSGraphExceptionIsHandledGracefully() {
-
+        // TODO: Test must be refactored
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
 
         // Call the method under test
@@ -370,7 +372,7 @@ class AzureClientTest {
 
     @Test
     void makeSureAddGroupMembershipCallsHTTPPostWhenMembershipIsCorrect() {
-
+        // TEST OK
          when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
          when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
          when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
@@ -393,6 +395,7 @@ class AzureClientTest {
 
     @Test
     void makeSureAddGroupMembershipDoesntPopulateKafkaWhenMSGraphThrowsError() {
+        // TEST OK
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
         when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
@@ -440,6 +443,7 @@ class AzureClientTest {
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
 
+        // TODO: Needs refactoring
         verify(azureGroupMembershipProducerService, times(1)).addMembership(any(AzureGroupMembership.class));
     }
 
@@ -458,12 +462,13 @@ class AzureClientTest {
         azureClient.deleteGroupMembership(kafkaKey);
 
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(singleMemberRefRequestBuilder, timeout(5000).times(1) ).delete();
+        // TODO: Needs refactoring
+        verify(singleMemberRefRequestBuilder, times(1) ).delete();
     }
 
     @Test
     void logAndSkipDeletionWhenKafkaIDIswithoutUnderscore () {
-
+        // TODO: Needs refactoring
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
         when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
@@ -480,11 +485,12 @@ class AzureClientTest {
         kafkaKey = "exampleGroupID_exampleUserID";
         azureClient.deleteGroupMembership(kafkaKey);
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
-        verify(singleMemberRefRequestBuilder, timeout(5000).times(1) ).delete();
+        verify(singleMemberRefRequestBuilder, times(1) ).delete();
     }
 
     @Test
     void logAndSkipDeletionWhenKafkaIDhaveMultipleUnderscores () {
+        // TODO: Needs refactoring
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.byGroupId(anyString())).thenReturn(groupItemRequestBuilder);
         when(groupItemRequestBuilder.members()).thenReturn(membersRequestBuilder);
