@@ -522,12 +522,10 @@ class AzureClientTest {
         verify(singleMemberRefRequestBuilder, times(2) ).delete();
     }
 
-    // TODO: Refactor when delta is implemented [FKS-944]
-
-    // TODO: What are we actually testing here? Nothing is returned.
-    // 3 random groups with 3 randoms produces 3 groups
+    // 3 random groups with 3 randoms produces 3 groups, and 9 posts to kafka
     @Test
     void makeSureDeltaIsCalledWhenGroupsAreDefinedAndPublishesCorrectNumberOfGroupsAndMembershipsToKafka() {
+        // TEST OK
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
@@ -543,18 +541,19 @@ class AzureClientTest {
         testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
         assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
 
-
         assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, TimeUnit.SECONDS));
+
         verify(azureGroupProducerService,times(3)).processGroup(any());
         // Verify correct number of publish is called for membership
-        //verify(azureGroupMembershipProducerService, times(9)).processMembership(anyString(),any());
         verify(azureGroupMembershipProducerService, times(9)).addMembership(any());
     }
 
     @Test
-    void makeSure18NewUsersAreCreatedAnd9AreRemoved() {
+    void makeSure18NewUsersArePublishedOnKafkaAnd9ArePublishedAsRemovedOnKafkaAnd9IsremovedFromCache() {
+        // TEST OK
         when(configGroup.getSuffix()).thenReturn("-suff-");
-        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        when(configGroup.getFintkontrollidattribute()).thenReturn(
+                "extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
@@ -569,21 +568,27 @@ class AzureClientTest {
 
         verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
 
-        verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-        verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
+        verify(azureGroupMembershipProducerService,
+                times(18)).addMembership(any(AzureGroupMembership.class));
+        verify(azureGroupMembershipProducerService,
+                times(9)).removeMembership(any(AzureGroupMembership.class));
 
-        //TODO: this verifier is not stable and as for now commented
-        //verify(resourceGroupMembershipCache, times(9)).remove(anyString());
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
+
+        verify(azureGroupMembershipProducerService,times(18)).addMembership(any(AzureGroupMembership.class));
+        verify(azureGroupMembershipProducerService,times(9)).removeMembership(any(AzureGroupMembership.class));
+        verify(resourceGroupMembershipCache, times(9)).remove(anyString());
     }
 
     @Test
     void makeSurePageThroughGroupsDeltaHandlesZeroGroups() {
-
+        // TEST OK
         when(configGroup.getSuffix()).thenReturn("-suff-");
         lenient().when(configGroup.getGrouppagingsize()).thenReturn(1);
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
-        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        when(configGroup.getFintkontrollidattribute()).thenReturn(
+                "extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
 
         DeltaGetResponse deltaGetResponseTest = new DeltaGetResponse();
         deltaGetResponseTest.setValue(getTestGrouplist(0,0));
@@ -597,6 +602,9 @@ class AzureClientTest {
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
         assertTrue(testPool.awaitQuiescence(15, TimeUnit.SECONDS));
+
+        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, TimeUnit.SECONDS));
+
         verify(azureGroupProducerService,times(0)).processGroup(any());
     }
 
@@ -604,7 +612,8 @@ class AzureClientTest {
     void makeSureDeltaFunctionFailsIfODataDeltaLinkIsUndefinedOnLastPage() {
 
         when(configGroup.getSuffix()).thenReturn("-suff-");
-        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        when(configGroup.getFintkontrollidattribute()).thenReturn(
+                "extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
 
         DeltaGetResponse firstPage = new DeltaGetResponse();

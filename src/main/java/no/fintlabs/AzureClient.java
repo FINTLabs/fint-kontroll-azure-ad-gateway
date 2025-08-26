@@ -35,7 +35,7 @@ AzureClient {
     private final ConcurrentHashMap<String, AzureUserExternal> entraIdExternalUserCache;
     private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private final ConcurrentHashMap<String, AzureGroup> azureGroupCache;
-    private final Set<String> azureGroupMembershipCache;
+    private final HashSet<String> azureGroupMembershipCache;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
