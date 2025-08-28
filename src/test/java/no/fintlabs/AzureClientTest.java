@@ -21,6 +21,7 @@ import no.fintlabs.azure.*;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -610,7 +611,7 @@ class AzureClientTest {
 
     @Test
     void makeSureDeltaFunctionFailsIfODataDeltaLinkIsUndefinedOnLastPage() {
-
+        // TEST OK
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn(
                 "extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
@@ -647,6 +648,7 @@ class AzureClientTest {
 
     @Test
     void makeSurePageThroughGroupsDeltaReturnsDeltaOnLastPage() {
+        // TEST OK
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
@@ -693,7 +695,6 @@ class AzureClientTest {
         assertNull(lastPage.getOdataNextLink(), "Last page should not have a next link.");
         assertNotNull(lastPage.getOdataDeltaLink(), "Last page should have a delta link.");
         assertEquals("last delta link", lastPage.getOdataDeltaLink(), "Delta link should match expected value.");
-
     }
 
     @Test
@@ -716,6 +717,7 @@ class AzureClientTest {
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+
         when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
 
         when(requestAdapter.send(any(RequestInformation.class), any(), any()))
@@ -727,6 +729,7 @@ class AzureClientTest {
         lastPage.setOdataDeltaLink("last delta link");
 
         when(deltaRequestBuilder.get()).thenReturn(lastPage);
+
         when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
 
         ForkJoinPool testPool = new ForkJoinPool(2);
@@ -1106,6 +1109,16 @@ class AzureClientTest {
 //        /*verify(groupCollectionPage, times(2)).getNextPage();
 //        verify(mockCollPage2, times(1)).getNextPage();
 //    }
+    @Test
+    void makeSure10GroupsWith1000UsersCreateCacheWith10000MembershipsAndPostsAllMembershipsToKafka()
+    {
+        assertTrue(false);
+    }
 
+    @Test
+    @Disabled("This function should only be launched manually")
+    void makeSure1000GroupsWith2000UsersCreateCacheWith20MillMembershipsAndPostsAllMembershipsToKafka()
+    {
+        assertTrue(false);
+    }
 }
-

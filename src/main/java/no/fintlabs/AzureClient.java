@@ -2,6 +2,7 @@ package no.fintlabs;
 
 import com.microsoft.graph.core.tasks.PageIterator;
 import com.microsoft.graph.groups.delta.DeltaGetResponse;
+import com.microsoft.graph.groups.delta.DeltaRequestBuilder;
 import com.microsoft.graph.models.*;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import java.util.List;
@@ -19,6 +20,7 @@ import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import java.util.*;
+import java.util.function.Consumer;
 
 
 @Component
@@ -41,20 +43,20 @@ AzureClient {
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final ExecutorService executor = Executors.newFixedThreadPool(40);
-    private String deltaLinkCache;
+    private String odataDeltaLink;
     private AtomicInteger numMembers;
     private AtomicInteger groupCounter;
     private Set<String> processedGroupIds;
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
-        public void clearCaches() {
-        deltaLinkCache = null;
+    public void clearCaches() {
+        odataDeltaLink = null;
         entraIdUserCache.clear();
         entraIdExternalUserCache.clear();
         azureGroupCache.clear();
         azureGroupMembershipCache.clear();
             log.info("Delta caches for group and user has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
-        }
+    }
 
     @Scheduled(
             initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
@@ -135,7 +137,7 @@ AzureClient {
                 }).build();
 
         pageIterator.iterate();
-        if (deltaLinkCache != null) {
+        if (odataDeltaLink != null) {
             if(changedUsers.get() > 0) {
                 log.info("*** <<< Found total {} users in Entra ID. Published {} changed users to Kafka >>> ***", users.get(), changedUsers.get());
             }
@@ -173,22 +175,18 @@ AzureClient {
         long groupStartTime = System.currentTimeMillis();
 
         try {
-            if (deltaLinkCache != null) {
-                String deltaUrl = deltaLinkCache;
-                DeltaGetResponse groupPage = graphServiceClient.groups().delta().withUrl(deltaUrl)
-                        .get(requestConfiguration -> {
-                            requestConfiguration.queryParameters.select = selectionCriteria;
-                            requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
-                        });
-                pageThroughGroupsDelta(groupPage);
-            } else {
-                DeltaGetResponse groupPage = graphServiceClient.groups().delta()
-                        .get(requestConfiguration -> {
-                            requestConfiguration.queryParameters.select = selectionCriteria;
-                            requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
-                        });
-                pageThroughGroupsDelta(groupPage);
-            }
+
+            Consumer<DeltaRequestBuilder.GetRequestConfiguration> configureRequest = requestConfiguration -> {
+                requestConfiguration.queryParameters.select = selectionCriteria;
+                requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
+            };
+
+            DeltaGetResponse groupPage = (odataDeltaLink != null)
+                    ? graphServiceClient.groups().delta().withUrl(odataDeltaLink).get(configureRequest)
+                    : graphServiceClient.groups().delta().get(configureRequest);
+
+            pageThroughGroupsDelta(groupPage);
+
         } catch (ApiException | ReflectiveOperationException e) {
             log.error("Failed when trying to get groups. ", e);
         }
@@ -196,7 +194,6 @@ AzureClient {
         long elapsedTimeInSeconds = (endTime - groupStartTime) / 1000;
         long minutes = elapsedTimeInSeconds / 60;
         long seconds = elapsedTimeInSeconds % 60;
-
 
         if (processedGroupIds.size() > 0 || numMembers.get() > 0) {
             log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, published to Kafka, in {} minutes and {} seconds  >>> ***",
@@ -229,11 +226,11 @@ AzureClient {
             throw new ReflectiveOperationException("Logic error: Last page doesn't contain ODataDeltaLink");
         }
 
-        if(deltaLinkCache == null) {
+        if(odataDeltaLink == null) {
             log.info("*** <<< Initial Delta run on Groups completed >>> ***");
         }
-        deltaLinkCache = groupPage.getOdataDeltaLink();
-        log.info("Delta link updated in deltaLinkCache. Finished pullAllGroupsDelta");
+        odataDeltaLink = groupPage.getOdataDeltaLink();
+        log.info("Delta link updated in variable odataDeltaLink. Finished pullAllGroupsDelta");
     }
 
     private void deltaPageIterator(DeltaGetResponse groupPage) throws ReflectiveOperationException {
@@ -295,7 +292,7 @@ AzureClient {
                     //azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
                     resourceGroupMembershipCache.remove(kafkaKey);
                     log.info("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
-                    if(deltaLinkCache != null) {
+                    if(odataDeltaLink != null) {
                         log.info("UserId: {} is removed as member from GroupId: {}", memberId, group.getId());
                     }
                     continue;
@@ -304,7 +301,7 @@ AzureClient {
                 //azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
-                if(deltaLinkCache != null) {
+                if(odataDeltaLink != null) {
                     log.info("UserId: {} is member of GroupId: {}", memberId, group.getId());
                 }
             }
