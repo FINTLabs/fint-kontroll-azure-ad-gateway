@@ -1,5 +1,5 @@
 plugins {
-    id 'org.springframework.boot' version '3.5.4'
+    id 'org.springframework.boot' version '4.0.0-M2'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'java'
 }
@@ -37,39 +37,34 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-    implementation 'io.netty:netty-resolver-dns-native-macos:4.2.3.Final'
-    implementation("io.netty:netty-handler:4.2.3.Final")
-    implementation "io.netty:netty-common"
-    implementation "org.xmlunit:xmlunit-core:2.10.0"
-    implementation "org.springframework:spring-webflux:6.2.9"
-    implementation "org.springframework:spring-webmvc:6.2.9"
-    implementation "org.springframework:spring-context:6.2.9"
-    implementation "org.apache.tomcat.embed:tomcat-embed-core"
+    implementation 'io.netty:netty-resolver-dns-native-macos:4.2.4.Final'
+    implementation("io.netty:netty-handler:4.2.4.Final")
+    implementation "io.netty:netty-common:4.2.4.Final"
+    implementation "org.xmlunit:xmlunit-core:2.10.3"
+    implementation "org.springframework:spring-webflux:7.0.0-M8"
+    implementation "org.springframework:spring-webmvc:7.0.0-M8"
+    implementation "org.springframework:spring-context:7.0.0-M8"
+    implementation "org.apache.tomcat.embed:tomcat-embed-core:11.0.10"
 
-    implementation 'com.azure:azure-identity:1.16.3'
-    implementation 'com.microsoft.graph:microsoft-graph:6.47.0'
-    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.azure:azure-identity:1.17.0'
+    implementation 'com.microsoft.graph:microsoft-graph:6.51.0'
+    implementation 'com.google.code.gson:gson:2.13.1'
     implementation group: 'commons-codec', name: 'commons-codec', version: '1.15'
 
     implementation 'org.springframework.kafka:spring-kafka'
-    // TODO: Upgrade with reference to new version when migrating to Spring boot 3 [FKS-214]
     implementation 'no.fintlabs:fint-kafka:5.0.0-rc-2'
-    //implementation 'no.fintlabs:fint-kafka:3.2.0-rc-1'
-    //implementation 'no.fintlabs:fint-flyt-cache:1.0.0'
-    //implementation 'org.ehcache:ehcache:3.10.6'
-    //implementation 'net.sf.ehcache:ehcache:2.10.9.2'
 
     implementation 'org.apache.commons:commons-lang3:3.18.0'
     implementation 'org.springframework.cloud:spring-cloud-function-context'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
-    compileOnly 'org.projectlombok:lombok:1.18.34'
-    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor:3.3.3'
-    annotationProcessor 'org.projectlombok:lombok:1.18.34'
+    compileOnly 'org.projectlombok:lombok:1.18.38'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus:1.16.0-M2'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor:4.0.0-M2'
+    annotationProcessor 'org.projectlombok:lombok:1.18.38'
 
-    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.3.3'
-    testImplementation 'org.projectlombok:lombok:1.18.34'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:4.0.0-M2'
+    testImplementation 'org.projectlombok:lombok:1.18.38'
 }
 
 test {
