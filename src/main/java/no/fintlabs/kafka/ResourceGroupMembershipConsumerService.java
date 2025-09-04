@@ -116,14 +116,14 @@ public class ResourceGroupMembershipConsumerService {
         }
     }
 
-    void updateAzureWithMembership(String kafkakKey, Optional<ResourceGroupMembership> resourceGroupMembership) {
+    void updateAzureWithMembership(String kafkaKey, Optional<ResourceGroupMembership> resourceGroupMembership) {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzureWithMembership function {}.", randomUUID);
 
         if (resourceGroupMembership.isEmpty()) {
-            azureClient.deleteGroupMembership(kafkakKey);
+            azureClient.deleteGroupMembership(kafkaKey);
         } else {
-            azureClient.addGroupMembership(resourceGroupMembership.get(), kafkakKey);
+            azureClient.addGroupMembership(resourceGroupMembership.get(), kafkaKey);
         }
         log.debug("Stopping updateAzureWithMembership function {}.", randomUUID);
     }
