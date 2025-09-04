@@ -46,12 +46,12 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.13.1'
     implementation 'commons-codec:commons-codec:1.19.0'
     implementation 'org.springframework.kafka:spring-kafka:3.3.9'
-    implementation 'no.fintlabs:fint-kafka:5.0.0-rc-2'
+    implementation 'no.fintlabs:fint-kafka:5.0.0-rc-3'
     implementation 'org.apache.commons:commons-lang3:3.18.0'
     implementation 'org.springframework.cloud:spring-cloud-function-context:4.2.3'
 
     compileOnly 'org.projectlombok:lombok:1.18.38'
-    runtimeOnly 'io.micrometer:micrometer-registry-prometheus1.16.0-M2'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus:1.16.0-M2'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor:3.5.5'
     annotationProcessor 'org.projectlombok:lombok:1.18.38'
 

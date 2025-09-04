@@ -13,12 +13,13 @@ import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
-
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.List;
@@ -72,10 +73,14 @@ public class ResourceGroupConsumerService {
                 .domainContextApplicationDefault()
                 .build();
 
-        ListenerConfiguration listenerConfiguration = ListenerConfiguration.builder()
-                .seekingOffsetResetOnAssignment(kafkaConfig.isSeekingOffsetResetOnAssignment())
-                .maxPollRecords(kafkaConfig.getMaxpollrecords())
-                .build();
+        ListenerConfiguration<ResourceGroup> listenerConfiguration =
+                ListenerConfiguration.builder(ResourceGroup.class)
+                        .groupIdApplicationDefault()
+                        .maxPollRecords(kafkaConfig.getMaxpollrecords())
+                        .maxPollInterval(Duration.ofMinutes(5))
+                        .errorHandler(new DefaultErrorHandler())
+                        .continueFromPreviousOffsetOnAssignment()
+                        .build();
 
         EntityTopicNameParameters entityTopicNameParameters = EntityTopicNameParameters
                 .builder()
@@ -83,15 +88,11 @@ public class ResourceGroupConsumerService {
                 .topicNamePrefixParameters(topicNamePrefixParameters)
                 .build();
 
-        ConcurrentMessageListenerContainer<String, ResourceGroup> container =
-                parameterizedListenerContainerFactoryService
-                        .createBatchListenerContainerFactory(
-                                ResourceGroup.class,
-                                this::processEntityBatch,
-                                listenerConfiguration)
-                        .createContainer(entityTopicNameParameters);
-        container.setAutoStartup(true);
-        return container;
+        var factory = parameterizedListenerContainerFactoryService
+                .createBatchListenerContainerFactory(this::processEntityBatch, listenerConfiguration,
+                        c -> c.setAutoStartup(true));
+
+        return factory.createContainer(entityTopicNameParameters);
     }
 
     public void processEntityBatch(List<ConsumerRecord<String, ResourceGroup>> records) {
