@@ -297,7 +297,9 @@ AzureClient {
                     }
                     continue;
                 }
-                azureGroupMembershipProducerService.addMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
+                AzureGroupMembership azureGroupMembership = new AzureGroupMembership(memberId,group.getId(),kafkaKey);
+                azureGroupMembershipProducerService.addMembership(azureGroupMembership);
+                azureGroupMembershipCache.add(azureGroupMembership.getId());
                 //azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
                 numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
@@ -544,6 +546,66 @@ AzureClient {
         }
     }
 
+    public void deleteGroupAsync(String resourceGroupId) {
+        if (resourceGroupId == null || resourceGroupId.trim().isEmpty()) {
+            log.error("deleteGroup cannot be completed: resourceGroupId is null/blank");
+            return;
+        }
+
+        final String attr = configGroup.getFintkontrollidattribute();
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                GroupCollectionResponse page = graphServiceClient
+                        .groups()
+                        .get(rc -> {
+                            rc.queryParameters.select = new String[] { "id," + attr };
+                            rc.queryParameters.filter = attr + " eq '" + resourceGroupId + "'";
+                            rc.queryParameters.top = 2;
+                            // If use counts:
+                            // rc.headers.add("ConsistencyLevel", "eventual");
+                            // rc.queryParameters.count = true;
+                        });
+
+                if (page == null || page.getValue() == null || page.getValue().isEmpty()) {
+                    log.warn("No group found for {}={} (nothing to delete)", attr, resourceGroupId);
+                    return;
+                }
+
+                var matches = page.getValue().stream()
+                        .filter(g -> resourceGroupId.equals(g.getAdditionalData().get(attr)))
+                        .toList();
+
+                if (matches.isEmpty()) {
+                    log.warn("No group matched {}={} after filtering (nothing to delete)", attr, resourceGroupId);
+                    return;
+                }
+                if (matches.size() > 1) {
+                    log.error("Expected exactly 1 group, found {} for {}={}. Aborting delete.", matches.size(), attr, resourceGroupId);
+                    return;
+                }
+
+                String groupId = matches.getFirst().getId();
+
+                try {
+                    graphServiceClient
+                            .groups()
+                            .byGroupId(groupId)
+                            .delete();
+
+                    log.info("Group objectId {} and {}={} deleted", groupId, attr, resourceGroupId);
+                } catch (com.microsoft.kiota.ApiException e) {
+                    log.error("Failed to delete group {} ({}={}). Error: {}", groupId, attr, resourceGroupId, e.getMessage());
+                }
+            } catch (com.microsoft.kiota.ApiException e) {
+                log.error("Failed to query groups for {}={}. Error: {}", attr, resourceGroupId, e.getMessage());
+            }
+        }, executor).exceptionally(e -> {
+            log.error("Exception while scheduling deleteGroup for {}={}. Error: {}", attr, resourceGroupId, e.getMessage());
+            return null;
+        });
+    }
+
     public void deleteGroup(String resourceGroupId) {
         GroupCollectionResponse groupCollectionPage = null;
         String[] selectionCriteria = new String[]{String.format("id,%s", configGroup.getFintkontrollidattribute())};
@@ -586,13 +648,22 @@ AzureClient {
 
         //LinkedList<Option> requestOptions = new LinkedList<>();
         //requestOptions.add(new HeaderOption("Prefer", "create-if-missing"));
-
-        Group groupResponse = graphServiceClient.groups()
-                .byGroupId(resourceGroup.getIdentityProviderGroupObjectId())
-                .patch(group);
-        if (groupResponse != null) {
-            log.info("Group with GroupObjectId '{}' successfully updated", resourceGroup.getIdentityProviderGroupObjectId());
-        }
+        String identityProviderGroupObjectId = resourceGroup.getIdentityProviderGroupObjectId();
+        CompletableFuture.runAsync(() -> {
+            try {
+                Group groupResponse = graphServiceClient.groups()
+                        .byGroupId(identityProviderGroupObjectId)
+                        .patch(group);
+                if (groupResponse != null) {
+                    log.info("Group with GroupObjectId '{}' successfully updated", identityProviderGroupObjectId);
+                }
+            } catch (ApiException e) {
+                log.error("Failed to update group with GroupObjectId '{}': {}", identityProviderGroupObjectId, e.getMessage());
+            }
+        }, executor).exceptionally(e -> {
+            log.error("Exception while update Group for {}. Error: {}", identityProviderGroupObjectId, e.getMessage());
+            return null;
+        });
     }
 
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
