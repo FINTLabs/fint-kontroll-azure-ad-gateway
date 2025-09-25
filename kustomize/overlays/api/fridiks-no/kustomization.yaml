@@ -27,7 +27,7 @@ patches:
         value: "fridiks-no.kontroll.entity.resource-group*"
       - op: add
         path: "/spec/resources"
-        value:
+        value: 
           limits:
             memory: "2Gi"
           requests:

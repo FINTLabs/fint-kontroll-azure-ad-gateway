@@ -27,7 +27,7 @@ patches:
         value: "fintlabs-no.kontroll.entity.resource-group*"
       - op: add
         path: "/spec/resources"
-        value:
+        value: 
           limits:
             memory: "3Gi"
           requests:
@@ -38,6 +38,11 @@ patches:
         value:
           name: "JAVA_TOOL_OPTIONS"
           value: "-XX:+ExitOnOutOfMemoryError -Xmx3072m"
+      - op: add
+        path: "/spec/env/1"
+        value:
+          name: "fint.org-id"
+          value: "fintlabs.no"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
