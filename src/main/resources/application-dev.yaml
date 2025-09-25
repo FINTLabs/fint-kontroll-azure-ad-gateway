@@ -8,7 +8,17 @@ logging:
     no.fintlabs.cache.ehcache: WARN
     okhttp3: WARN
     #org.apache: ERROR
-
+fint:
+  kontroll:
+    azure-ad-gateway:
+      group-scheduler:
+        pull:
+          initial-delay-ms: 5000
+          delta-delay-ms: 20000
+        delta-pull:
+          initial-delay-ms: 5000
+          delta-delay-ms: 20000
+        clear-cache: "0 */2 * * * *"
 #fint:
 #  kafka:
 #    bootstrap-servers: localhost:9092
