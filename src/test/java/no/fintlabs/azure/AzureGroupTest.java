@@ -1,16 +1,9 @@
 package no.fintlabs.azure;
 
 
-import com.google.gson.JsonPrimitive;
-import com.microsoft.graph.models.DirectoryObject;
-import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
-
 import com.microsoft.graph.models.Group;
 
-import com.microsoft.graph.models.GroupCollectionResponse;
-import com.microsoft.graph.serviceclient.GraphServiceClient;
-import lombok.RequiredArgsConstructor;
-import no.fintlabs.ConfigGroup;
+import no.fintlabs.config.ConfigGroup;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

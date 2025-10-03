@@ -6,8 +6,8 @@ import com.microsoft.graph.users.item.getmembergroups.GetMemberGroupsPostRequest
 import com.microsoft.kiota.ApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import no.fintlabs.ConfigGroup;
-import no.fintlabs.ConfigUser;
+import no.fintlabs.config.ConfigGroup;
+import no.fintlabs.config.ConfigUser;
 import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.AzureUser;
 import org.springframework.stereotype.Service;

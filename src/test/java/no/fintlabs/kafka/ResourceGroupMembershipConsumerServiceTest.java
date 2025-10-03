@@ -1,7 +1,7 @@
 package no.fintlabs.kafka;
 
 import net.bytebuddy.utility.RandomString;
-import no.fintlabs.AzureClient;
+import no.fintlabs.group.MsGraphGroup;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
 import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 class ResourceGroupMembershipConsumerServiceTest {
 
     @Mock
-    private AzureClient azureClient;
+    private MsGraphGroup msGraphGroup;
     @Mock
     private ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     @Mock
@@ -136,11 +136,11 @@ class ResourceGroupMembershipConsumerServiceTest {
         resourceGroupMembershipConsumerService.processMembershipBatch(records);
 
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
-                verify(azureClient, times(members.size()))
+                verify(msGraphGroup, times(members.size()))
                         .addGroupMembership(any(ResourceGroupMembership.class), anyString()));
 
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
-                verify(azureClient, never()).deleteGroupMembership(anyString()));
+                verify(msGraphGroup, never()).deleteGroupMembership(anyString()));
     }
 
 
@@ -149,8 +149,8 @@ class ResourceGroupMembershipConsumerServiceTest {
     void makeSureNullParametersDoesntCallAzureClient() {
         resourceGroupMembershipConsumerService.processMembershipBatch(Collections.emptyList());
 
-        verify(azureClient, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
-        verify(azureClient, times(0)).deleteGroupMembership(anyString());
+        verify(msGraphGroup, times(0)).addGroupMembership(any(ResourceGroupMembership.class), anyString());
+        verify(msGraphGroup, times(0)).deleteGroupMembership(anyString());
     }
 
     @Test
@@ -272,11 +272,11 @@ class ResourceGroupMembershipConsumerServiceTest {
         resourceGroupMembershipConsumerService.processMembershipBatch(List.of(rec(key2, null)));
 
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
-                verify(azureClient, times(2))
+                verify(msGraphGroup, times(2))
                         .addGroupMembership(any(ResourceGroupMembership.class), anyString()));
 
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
-                verify(azureClient, times(2))
+                verify(msGraphGroup, times(2))
                         .deleteGroupMembership(anyString()));
     }
 
@@ -326,16 +326,16 @@ class ResourceGroupMembershipConsumerServiceTest {
     void updateAzureWithMembership_NewMembershipCallsAzureAddGroupMembership() {
         resourceGroupMembershipConsumerService.updateAzureWithMembership(exampleKafkaKey, Optional.of(exampleGroupMembership));
 
-        verify(azureClient, times(1)).addGroupMembership(any(),anyString());
-        verify(azureClient, times(0)).deleteGroupMembership(anyString());
+        verify(msGraphGroup, times(1)).addGroupMembership(any(),anyString());
+        verify(msGraphGroup, times(0)).deleteGroupMembership(anyString());
     }
 
     @Test
     void updateAzureWithMembership_DeletedMembershipCallsAzureDeleteGroupMembership() {
         resourceGroupMembershipConsumerService.updateAzureWithMembership(exampleKafkaKey,Optional.empty());
 
-        verify(azureClient, times(0)).addGroupMembership(any(),anyString());
-        verify(azureClient, times(1)).deleteGroupMembership(anyString());
+        verify(msGraphGroup, times(0)).addGroupMembership(any(),anyString());
+        verify(msGraphGroup, times(1)).deleteGroupMembership(anyString());
     }
 }
 

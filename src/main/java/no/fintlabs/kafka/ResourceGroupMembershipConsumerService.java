@@ -4,8 +4,8 @@ package no.fintlabs.kafka;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.AzureClient;
-import no.fintlabs.Config;
+import no.fintlabs.config.Config;
+import no.fintlabs.group.MsGraphGroup;
 import no.fintlabs.kafka.consuming.ListenerConfiguration;
 import no.fintlabs.kafka.consuming.ParameterizedListenerContainerFactoryService;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 
 public class ResourceGroupMembershipConsumerService {
-    private final AzureClient azureClient;
+    private final MsGraphGroup msGraphGroup;
     private final Config.KafkaConfig kafkaConfig;
     private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private final Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink =
@@ -121,9 +121,9 @@ public class ResourceGroupMembershipConsumerService {
         log.debug("Starting updateAzureWithMembership function {}.", randomUUID);
 
         if (resourceGroupMembership.isEmpty()) {
-            azureClient.deleteGroupMembership(kafkaKey);
+            msGraphGroup.deleteGroupMembership(kafkaKey);
         } else {
-            azureClient.addGroupMembership(resourceGroupMembership.get(), kafkaKey);
+            msGraphGroup.addGroupMembership(resourceGroupMembership.get(), kafkaKey);
         }
         log.debug("Stopping updateAzureWithMembership function {}.", randomUUID);
     }

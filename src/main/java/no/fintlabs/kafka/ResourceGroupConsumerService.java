@@ -3,9 +3,9 @@ package no.fintlabs.kafka;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.AzureClient;
-import no.fintlabs.Config;
-import no.fintlabs.ConfigGroup;
+import no.fintlabs.config.Config;
+import no.fintlabs.config.ConfigGroup;
+import no.fintlabs.group.MsGraphGroup;
 import no.fintlabs.kafka.consuming.ListenerConfiguration;
 import no.fintlabs.kafka.consuming.ParameterizedListenerContainerFactoryService;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
@@ -24,13 +24,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class ResourceGroupConsumerService {
-    private final AzureClient azureClient;
+    private final MsGraphGroup msGraphGroup;
     private final Config.KafkaConfig kafkaConfig;
     private final ConfigGroup configGroup;
     private final ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache;
@@ -128,13 +127,13 @@ public class ResourceGroupConsumerService {
         if (resourceGroupOptional.isPresent()) {
             resourceGroup = resourceGroupOptional.get();
             boolean groupexists;
-            groupexists = azureClient.doesGroupExist(resourceGroup.getId());
+            groupexists = msGraphGroup.doesGroupExist(resourceGroup.getId());
             if (resourceGroup.getResourceName() != null && !groupexists) {
                 log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
-                azureClient.addGroupToAzure(resourceGroup);
+                msGraphGroup.addGroupToAzureAsync(resourceGroup);
             } else {
                 if (configGroup.getAllowgroupupdate() && resourceGroup.getIdentityProviderGroupObjectId() != null) {
-                    azureClient.updateGroup(resourceGroup);
+                    msGraphGroup.updateGroup(resourceGroup);
                     log.info("Updated group with ResourceGroupId {}", resourceGroup.getId());
                 } else if (!configGroup.getAllowgroupupdate()) {
                     log.warn("ResourceGroupId {} was NOT updated, as \"allowgroupupdate\" is set to false", resourceGroup.getId());
@@ -146,7 +145,7 @@ public class ResourceGroupConsumerService {
         } else {
             if (configGroup.getAllowgroupdelete()) {
                 log.debug("Deleting group from Azure with id '{}'", kafkaKey);
-                azureClient.deleteGroup(kafkaKey);
+                msGraphGroup.deleteGroupAsync(kafkaKey);
             } else {
                 log.warn("ResourceGroupId {} is NOT deleted, as environment parameter allowgroupdelete is set to false", kafkaKey);
             }

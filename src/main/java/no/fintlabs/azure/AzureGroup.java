@@ -4,7 +4,7 @@ import com.microsoft.graph.models.Group;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.ConfigGroup;
+import no.fintlabs.config.ConfigGroup;
 
 @Setter
 @Getter

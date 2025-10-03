@@ -5,13 +5,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-@Log4j2
+@Slf4j
 public class AzureGroupMembership {
     private String user_id;
     private String group_id;

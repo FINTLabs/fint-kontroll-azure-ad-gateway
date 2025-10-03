@@ -1,8 +1,8 @@
 package no.fintlabs.kafka;
 
-import no.fintlabs.AzureClient;
-import no.fintlabs.Config;
-import no.fintlabs.ConfigGroup;
+import no.fintlabs.config.Config;
+import no.fintlabs.config.ConfigGroup;
+import no.fintlabs.group.MsGraphGroup;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class ResourceGroupConsumerServiceTest {
     @Mock
-    private AzureClient azureClient;
+    private MsGraphGroup msGraphGroup;
 
     @Mock
     private ConfigGroup configGroup;
@@ -70,7 +70,7 @@ public class ResourceGroupConsumerServiceTest {
         String kafkaKeyID = "TestKafkaKeyID";
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
 
-        AzureClient azureClient = mock(AzureClient.class);
+        MsGraphGroup msGraphGroup = mock(MsGraphGroup.class);
         Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
         ConfigGroup configGroup = mock(ConfigGroup.class);
         ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentHashMap.class);
@@ -82,7 +82,7 @@ public class ResourceGroupConsumerServiceTest {
         when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         ResourceGroupConsumerService service = new ResourceGroupConsumerService(
-                azureClient,
+                msGraphGroup,
                 kafkaConfig,
                 configGroup,
                 resourceGroupCache
@@ -103,7 +103,8 @@ public class ResourceGroupConsumerServiceTest {
         int batchSize = 2000;
         List<ConsumerRecord<String, ResourceGroup>> records = new ArrayList<>();
 
-        AzureClient azureClient = mock(AzureClient.class);
+        MsGraphGroup msGraphGroup = mock(MsGraphGroup.class);
+
         Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
         ConfigGroup configGroup = mock(ConfigGroup.class);
         ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentHashMap.class);
@@ -114,7 +115,7 @@ public class ResourceGroupConsumerServiceTest {
         when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         ResourceGroupConsumerService service = new ResourceGroupConsumerService(
-                azureClient,
+                msGraphGroup,
                 kafkaConfig,
                 configGroup,
                 resourceGroupCache
@@ -171,7 +172,7 @@ public class ResourceGroupConsumerServiceTest {
     void processEntity_That_Is_Empty_ResourceGroup_But_Not_In_Cache_Continues_Operation() {
         String kafkaKeyID = "TestKafkaKeyID";
 
-        AzureClient azureClient = mock(AzureClient.class);
+        MsGraphGroup msGraphGroup = mock(MsGraphGroup.class);
         Config.KafkaConfig kafkaConfig = mock(Config.KafkaConfig.class);
         ConfigGroup configGroup = mock(ConfigGroup.class);
         ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = mock(ConcurrentHashMap.class);
@@ -184,7 +185,7 @@ public class ResourceGroupConsumerServiceTest {
         when(resourceGroupCache.containsKey(eq(kafkaKeyID))).thenReturn(false);
 
         ResourceGroupConsumerService service = new ResourceGroupConsumerService(
-                azureClient,
+                msGraphGroup,
                 kafkaConfig,
                 configGroup,
                 resourceGroupCache
@@ -206,43 +207,43 @@ public class ResourceGroupConsumerServiceTest {
 
         String kafkaKeyID = "TestKafkaKeyID";
 
-        when(azureClient.doesGroupExist(anyString())).thenReturn(false);
+        when(msGraphGroup.doesGroupExist(anyString())).thenReturn(false);
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
 
-        verify(azureClient, times(1)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
-        verify(azureClient, times(0)).deleteGroup(any());
+        verify(msGraphGroup, times(1)).addGroupToAzureAsync(any());
+        verify(msGraphGroup, times(0)).updateGroup(any());
+        verify(msGraphGroup, times(0)).deleteGroup(any());
     }
     @Test
     void updateAzure_UpdatedGroup_if_allowed() throws Exception {
         String kafkaKeyID = "TestKafkaKeyID";
 
-        when(azureClient.doesGroupExist(anyString())).thenReturn(true);
+        when(msGraphGroup.doesGroupExist(anyString())).thenReturn(true);
         when(configGroup.getAllowgroupupdate()).thenReturn(true);
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
 
-        verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(1)).updateGroup(any());
-        verify(azureClient, times(0)).deleteGroup(any());
+        verify(msGraphGroup, times(0)).addGroupToAzureAsync(any());
+        verify(msGraphGroup, times(1)).updateGroup(any());
+        verify(msGraphGroup, times(0)).deleteGroup(any());
     }
 
     @Test
     void updateAzure_UpdatedGroup_if_not_allowed() throws Exception {
         String kafkaKeyID = "TestKafkaKeyID";
 
-        when(azureClient.doesGroupExist(anyString())).thenReturn(true);
+        when(msGraphGroup.doesGroupExist(anyString())).thenReturn(true);
         when(configGroup.getAllowgroupupdate()).thenReturn(false);
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
 
-        verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
-        verify(azureClient, times(0)).deleteGroup(any());
+        verify(msGraphGroup, times(0)).addGroupToAzureAsync(any());
+        verify(msGraphGroup, times(0)).updateGroup(any());
+        verify(msGraphGroup, times(0)).deleteGroup(any());
     }
 
     @Test
@@ -252,9 +253,9 @@ public class ResourceGroupConsumerServiceTest {
         when(configGroup.getAllowgroupdelete()).thenReturn(true);
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.empty());
 
-        verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
-        verify(azureClient, times(1)).deleteGroup(any());
+        verify(msGraphGroup, times(0)).addGroupToAzureAsync(any());
+        verify(msGraphGroup, times(0)).updateGroup(any());
+        verify(msGraphGroup, times(1)).deleteGroup(any());
     }
 
     @Test
@@ -264,8 +265,8 @@ public class ResourceGroupConsumerServiceTest {
         when(configGroup.getAllowgroupdelete()).thenReturn(false);
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.empty());
 
-        verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
-        verify(azureClient, times(0)).deleteGroup(any());
+        verify(msGraphGroup, times(0)).addGroupToAzureAsync(any());
+        verify(msGraphGroup, times(0)).updateGroup(any());
+        verify(msGraphGroup, times(0)).deleteGroup(any());
     }
 }
