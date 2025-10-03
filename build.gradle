@@ -42,7 +42,7 @@ dependencies {
     implementation "org.springframework:spring-context:6.2.10"
     implementation "org.apache.tomcat.embed:tomcat-embed-core:11.0.10"
     implementation 'com.azure:azure-identity:1.17.0'
-    implementation 'com.microsoft.graph:microsoft-graph:6.51.0'
+    implementation 'com.microsoft.graph:microsoft-graph:6.53.0'
     implementation 'com.google.code.gson:gson:2.13.1'
     implementation 'commons-codec:commons-codec:1.19.0'
     implementation 'org.springframework.kafka:spring-kafka:3.3.9'
