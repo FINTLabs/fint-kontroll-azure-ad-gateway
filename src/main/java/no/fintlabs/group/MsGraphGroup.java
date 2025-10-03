@@ -1,272 +1,171 @@
-package no.fintlabs;
+package no.fintlabs.group;
 
 import com.microsoft.graph.core.tasks.PageIterator;
 import com.microsoft.graph.groups.delta.DeltaGetResponse;
 import com.microsoft.graph.groups.delta.DeltaRequestBuilder;
 import com.microsoft.graph.models.*;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import java.util.List;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.serialization.UntypedArray;
 import com.microsoft.kiota.serialization.UntypedObject;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.*;
+import no.fintlabs.config.Config;
+import no.fintlabs.config.ConfigGroup;
+import no.fintlabs.config.ConfigUser;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
 import java.util.*;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-
 @Component
-@Log4j2
+@Slf4j
 @RequiredArgsConstructor
 
-public class
-AzureClient {
+public class MsGraphGroup {
     protected final Config config;
     protected final ConfigGroup configGroup;
-    protected final ConfigUser configUser;
     protected final GraphServiceClient graphServiceClient;
-    private final ConcurrentHashMap<String, AzureUser> entraIdUserCache;
-    private final ConcurrentHashMap<String, AzureUserExternal> entraIdExternalUserCache;
     private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private final ConcurrentHashMap<String, AzureGroup> azureGroupCache;
     private final HashSet<String> azureGroupMembershipCache;
-    private final AzureUserProducerService azureUserProducerService;
-    private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
-    private final ExecutorService executor = Executors.newFixedThreadPool(40);
-    private String odataDeltaLink;
-    private AtomicInteger numMembers;
+    private final ExecutorService groupExecutor = Executors.newFixedThreadPool(10);
+
+    private String odataGroupDeltaLink;
+    private AtomicInteger numMembers = new AtomicInteger(0);
     private AtomicInteger groupCounter;
     private Set<String> processedGroupIds;
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
     public void clearCaches() {
-        odataDeltaLink = null;
-        entraIdUserCache.clear();
-        entraIdExternalUserCache.clear();
+        odataGroupDeltaLink = null;
         azureGroupCache.clear();
         azureGroupMembershipCache.clear();
-            log.info("Delta caches for group and user has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
+        log.info("Delta caches for group has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
     }
 
     @Scheduled(
-            initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
-            fixedDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
+            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.initial-delay-ms}",
+            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.delta-delay-ms}"
     )
-    public void pullAllUsers() {
-        log.info("*** <<< Starting to pull users from Microsoft Graph >>> ***");
-        long startTime = System.currentTimeMillis();
-        String[] selectionCriteria = new String[]{String.join(",", configUser.AllAttributes())};
-        String filterCriteria = "usertype eq 'member'";
-        try {
-            this.pageThroughUsers(graphServiceClient.users()
-                    .get(requestConfiguration -> {
-                        requestConfiguration.queryParameters.select = selectionCriteria;
-                        requestConfiguration.queryParameters.filter = filterCriteria;
-                        requestConfiguration.queryParameters.top = configUser.getUserpagingsize();
-                    }));
-        } catch (ApiException | ReflectiveOperationException ex) {
-            log.error("pullAllUsers failed with message: {}", ex.getMessage());
-        }
-        long endTime = System.currentTimeMillis();
-        long elapsedTimeInSeconds = (endTime - startTime) / 1000;
-        long minutes = elapsedTimeInSeconds / 60;
-        long seconds = elapsedTimeInSeconds % 60;
-
-        log.info("*** <<< Finished pulling users from Microsoft Graph in {} minutes and {} seconds >>> *** ", minutes, seconds);
-    }
-
-    private void pageThroughUsers(UserCollectionResponse userPage) throws ReflectiveOperationException {
-        AtomicInteger users = new AtomicInteger();
-        AtomicInteger changedUsers = new AtomicInteger();
-        AtomicInteger changedExtUsers = new AtomicInteger();
-        PageIterator<User, UserCollectionResponse> pageIterator = new PageIterator.Builder<User, UserCollectionResponse>()
-                .client(graphServiceClient)
-                .collectionPage(userPage)
-                .collectionPageFactory(UserCollectionResponse::createFromDiscriminatorValue)
-                .processPageItemCallback(user -> {
-                    users.getAndIncrement();
-
-                    if (entraIdUserCache != null &&
-                            entraIdUserCache.containsKey(user.getId())) {
-                        AzureUser entraIdUserObject = new AzureUser(user, configUser);
-                        if (entraIdUserObject.equals(entraIdUserCache.get(user.getId()))) {
-                            log.info("User {} is unchanged from Entra Cache. Skipping publishing to Kafka.", user.getId());
-                            return true;
-                        }
-                    }
-
-                    String externalUserAttribute = AzureUser.getAttributeValue(user, configUser.getExternaluserattribute());
-                    if (configUser.getEnableExternalUsers() && externalUserAttribute != null
-                            && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
-                        AzureUserExternal entraUserExtObject = new AzureUserExternal(user, configUser);
-                        if (entraIdExternalUserCache != null &&
-                                entraIdExternalUserCache.containsKey(user.getId()) && entraUserExtObject.equals(entraIdExternalUserCache.get(user.getId()))) {
-                            log.info("External User {} is unchanged. Skipping publishing to Kafka.", user.getId());
-                            return true;
-                        }
-                        else {
-                            log.info("Publishing external user to Kafka: {}", user.getUserPrincipalName());
-                            azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
-                            changedExtUsers.getAndIncrement();
-                            entraIdExternalUserCache.put(user.getId(), new AzureUserExternal(user, configUser));
-                        }
-                    } else {
-                        AzureUser azureuser = new AzureUser(user, configUser);
-                        if ((azureuser.getEmployeeId() != null && !azureuser.getEmployeeId().isEmpty()) ||
-                                (azureuser.getStudentId() != null && !azureuser.getStudentId().isEmpty())) {
-                            log.info("Publishing user to Kafka: {}", user.getUserPrincipalName());
-                            azureUserProducerService.publish(azureuser);
-                            log.info("Updating cache for user: {}", user.getId());
-                            changedUsers.getAndIncrement();
-                            entraIdUserCache.put(user.getId(), azureuser);
-                        } else {
-                            log.warn("UserId: {} does not contain required employeeId or studentId. Not published to kafka", user.getId());
-                        }
-                    }
-                    return true;
-                }).build();
-
-        pageIterator.iterate();
-        if (odataDeltaLink != null) {
-            if(changedUsers.get() > 0) {
-                log.info("*** <<< Found total {} users in Entra ID. Published {} changed users to Kafka >>> ***", users.get(), changedUsers.get());
-            }
-            else {
-                    log.info("*** <<< No changes since last call on users from graph >>> ***");
-                }
-            if (changedExtUsers.get() > 0) {
-                log.info("*** <<< Found {} users of type External users in Entra ID that were changed >>> ***", changedExtUsers.get());
-            }
-        } else {
-            if(changedUsers.get() > 0) {
-                log.info("*** <<< Found total {} users in Entra ID. {} published to Kafka >>> ***", users.get(), changedUsers.get());
-            }
-            else {
-                log.info("*** <<< No changes since last call on users from graph >>> ***");
-            }
-            if (changedExtUsers.get() > 0) {
-                log.info("*** <<< Of the total, there are {} users of type External users in Entra ID >>> ***", changedExtUsers.get());
-            }
-            else {
-                log.info("*** <<< No changes on external users since last call on users from graph >>> ***");
-            }
-        }
-    }
-
-//    @Scheduled(
-//            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.initial-delay-ms}",
-//            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.delta-delay-ms}"
-//    )
     public void pullAllGroupsDelta() {
         log.info("*** <<< Fetching groups and members using delta call from Microsoft Graph >>> ***");
-        String[] selectionCriteria = new String[]{String.format("id,displayName,description,members,%s", configGroup.getFintkontrollidattribute())};
-        numMembers = new AtomicInteger(0);
-        processedGroupIds = new HashSet<>();
-        long groupStartTime = System.currentTimeMillis();
+        long startMs = System.currentTimeMillis();
+        numMembers.set(0);
+        processedGroupIds = ConcurrentHashMap.newKeySet();
 
         try {
-
-            Consumer<DeltaRequestBuilder.GetRequestConfiguration> configureRequest = requestConfiguration -> {
-                requestConfiguration.queryParameters.select = selectionCriteria;
-                requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
+            Consumer<DeltaRequestBuilder.GetRequestConfiguration> initialCfg = req -> {
+                req.queryParameters.select = new String[]{
+                        "id", "displayName", "description", "members",
+                        configGroup.getFintkontrollidattribute()
+                };
+                req.queryParameters.top = configGroup.getGrouppagingsize();
+                req.headers.add("Prefer", "return=minimal");
+            };
+            Consumer<DeltaRequestBuilder.GetRequestConfiguration> contCfg = req -> {
+                req.headers.add("Prefer", "return=minimal");
             };
 
-            DeltaGetResponse groupPage = (odataDeltaLink != null)
-                    ? graphServiceClient.groups().delta().withUrl(odataDeltaLink).get(configureRequest)
-                    : graphServiceClient.groups().delta().get(configureRequest);
+            DeltaGetResponse firstPage =
+                    (odataGroupDeltaLink != null && !odataGroupDeltaLink.isBlank())
+                            ? graphServiceClient.groups().delta().withUrl(odataGroupDeltaLink).get(contCfg)
+                            : graphServiceClient.groups().delta().get(initialCfg);
 
-            pageThroughGroupsDelta(groupPage);
+            List<CompletableFuture<Void>> tasks = new ArrayList<>();
 
-        } catch (ApiException | ReflectiveOperationException e) {
-            log.error("Failed when trying to get groups. ", e);
+            DeltaGetResponse current = firstPage;
+            DeltaGetResponse lastPage  = firstPage;
+
+            Set<String> seenNextLinks = new HashSet<>();
+
+            while (current != null) {
+
+                if (current.getValue() != null) {
+                    current.getValue().forEach(grp ->
+                            tasks.add(CompletableFuture.runAsync(() -> processSingleGroup(grp), groupExecutor))
+                    );
+                }
+
+                String next = current.getOdataNextLink();
+                if (next == null) break;
+
+                if (!seenNextLinks.add(next)) {
+                    log.error("Detected nextLink cycle; stopping paging. nextLink={}", next);
+                    break;
+                }
+
+                current  = graphServiceClient.groups().delta().withUrl(next).get(contCfg);
+                lastPage = current;
+            }
+
+            if (!tasks.isEmpty()) CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
+
+            String newDelta = (lastPage != null) ? lastPage.getOdataDeltaLink() : null;
+            if (newDelta == null || newDelta.isBlank()) {
+                log.warn("Last page doesn't contain @odata.deltaLink; keeping previous token.");
+                return;
+            } else {
+                if (odataGroupDeltaLink == null) {
+                    log.info("*** <<< Initial Delta run on Groups completed >>> ***");
+                }
+                odataGroupDeltaLink = newDelta;
+                log.debug("*** <<< odataGroupDeltaLink updated. Finished pullAllGroupsDelta >>> ***");
+            }
+
+        } catch (ApiException e) {
+            log.error("ApiException when trying to get groups using delta: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected exception when processing groups: {}", e.getMessage());
+        } finally {
+
         }
-        long endTime = System.currentTimeMillis();
-        long elapsedTimeInSeconds = (endTime - groupStartTime) / 1000;
-        long minutes = elapsedTimeInSeconds / 60;
-        long seconds = elapsedTimeInSeconds % 60;
 
-        if (processedGroupIds.size() > 0 || numMembers.get() > 0) {
-            log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, published to Kafka, in {} minutes and {} seconds  >>> ***",
-                    processedGroupIds.size(),
-                    configGroup.getSuffix(),
-                    numMembers.get(),
-                    minutes,
-                    seconds);
+        long elapsedSec = (System.currentTimeMillis() - startMs) / 1000;
+        long minutes = elapsedSec / 60, seconds = elapsedSec % 60;
+
+        if (!processedGroupIds.isEmpty() || numMembers.get() > 0) {
+            log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, published to Kafka, in {} minutes and {} seconds >>> ***",
+                    processedGroupIds.size(), configGroup.getSuffix(), numMembers.get(), minutes, seconds);
         } else {
             log.info("*** <<< No changes since last delta call on groups from Graph. Finished in {} minutes and {} seconds >>> ***",
-                    minutes,
-                    seconds);
+                    minutes, seconds);
         }
-
     }
 
-    private void pageThroughGroupsDelta(DeltaGetResponse groupPage) throws ReflectiveOperationException {
+    private void processSingleGroup(Group group) {
+        try {
+            String groupId = group.getId();
 
-        while (true) {
-            deltaPageIterator(groupPage);
-            if (groupPage != null && groupPage.getOdataNextLink() != null) {
-                groupPage = graphServiceClient.groups().delta().withUrl(groupPage.getOdataNextLink()).get();
-            } else {
-                break;
+            if (group.getDisplayName() == null
+                    || !group.getDisplayName().endsWith(configGroup.getSuffix())
+                    || group.getAdditionalData().isEmpty()
+                    || !group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute())) {
+                return;
             }
+
+            if (processedGroupIds.add(groupId)) {
+                AzureGroup newGroup = new AzureGroup(group, configGroup);
+                azureGroupProducerService.processGroup(newGroup);
+            }
+
+            processMembersDelta(group);
+
+        } catch (Exception e) {
+            log.error("Error processing group {}. Skipping.", group.getId(), e);
         }
-
-        if (groupPage.getOdataDeltaLink() == null) {
-            log.error("Logic error: Last page doesn't contain ODataDeltaLink");
-            throw new ReflectiveOperationException("Logic error: Last page doesn't contain ODataDeltaLink");
-        }
-
-        if(odataDeltaLink == null) {
-            log.info("*** <<< Initial Delta run on Groups completed >>> ***");
-        }
-        odataDeltaLink = groupPage.getOdataDeltaLink();
-        log.info("Delta link updated in variable odataDeltaLink. Finished pullAllGroupsDelta");
-    }
-
-    private void deltaPageIterator(DeltaGetResponse groupPage) throws ReflectiveOperationException {
-        Set<String> currentPageProcessedGroupIds = new HashSet<>();
-
-        PageIterator<Group, DeltaGetResponse> pageIterator = new PageIterator.Builder<Group, DeltaGetResponse>()
-                .client(graphServiceClient)
-                .collectionPage(groupPage)
-                .collectionPageFactory(DeltaGetResponse::createFromDiscriminatorValue)
-                .processPageItemCallback(group -> {
-                    try {
-                        String groupId = group.getId();
-                        if (currentPageProcessedGroupIds.add(groupId)) {
-                            if (group.getDisplayName() != null && group.getDisplayName().endsWith(configGroup.getSuffix())
-                                    && !group.getAdditionalData().isEmpty()
-                                    && group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute())) {
-
-                                if(processedGroupIds.add(groupId)) {
-                                    AzureGroup newGroup = new AzureGroup(group, configGroup);
-                                    azureGroupProducerService.processGroup(newGroup);
-                                }
-
-                                log.info("Processing members for group: {}", group.getDisplayName());
-                                processMembersDelta(group);
-                            } else {
-                                log.warn("Skipping group: {} due to missing suffix or attributes", groupId);
-                            }
-                        } else {
-                            log.debug("Group {} already processed in this page", groupId);
-                        }
-                    } catch (Exception e) {
-                        log.error("Error processing group: {}. Skipping to next.", group.getId(), e);
-                    }
-                    return true;
-                }).build();
-        pageIterator.iterate();
     }
 
     private void processMembersDelta(Group group) {
@@ -277,35 +176,33 @@ AzureClient {
         try {
             Object membersDeltaObject = additionalData.get("members@delta");
             UntypedArray membersDeltaArray = (UntypedArray) membersDeltaObject;
+
             for (Object member : membersDeltaArray.getValue()) {
                 UntypedObject untypedMember = (UntypedObject) member;
                 String memberType = (String) untypedMember.getValue().get("@odata.type").getValue();
                 String memberId = (String) untypedMember.getValue().get("id").getValue();
 
-                if (!memberType.equals("#microsoft.graph.user")) {
+                if (!"#microsoft.graph.user".equals(memberType)) {
                     continue;
                 }
 
                 String kafkaKey = group.getId() + "_" + memberId;
+
                 if (untypedMember.getValue().containsKey("@removed")) {
-                    azureGroupMembershipProducerService.removeMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
-                    //azureGroupMembershipProducerService.publishDeletedMembership(kafkaKey);
+                    azureGroupMembershipProducerService.removeMembership(
+                            new AzureGroupMembership(memberId, group.getId(), kafkaKey)
+                    );
                     resourceGroupMembershipCache.remove(kafkaKey);
-                    log.info("Produced message to Kafka on removed user with ObjectID: {} from group: {}", memberId, group.getId());
-                    if(odataDeltaLink != null) {
-                        log.info("UserId: {} is removed as member from GroupId: {}", memberId, group.getId());
-                    }
+                    log.info("Removed user {} from group {}", memberId, group.getId());
                     continue;
                 }
-                AzureGroupMembership azureGroupMembership = new AzureGroupMembership(memberId,group.getId(),kafkaKey);
+
+                AzureGroupMembership azureGroupMembership =
+                        new AzureGroupMembership(memberId, group.getId(), kafkaKey);
                 azureGroupMembershipProducerService.addMembership(azureGroupMembership);
                 azureGroupMembershipCache.add(azureGroupMembership.getId());
-                //azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(memberId,group.getId(),kafkaKey));
-                numMembers.getAndIncrement();
-                log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", memberId, group.getId());
-                if(odataDeltaLink != null) {
-                    log.info("UserId: {} is member of GroupId: {}", memberId, group.getId());
-                }
+                numMembers.incrementAndGet();
+                log.debug("User {} is member of group {}", memberId, group.getId());
             }
 
         } catch (ClassCastException e) {
@@ -313,11 +210,6 @@ AzureClient {
         }
     }
 
-//  TODO: Consider if this is needed
-    @Scheduled(
-            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
-            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
-    )
     public void pullAllGroupsAsync() {
         log.info("*** <<< Fetching groups from Microsoft Graph >>> ***");
         long startTime = System.currentTimeMillis();
@@ -336,7 +228,7 @@ AzureClient {
                 log.error("Failed when trying to get groups. ", e);
                 return new ArrayList<AzureGroup>();
             }
-        }, executor).thenAccept(allGroups -> {
+        }, groupExecutor).thenAccept(allGroups -> {
             long endTime = System.currentTimeMillis();
             long elapsedTimeInSeconds = (endTime - startTime) / 1000;
             long minutes = elapsedTimeInSeconds / 60;
@@ -410,7 +302,7 @@ AzureClient {
                         log.error("Error fetching members for group {}: {}", group.getId(), e.getMessage());
                         return null;
                     }
-                }, executor).thenCompose(memberPage -> {
+                }, groupExecutor).thenCompose(memberPage -> {
                     if (memberPage != null) {
                         return pageThroughAzureGroupAsync(group, memberPage);
                     }
@@ -428,7 +320,7 @@ AzureClient {
         AtomicInteger membersPerGroupCount = new AtomicInteger(0);
 
         return processPageAsync(azureGroup, inPage, membersPerGroupCount)
-                .thenRun(() -> log.info("{} memberships detected in groupName \"{}\" with groupId {}",
+                .thenRun(() -> log.debug("{} memberships detected in groupName \"{}\" with groupId {}",
                         membersPerGroupCount.get(), azureGroup.getDisplayName(), azureGroup.getId()));
     }
 
@@ -443,7 +335,7 @@ AzureClient {
             if(azureGroupMembershipCache != null
                     && azureGroupMembershipCache.contains(azureGroupMembership.getId()))
             {
-                log.info("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.getId(), azureGroup.getId());
+                log.debug("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.getId(), azureGroup.getId());
             }
             else {
                 azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
@@ -467,7 +359,7 @@ AzureClient {
                     log.error("Error fetching next member page for group {}: {}", azureGroup.getId(), e.getMessage());
                     return null;
                 }
-            }, executor).thenCompose(nextPage -> {
+            }, groupExecutor).thenCompose(nextPage -> {
                 if (nextPage != null) {
                     return processPageAsync(azureGroup, nextPage, membersCount);
                 }
@@ -477,7 +369,6 @@ AzureClient {
 
         return CompletableFuture.completedFuture(null);
     }
-
     public boolean doesGroupExist(String resourceGroupId) throws Exception {
         // TODO: Attributes should not be hard-coded [FKS-210]
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
@@ -504,7 +395,7 @@ AzureClient {
         return false;
     }
 
-    public void addGroupToAzure(ResourceGroup resourceGroup) {
+    public void addGroupToAzureAsync(ResourceGroup resourceGroup) {
         if (resourceGroup.getResourceName() != null &&
                 !resourceGroup.getResourceName().trim().isEmpty() &&
                 resourceGroup.getResourceType() != null &&
@@ -537,7 +428,7 @@ AzureClient {
                     log.warn(e.getMessage());
                 }
 
-            }, executor).exceptionally(ex -> {
+            }, groupExecutor).exceptionally(ex -> {
                 log.error("Exception while adding group: {}", ex.getMessage(), ex);
                 return null;
             });
@@ -600,7 +491,7 @@ AzureClient {
             } catch (com.microsoft.kiota.ApiException e) {
                 log.error("Failed to query groups for {}={}. Error: {}", attr, resourceGroupId, e.getMessage());
             }
-        }, executor).exceptionally(e -> {
+        }, groupExecutor).exceptionally(e -> {
             log.error("Exception while scheduling deleteGroup for {}={}. Error: {}", attr, resourceGroupId, e.getMessage());
             return null;
         });
@@ -660,7 +551,7 @@ AzureClient {
             } catch (ApiException e) {
                 log.error("Failed to update group with GroupObjectId '{}': {}", identityProviderGroupObjectId, e.getMessage());
             }
-        }, executor).exceptionally(e -> {
+        }, groupExecutor).exceptionally(e -> {
             log.error("Exception while update Group for {}. Error: {}", identityProviderGroupObjectId, e.getMessage());
             return null;
         });
@@ -717,7 +608,7 @@ AzureClient {
                                 resourceGroupMembership.getAzureGroupRef(), e.getMessage());
                     }
                 }
-            }, executor).exceptionally(ex -> {
+            }, groupExecutor).exceptionally(ex -> {
                 log.error("Exception while adding user to group: {}", ex.getMessage(), ex);
                 return null;
             });
@@ -765,9 +656,10 @@ AzureClient {
             } catch (Exception e) {
                 log.error("Failed to process function deleteGroupMembership, Error: ", e);
             }
-        },executor).exceptionally(ex -> {
+        }, groupExecutor).exceptionally(ex -> {
             log.error("Exception while trying to remove user from group: {}", ex.getMessage(), ex);
             return null;
         });
     }
+
 }

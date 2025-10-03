@@ -1,4 +1,4 @@
-package no.fintlabs;
+package no.fintlabs.config;
 
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;

@@ -1,4 +1,4 @@
-package no.fintlabs;
+package no.fintlabs.config;
 
 import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.AzureUser;
@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 @Configuration
 public class CacheConfiguration {

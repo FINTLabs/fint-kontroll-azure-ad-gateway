@@ -1,11 +1,9 @@
-package no.fintlabs;
+package no.fintlabs.group;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonPrimitive;
 import com.microsoft.graph.models.Group;
+import no.fintlabs.config.Config;
+import no.fintlabs.config.ConfigGroup;
 import no.fintlabs.kafka.ResourceGroup;
-
-import java.util.HashMap;
 
 public class MsGraphGroupMapper {
 
