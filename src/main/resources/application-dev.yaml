@@ -11,6 +11,11 @@ logging:
 fint:
   kontroll:
     azure-ad-gateway:
+      user-scheduler:
+        pull:
+          initial-delay-ms: 1000
+          fixed-delay-ms: 30000
+        clear-cache: "0 30 */2 * * *"
       group-scheduler:
         pull:
           initial-delay-ms: 5000
@@ -18,7 +23,7 @@ fint:
         delta-pull:
           initial-delay-ms: 5000
           delta-delay-ms: 20000
-        clear-cache: "0 */2 * * * *"
+        clear-cache: "0 0 */2 * * *"
 #fint:
 #  kafka:
 #    bootstrap-servers: localhost:9092

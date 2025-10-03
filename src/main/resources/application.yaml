@@ -58,10 +58,10 @@ fint:
           interval-ms: 518400000
 
 #placeholders. Do not add creds
-azure:
-  timeout: 1
-  credentials:
-    clientid: XXXX
-    clientsecret: XXXX
-    tenantguid: XXXX
-    entobjectid: ZZZZ
+#azure:
+#  timeout: 1
+#  credentials:
+#    clientid: XXXX
+#    clientsecret: XXXX
+#    tenantguid: XXXX
+#    entobjectid: ZZZZ
