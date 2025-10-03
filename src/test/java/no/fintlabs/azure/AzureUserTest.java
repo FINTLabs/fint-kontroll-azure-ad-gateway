@@ -1,7 +1,7 @@
 package no.fintlabs.azure;
 
 import com.microsoft.graph.models.User;
-import no.fintlabs.ConfigUser;
+import no.fintlabs.config.ConfigUser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;

@@ -53,4 +53,13 @@ public class AzureUserExternalProducerService {
                         .build()
         );
     }
+    public void publishDeletedUser(String userId) {
+        azureUserExternalTemplate.send(
+                ParameterizedProducerRecord.<AzureUserExternal>builder()
+                        .topicNameParameters(entityTopicNameParameters)
+                        .key(userId)
+                        .value(null)
+                        .build()
+        );
+    }
 }

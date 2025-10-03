@@ -55,4 +55,14 @@ public class AzureUserProducerService {
                         .build()
         );
     }
+
+    public void publishDeletedUser(String userId) {
+        azureUserTemplate.send(
+                ParameterizedProducerRecord.<AzureUser>builder()
+                        .topicNameParameters(entityTopicNameParameters)
+                        .key(userId)
+                        .value(null)
+                        .build()
+        );
+    }
 }

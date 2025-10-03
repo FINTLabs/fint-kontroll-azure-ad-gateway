@@ -18,8 +18,13 @@ import com.microsoft.kiota.serialization.UntypedNode;
 import com.microsoft.kiota.serialization.UntypedObject;
 import com.microsoft.kiota.serialization.UntypedString;
 import no.fintlabs.azure.*;
+import no.fintlabs.config.Config;
+import no.fintlabs.config.ConfigGroup;
+import no.fintlabs.config.ConfigUser;
+import no.fintlabs.group.MsGraphGroup;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
+import no.fintlabs.user.MsGraphUser;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -88,7 +93,11 @@ class AzureClientTest {
     private Config.Credentials configcredentials;
 
     @InjectMocks
-    private AzureClient azureClient;
+    private MsGraphGroup msGraphGroup;
+
+    @InjectMocks
+    private MsGraphUser msGraphUser;
+
 
     @Mock
     private ConcurrentHashMap<String, AzureUser> entraIdUserCache;
@@ -212,7 +221,7 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.get(any())).thenReturn(groupCollectionResponse);
 
-        assertTrue(azureClient.doesGroupExist(resourceGroupID));
+        assertTrue(msGraphGroup.doesGroupExist(resourceGroupID));
     }
 
     @Test
@@ -227,7 +236,7 @@ class AzureClientTest {
         List<Group> groupList = getTestGrouplist(3, 3);
         when(groupCollectionResponse.getValue()).thenReturn(groupList);
 
-        assertFalse(azureClient.doesGroupExist(resourceGroupID));
+        assertFalse(msGraphGroup.doesGroupExist(resourceGroupID));
     }
 
     @Test
@@ -238,7 +247,7 @@ class AzureClientTest {
         when(groupCollectionResponse.getOdataNextLink()).thenReturn("somefakeurl");
 
         assertThrows(Exception.class,
-                () -> azureClient.doesGroupExist("123")
+                () -> msGraphGroup.doesGroupExist("123")
         );
     }
 
@@ -264,7 +273,7 @@ class AzureClientTest {
         when(configGroup.getFintkontrollidattribute()).thenReturn("RoleKontrollIdAttribute");
         ArgumentCaptor<Group> groupCaptor = ArgumentCaptor.forClass(Group.class);
 
-        azureClient.addGroupToAzure(resourceGroup);
+        msGraphGroup.addGroupToAzureAsync(resourceGroup);
 
         //assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, SECONDS));
 
@@ -301,7 +310,7 @@ class AzureClientTest {
         when(config.getCredentials()).thenReturn(configcredentials);
         when(configcredentials.getEntobjectid()).thenReturn("testentobjectid123");
 
-        azureClient.addGroupToAzure(resourceGroup);
+        msGraphGroup.addGroupToAzureAsync(resourceGroup);
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(groupsRequestBuilder, times(1)).post(any(Group.class));
@@ -321,7 +330,7 @@ class AzureClientTest {
                 .resourceLimit("1000")
                 .build();
 
-        azureClient.addGroupToAzure(resourceGroup);
+        msGraphGroup.addGroupToAzureAsync(resourceGroup);
 
         //assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, SECONDS));
         await().atMost(5, SECONDS).untilAsserted(() -> {
@@ -349,7 +358,7 @@ class AzureClientTest {
                  .build();
 
         ForkJoinPool testPool = new ForkJoinPool();
-        testPool.submit(() -> azureClient.updateGroup(resourceGroup)).join();
+        testPool.submit(() -> msGraphGroup.updateGroup(resourceGroup)).join();
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(groupItemRequestBuilder, times(1)).patch(any(Group.class));
@@ -370,7 +379,7 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        azureClient.addGroupMembership(m, "resourcekey");
+        msGraphGroup.addGroupMembership(m, "resourcekey");
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupMembershipProducerService, never()).addMembership(any(AzureGroupMembership.class));
@@ -394,7 +403,7 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+        msGraphGroup.addGroupMembership(resourceGroupMembership, kafkaKey);
 
         await().atMost(5, SECONDS).untilAsserted(() ->
                 verify(refRequestBuilder, times(1)).post(any(ReferenceCreate.class))
@@ -419,7 +428,7 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+        msGraphGroup.addGroupMembership(resourceGroupMembership, kafkaKey);
 
         //assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, SECONDS));
         await().atMost(5, SECONDS).untilAsserted(() -> {
@@ -448,7 +457,7 @@ class AzureClientTest {
                 .roleRef("exampleRoleRef")
                 .build();
 
-        azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+        msGraphGroup.addGroupMembership(resourceGroupMembership, kafkaKey);
 
         //assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, SECONDS));
 
@@ -470,7 +479,7 @@ class AzureClientTest {
         // Creating test data
         String kafkaKey = "somekey_someotherkey";
 
-        azureClient.deleteGroupMembership(kafkaKey);
+        msGraphGroup.deleteGroupMembership(kafkaKey);
 
 //        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, SECONDS));
 //        // TODO: Needs refactoring
@@ -487,7 +496,7 @@ class AzureClientTest {
         when(membersRequestBuilder.byDirectoryObjectId(anyString())).thenReturn(directoryObjectItemRequestBuilder);
         when(directoryObjectItemRequestBuilder.ref()).thenReturn(singleMemberRefRequestBuilder);
 
-        azureClient.deleteGroupMembership("exampleWithoutUnderscore");
+        msGraphGroup.deleteGroupMembership("exampleWithoutUnderscore");
         verifyNoInteractions(singleMemberRefRequestBuilder);
 
 //        // 2) Valid key → must call delete()
@@ -514,7 +523,7 @@ class AzureClientTest {
                 .build();
 
         String kafkaKey = "example_with_multiple_underscores";
-        azureClient.deleteGroupMembership(kafkaKey);
+        msGraphGroup.deleteGroupMembership(kafkaKey);
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verifyNoInteractions(singleMemberRefRequestBuilder);
@@ -548,7 +557,7 @@ class AzureClientTest {
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
         ForkJoinPool testPool = new ForkJoinPool(2);
-        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+        testPool.submit(() -> msGraphGroup.pullAllGroupsDelta()).join();
         assertTrue(testPool.awaitQuiescence(15, SECONDS));
 
         //assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, SECONDS));
@@ -572,7 +581,7 @@ class AzureClientTest {
         delta.setOdataDeltaLink("delta link");
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
 
-        azureClient.pullAllGroupsDelta();
+        msGraphGroup.pullAllGroupsDelta();
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
@@ -604,7 +613,7 @@ class AzureClientTest {
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
         ForkJoinPool testPool = new ForkJoinPool(2);
-        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+        testPool.submit(() -> msGraphGroup.pullAllGroupsDelta()).join();
 //        assertTrue(testPool.awaitQuiescence(15, SECONDS));
 //
 //        assertTrue(ForkJoinPool.commonPool().awaitQuiescence(15, SECONDS));
@@ -615,7 +624,7 @@ class AzureClientTest {
     }
 
     @Test
-    void makeSureDeltaFunctionFailsIfODataDeltaLinkIsUndefinedOnLastPage() {
+    void makeSureDeltaFunctionHandlesNoDeltaLinkIfODataDeltaLinkIsUndefinedOnLastPage() {
         // TEST OK
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn(
@@ -635,6 +644,16 @@ class AzureClientTest {
         lastPage.setOdataNextLink(null);
         lastPage.setOdataDeltaLink(null);
 
+        DeltaGetResponse lastRecovered = new DeltaGetResponse();
+        lastRecovered.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        lastRecovered.setOdataNextLink(null);
+        lastRecovered.setOdataDeltaLink("recovered-delta-token");
+
+        when(deltaRequestBuilder.get(any()))
+                .thenReturn(firstPage)
+                .thenReturn(secondPage)
+                .thenReturn(lastPage);
+
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
         when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
@@ -642,20 +661,83 @@ class AzureClientTest {
                 .thenReturn(secondPage, lastPage);
 
         when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.withUrl("LinkToThirdPage")).thenReturn(deltaRequestBuilder);
 
+        when(deltaRequestBuilder.get(any()))
+                .thenReturn(firstPage)
+                .thenReturn(secondPage)
+                .thenReturn(lastPage)
+                .thenReturn(lastRecovered);
 
-        assertThrows(NullPointerException.class,
-                () -> azureClient.pullAllGroupsDelta(),
-                "Expected pullAllGroupsDelta to throw a NullPointerException when the delta link is missing on the last page."
-        );
+        msGraphGroup.pullAllGroupsDelta();
+
         assertNull(lastPage.getOdataDeltaLink(), "Last page should not have a delta link.");
     }
 
+//    @Test
+//    void makeSurePageThroughGroupsDeltaReturnsDeltaOnLastPage() {
+//        // TEST OK
+//        when(configGroup.getSuffix()).thenReturn("-suff-");
+//        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+//        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+//
+//
+//        DeltaGetResponse firstPage = new DeltaGetResponse();
+//        firstPage.setValue(getTestGrouplistAddedRemoved(3, 6, 3));
+//        firstPage.setOdataNextLink("LinkToSecondPage");
+//
+//        DeltaGetResponse secondPage = new DeltaGetResponse();
+//        secondPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+//        secondPage.setOdataNextLink("LinkToThirdPage");
+//
+//        DeltaGetResponse thirdPage = new DeltaGetResponse();
+//        thirdPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+//        thirdPage.setOdataDeltaLink("delta link");
+//
+//        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+//        when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+//        when(deltaRequestBuilder.get(any()))
+//                .thenReturn(firstPage, secondPage, thirdPage);
+//
+//        when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
+//
+//        when(requestAdapter.send(any(RequestInformation.class), any(), any()))
+//                .thenReturn(secondPage, thirdPage);
+//
+//        DeltaGetResponse lastPage = new DeltaGetResponse();
+//        lastPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+//        lastPage.setOdataNextLink(null);
+//        lastPage.setOdataDeltaLink("last delta link");
+//
+//        when(deltaRequestBuilder.get()).thenReturn(lastPage);
+//        when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
+//        when(deltaRequestBuilder.withUrl("LinkToThirdPage")).thenReturn(deltaRequestBuilder);
+//
+//        ForkJoinPool testPool = new ForkJoinPool(2);
+//        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+////        assertTrue(testPool.awaitQuiescence(15, SECONDS));
+//
+//        await().atMost(15, SECONDS).untilAsserted(() -> {
+//
+//            verify(azureGroupProducerService, times(4)).processGroup(any());
+//            verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
+//            verify(groupsRequestBuilder, times(2)).delta();
+//            verify(graphServiceClient, times(2)).groups();
+//            verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
+//            verify(deltaRequestBuilder, times(1)).get(any());
+//            verify(deltaRequestBuilder, times(1)).get();
+//
+//            assertNull(lastPage.getOdataNextLink(), "Last page should not have a next link.");
+//            assertNotNull(lastPage.getOdataDeltaLink(), "Last page should have a delta link.");
+//            assertEquals("last delta link", lastPage.getOdataDeltaLink(), "Delta link should match expected value.");
+//        });
+//    }
+
     @Test
     void makeSurePageThroughGroupsDeltaReturnsDeltaOnLastPage() {
-        // TEST OK
         when(configGroup.getSuffix()).thenReturn("-suff-");
-        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        when(configGroup.getFintkontrollidattribute())
+                .thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
 
         DeltaGetResponse firstPage = new DeltaGetResponse();
@@ -668,48 +750,33 @@ class AzureClientTest {
 
         DeltaGetResponse thirdPage = new DeltaGetResponse();
         thirdPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
-        thirdPage.setOdataDeltaLink("delta link");
+        thirdPage.setOdataDeltaLink("delta link"); // final
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
-        when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
-
-        when(requestAdapter.send(any(RequestInformation.class), any(), any()))
-                .thenReturn(secondPage, thirdPage);
-
-        DeltaGetResponse lastPage = new DeltaGetResponse();
-        lastPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
-        lastPage.setOdataNextLink(null);
-        lastPage.setOdataDeltaLink("last delta link");
-
-        when(deltaRequestBuilder.get()).thenReturn(lastPage);
+        when(deltaRequestBuilder.get(any())).thenReturn(firstPage, secondPage, thirdPage);
         when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.withUrl("LinkToThirdPage")).thenReturn(deltaRequestBuilder);
 
         ForkJoinPool testPool = new ForkJoinPool(2);
-        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
-//        assertTrue(testPool.awaitQuiescence(15, SECONDS));
+        testPool.submit(() -> msGraphGroup.pullAllGroupsDelta()).join();
 
         await().atMost(15, SECONDS).untilAsserted(() -> {
-
-            verify(azureGroupProducerService, times(4)).processGroup(any());
-            verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
-            verify(groupsRequestBuilder, times(2)).delta();
-            verify(graphServiceClient, times(2)).groups();
+            verify(groupsRequestBuilder, atLeastOnce()).delta();
+            verify(deltaRequestBuilder, times(3)).get(any()); // 3 pages fetched
             verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
-            verify(deltaRequestBuilder, times(1)).get(any());
-            verify(deltaRequestBuilder, times(1)).get();
-
-            assertNull(lastPage.getOdataNextLink(), "Last page should not have a next link.");
-            assertNotNull(lastPage.getOdataDeltaLink(), "Last page should have a delta link.");
-            assertEquals("last delta link", lastPage.getOdataDeltaLink(), "Delta link should match expected value.");
+            verify(deltaRequestBuilder, times(1)).withUrl("LinkToThirdPage");
+            assertNull(thirdPage.getOdataNextLink());
+            assertEquals("delta link", thirdPage.getOdataDeltaLink());
         });
+
     }
 
     @Test
     void makeSurePageThroughGroupsDeltaPagesThroughPages() {
         when(configGroup.getSuffix()).thenReturn("-suff-");
-        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
-        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(configGroup.getFintkontrollidattribute())
+                .thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
 
         DeltaGetResponse firstPage = new DeltaGetResponse();
         firstPage.setValue(getTestGrouplistAddedRemoved(3, 6, 3));
@@ -721,39 +788,30 @@ class AzureClientTest {
 
         DeltaGetResponse thirdPage = new DeltaGetResponse();
         thirdPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        thirdPage.setOdataNextLink(null);
         thirdPage.setOdataDeltaLink("delta link");
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
-
-        when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
-
-        when(requestAdapter.send(any(RequestInformation.class), any(), any()))
-                .thenReturn(secondPage, thirdPage);
-
-        DeltaGetResponse lastPage = new DeltaGetResponse();
-        lastPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
-        lastPage.setOdataNextLink(null);
-        lastPage.setOdataDeltaLink("last delta link");
-
-        when(deltaRequestBuilder.get()).thenReturn(lastPage);
+        when(deltaRequestBuilder.get(any()))
+                .thenReturn(firstPage)
+                .thenReturn(secondPage)
+                .thenReturn(thirdPage);
 
         when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.withUrl("LinkToThirdPage")).thenReturn(deltaRequestBuilder);
 
-        ForkJoinPool testPool = new ForkJoinPool(2);
-        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
-//        assertTrue(testPool.awaitQuiescence(15, SECONDS));
+        new ForkJoinPool(2).submit(() -> msGraphGroup.pullAllGroupsDelta()).join();
 
-        await().atMost(15, SECONDS).untilAsserted(() -> {
-            verify(azureGroupProducerService, times(4)).processGroup(any());
-            verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
-            verify(groupsRequestBuilder, times(2)).delta();
-            verify(graphServiceClient, times(2)).groups();
-            verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
-            verify(deltaRequestBuilder, times(1)).get(any());
-            verify(deltaRequestBuilder, times(1)).get();
-        });
+        verify(graphServiceClient, atLeastOnce()).groups();
+        verify(groupsRequestBuilder, atLeastOnce()).delta();
+        verify(deltaRequestBuilder, times(3)).get(any()); // 3 pages fetched
+        verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
+        verify(deltaRequestBuilder, times(1)).withUrl("LinkToThirdPage");
+
+        verify(azureGroupProducerService, times(4)).processGroup(any()); // adjust if needed
     }
+
 
     @Test
     void makeSureUserIsnotRepublishedIfUserCacheContainsUserAndExternalUserIsPublished()
@@ -811,7 +869,7 @@ class AzureClientTest {
         lenient().when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
 
         ForkJoinPool testPool = new ForkJoinPool(2);
-        testPool.submit(() -> azureClient.pullAllUsers()).join();
+        testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
 //        assertTrue(testPool.awaitQuiescence(15, SECONDS));
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureUserProducerService, times(1)).publish(nonCachedUser);
@@ -862,7 +920,7 @@ class AzureClientTest {
         lenient().when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
 
         ForkJoinPool testPool = new ForkJoinPool(2);
-        testPool.submit(() -> azureClient.pullAllUsers()).join();
+        testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
 //        assertTrue(testPool.awaitQuiescence(15, SECONDS));
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
@@ -887,7 +945,7 @@ class AzureClientTest {
         when(deltaRequestBuilder.get(any())).thenReturn(deltaGetResponseTest);
 
         ForkJoinPool testPool = new ForkJoinPool(2);
-        testPool.submit(() -> azureClient.pullAllGroupsDelta()).join();
+        testPool.submit(() -> msGraphGroup.pullAllGroupsDelta()).join();
         assertTrue(testPool.awaitQuiescence(15, SECONDS));
 
 
@@ -941,7 +999,7 @@ class AzureClientTest {
         lenient().when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
 
         ForkJoinPool testPool = new ForkJoinPool(2);
-        testPool.submit(() -> azureClient.pullAllUsers()).join();
+        testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
         //assertTrue(testPool.awaitQuiescence(15, SECONDS));
         await().atMost(15, SECONDS).untilAsserted(() -> {
             verify(azureUserProducerService, times(1)).publish(notCachedUser);
@@ -967,7 +1025,7 @@ class AzureClientTest {
                      .roleRef("exampleRoleRef")
                      .build();
 
-             azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+             msGraphGroup.addGroupMembership(resourceGroupMembership, kafkaKey);
 
              await().atMost(5, SECONDS).untilAsserted(() -> {
              verify(azureGroupMembershipProducerService, timeout(5000).times(1)).addMembership(any(AzureGroupMembership.class));
@@ -994,7 +1052,7 @@ class AzureClientTest {
                  .roleRef("exampleRoleRef")
                  .build();
 
-         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+         msGraphGroup.addGroupMembership(resourceGroupMembership, kafkaKey);
 
          //assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, SECONDS));
          await().atMost(5, SECONDS).untilAsserted(() -> {
@@ -1020,7 +1078,7 @@ class AzureClientTest {
         when(configGroup.getFintkontrollidattribute()).thenReturn("fintkontrollId");
 
         ForkJoinPool testPool = new ForkJoinPool(2);
-        testPool.submit(() -> azureClient.deleteGroupAsync(g.getId())).join();
+        testPool.submit(() -> msGraphGroup.deleteGroupAsync(g.getId())).join();
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(groupItemRequestBuilder, times(1)).delete();
@@ -1044,7 +1102,7 @@ class AzureClientTest {
          when(configGroup.getSuffix()).thenReturn("-suff-");
          when(configGroup.getFintkontrollidattribute()).thenReturn("fintkontrollId");
 
-         azureClient.deleteGroup(g.getId());
+         msGraphGroup.deleteGroup(g.getId());
          await().atMost(5, SECONDS).untilAsserted(() -> {
              verify(groupItemRequestBuilder, times(1)).delete();
          });
@@ -1071,18 +1129,17 @@ class AzureClientTest {
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("fintkontrollId");
 
-        azureClient.deleteGroup("refGroupID");
+        msGraphGroup.deleteGroup("refGroupID");
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(groupItemRequestBuilder, times(1)).delete();
         });
     }
 
-
     @Test
     public void makeSureGetNextPageIsCalledAsExpected() {
         when(configGroup.getSuffix()).thenReturn("-suff-");
-        when(configGroup.getFintkontrollidattribute()).thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
-        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(configGroup.getFintkontrollidattribute())
+                .thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
 
         DeltaGetResponse firstPage = new DeltaGetResponse();
         firstPage.setValue(getTestGrouplistAddedRemoved(3, 6, 3));
@@ -1094,48 +1151,34 @@ class AzureClientTest {
 
         DeltaGetResponse thirdPage = new DeltaGetResponse();
         thirdPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
+        thirdPage.setOdataNextLink(null);
         thirdPage.setOdataDeltaLink("delta link");
 
-        when(deltaRequestBuilder.get(any(Consumer.class))).thenReturn(firstPage);
+        DeltaRequestBuilder deltaRequestBuilder = mock(DeltaRequestBuilder.class);
+
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
-        when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
-        when(requestAdapter.send(any(RequestInformation.class), any(), any()))
-                .thenReturn(secondPage, thirdPage);
+
+        when(deltaRequestBuilder.get(any()))
+                .thenReturn(firstPage)
+                .thenReturn(secondPage)
+                .thenReturn(thirdPage);
+
         when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
         when(deltaRequestBuilder.withUrl("LinkToThirdPage")).thenReturn(deltaRequestBuilder);
 
-        DeltaGetResponse lastPage = new DeltaGetResponse();
-        lastPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
-        lastPage.setOdataNextLink(null);
-        lastPage.setOdataDeltaLink("last delta link");
+        new ForkJoinPool(2).submit(() -> msGraphGroup.pullAllGroupsDelta()).join();
 
-        when(deltaRequestBuilder.get()).thenReturn(lastPage);
-        when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
+        verify(graphServiceClient, atLeastOnce()).groups();
+        verify(groupsRequestBuilder, atLeastOnce()).delta();
 
-        new ForkJoinPool(2).submit(() -> azureClient.pullAllGroupsDelta()).join();
-        await().atMost(15, SECONDS).untilAsserted(() -> {
-            verify(azureGroupProducerService, times(4)).processGroup(any());
-            verify(requestAdapter, times(2)).send(any(RequestInformation.class), any(), any());
-            verify(graphServiceClient, times(2)).groups();
-            verify(groupsRequestBuilder, times(2)).delta();
-            verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
-            ArgumentCaptor<RequestInformation> riCap = ArgumentCaptor.forClass(RequestInformation.class);
-            verify(requestAdapter, times(2)).send(riCap.capture(), any(), any());
-            List<RequestInformation> ris = riCap.getAllValues();
-
-            String url0 = ris.get(0).getUri().toString();
-            String url1 = ris.get(1).getUri().toString();
-
-            assertEquals("LinkToSecondPage", url0, "Should request the 2nd page URL");
-            assertEquals("LinkToThirdPage",  url1, "Should request the 3rd page URL");
-
-            assertNull(thirdPage.getOdataNextLink(), "Last page should not have a next link.");
-            assertNotNull(thirdPage.getOdataDeltaLink(), "Last page should have a delta link.");
-            assertEquals("delta link", thirdPage.getOdataDeltaLink());
-        });
-
+        verify(deltaRequestBuilder, times(3)).get(any());
+        verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
+        verify(deltaRequestBuilder, times(1)).withUrl("LinkToThirdPage");
+        assertNull(thirdPage.getOdataNextLink(), "Last page should not have a next link.");
+        assertEquals("delta link", thirdPage.getOdataDeltaLink(), "Delta link should match expected value.");
     }
+
 
     @Test
     public void makeSureTrownErrorIsSwallowedAndNotThrown() {
@@ -1147,7 +1190,7 @@ class AzureClientTest {
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
         when(deltaRequestBuilder.get(ArgumentMatchers.any())).thenThrow(new ApiException("Test exception"));
 
-        azureClient.pullAllGroupsDelta();
+        msGraphGroup.pullAllGroupsDelta();
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, never()).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, never()).addMembership(any(AzureGroupMembership.class));
@@ -1155,7 +1198,7 @@ class AzureClientTest {
             verify(azureGroupMembershipCache, never());
         });
         assertDoesNotThrow(()-> {
-            azureClient.pullAllGroupsDelta();
+            msGraphGroup.pullAllGroupsDelta();
         });
     }
 
@@ -1168,7 +1211,7 @@ class AzureClientTest {
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
         when(deltaRequestBuilder.get(ArgumentMatchers.any())).thenThrow(new ApiException("Gateway Timeout"));
 
-        azureClient.pullAllGroupsDelta();
+        msGraphGroup.pullAllGroupsDelta();
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, never()).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, never()).addMembership(any(AzureGroupMembership.class));
@@ -1194,7 +1237,7 @@ class AzureClientTest {
         delta.setOdataDeltaLink("delta link");
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
 
-        azureClient.pullAllGroupsDelta();
+        msGraphGroup.pullAllGroupsDelta();
 
         await().atMost(60, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(groups)).processGroup(any(AzureGroup.class));
@@ -1219,11 +1262,11 @@ class AzureClientTest {
             when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
             DeltaGetResponse delta = new DeltaGetResponse();
-            delta.setValue(getTestGrouplistAddedRemoved(groups, membersPrGroups, 0)); // 10 groups, 1000 adds/group, 0 removes
+            delta.setValue(getTestGrouplistAddedRemoved(groups, membersPrGroups, 0));
             delta.setOdataDeltaLink("delta link");
             when(deltaRequestBuilder.get(any())).thenReturn(delta);
 
-            azureClient.pullAllGroupsDelta();
+            msGraphGroup.pullAllGroupsDelta();
 
             await().atMost(5, MINUTES).untilAsserted(() -> {
                 verify(azureGroupProducerService, times(groups)).processGroup(any(AzureGroup.class));

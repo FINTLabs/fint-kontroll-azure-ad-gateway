@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import no.fintlabs.ConfigUser;
+import no.fintlabs.config.ConfigUser;
 
 import java.util.Objects;
 
