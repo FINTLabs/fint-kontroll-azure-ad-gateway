@@ -38,13 +38,15 @@ public class MsGraphGroup {
     protected final GraphServiceClient graphServiceClient;
     private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private final ConcurrentHashMap<String, AzureGroup> azureGroupCache;
-    private final HashSet<String> azureGroupMembershipCache;
+    //private final HashSet<String> azureGroupMembershipCache;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final ExecutorService groupExecutor = Executors.newFixedThreadPool(10);
-
+    private final Set<String> membershipCache = ConcurrentHashMap.newKeySet();
     private String odataGroupDeltaLink;
     private AtomicInteger numMembers = new AtomicInteger(0);
+    private final AtomicInteger addedMemberships  = new AtomicInteger(0);
+    private final AtomicInteger removedMemberships = new AtomicInteger(0);
     private AtomicInteger groupCounter;
     private Set<String> processedGroupIds;
 
@@ -52,7 +54,8 @@ public class MsGraphGroup {
     public void clearCaches() {
         odataGroupDeltaLink = null;
         azureGroupCache.clear();
-        azureGroupMembershipCache.clear();
+        //azureGroupMembershipCache.clear();
+        membershipCache.clear();
         log.info("Delta caches for group has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
     }
 
@@ -65,6 +68,8 @@ public class MsGraphGroup {
         long startMs = System.currentTimeMillis();
         numMembers.set(0);
         processedGroupIds = ConcurrentHashMap.newKeySet();
+        addedMemberships.set(0);
+        removedMemberships.set(0);
 
         try {
             Consumer<DeltaRequestBuilder.GetRequestConfiguration> initialCfg = req -> {
@@ -73,15 +78,11 @@ public class MsGraphGroup {
                         configGroup.getFintkontrollidattribute()
                 };
                 req.queryParameters.top = configGroup.getGrouppagingsize();
-                req.headers.add("Prefer", "return=minimal");
-            };
-            Consumer<DeltaRequestBuilder.GetRequestConfiguration> contCfg = req -> {
-                req.headers.add("Prefer", "return=minimal");
             };
 
             DeltaGetResponse firstPage =
                     (odataGroupDeltaLink != null && !odataGroupDeltaLink.isBlank())
-                            ? graphServiceClient.groups().delta().withUrl(odataGroupDeltaLink).get(contCfg)
+                            ? graphServiceClient.groups().delta().withUrl(odataGroupDeltaLink).get()
                             : graphServiceClient.groups().delta().get(initialCfg);
 
             List<CompletableFuture<Void>> tasks = new ArrayList<>();
@@ -107,7 +108,7 @@ public class MsGraphGroup {
                     break;
                 }
 
-                current  = graphServiceClient.groups().delta().withUrl(next).get(contCfg);
+                current  = graphServiceClient.groups().delta().withUrl(next).get();
                 lastPage = current;
             }
 
@@ -129,19 +130,29 @@ public class MsGraphGroup {
             log.error("ApiException when trying to get groups using delta: {}", e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected exception when processing groups: {}", e.getMessage());
-        } finally {
-
         }
 
         long elapsedSec = (System.currentTimeMillis() - startMs) / 1000;
         long minutes = elapsedSec / 60, seconds = elapsedSec % 60;
+        int adds = addedMemberships.get();
+        int removes = removedMemberships.get();
 
-        if (!processedGroupIds.isEmpty() || numMembers.get() > 0) {
-            log.info("*** <<< Found {} groups with suffix \"{}\" that included {} memberships, published to Kafka, in {} minutes and {} seconds >>> ***",
-                    processedGroupIds.size(), configGroup.getSuffix(), numMembers.get(), minutes, seconds);
+        if (!processedGroupIds.isEmpty() || adds > 0 || removes > 0) {
+            log.info("*** <<< Found {} groups with suffix \"{}\"; memberships changed ({} added / {} removed). "
+                            + "Published to Kafka in {} minutes and {} seconds >>> ***",
+                    processedGroupIds.size(),
+                    configGroup.getSuffix(),
+                    adds,
+                    removes,
+                    minutes,
+                    seconds
+            );
         } else {
-            log.info("*** <<< No changes since last delta call on groups from Graph. Finished in {} minutes and {} seconds >>> ***",
-                    minutes, seconds);
+            log.info("*** <<< No membership changes since last delta call on groups from Graph. "
+                            + "Finished in {} minutes and {} seconds >>> ***",
+                    minutes,
+                    seconds
+            );
         }
     }
 
@@ -186,23 +197,29 @@ public class MsGraphGroup {
                     continue;
                 }
 
-                String kafkaKey = group.getId() + "_" + memberId;
+                String key = group.getId() + "_" + memberId;
 
                 if (untypedMember.getValue().containsKey("@removed")) {
-                    azureGroupMembershipProducerService.removeMembership(
-                            new AzureGroupMembership(memberId, group.getId(), kafkaKey)
-                    );
-                    resourceGroupMembershipCache.remove(kafkaKey);
-                    log.info("Removed user {} from group {}", memberId, group.getId());
+                    if (membershipCache.remove(key)) {
+                        azureGroupMembershipProducerService.removeMembership(
+                                new AzureGroupMembership(memberId, group.getId(), key)
+                        );
+                        removedMemberships.incrementAndGet();
+                        log.debug("User {} is no longer member of group {}", memberId, group.getId());
+                    } else {
+                        log.debug("Remove event for {}, but cache had no membership (already removed).", key);
+                    }
                     continue;
                 }
 
-                AzureGroupMembership azureGroupMembership =
-                        new AzureGroupMembership(memberId, group.getId(), kafkaKey);
-                azureGroupMembershipProducerService.addMembership(azureGroupMembership);
-                azureGroupMembershipCache.add(azureGroupMembership.getId());
-                numMembers.incrementAndGet();
-                log.debug("User {} is member of group {}", memberId, group.getId());
+                if (membershipCache.add(key)) {
+                    AzureGroupMembership m = new AzureGroupMembership(memberId, group.getId(), key);
+                    azureGroupMembershipProducerService.addMembership(m);
+                    addedMemberships.incrementAndGet();
+                    log.debug("User {} is member of group {}", memberId, group.getId());
+                } else {
+                    log.debug("Add/update for {}, but membership already present (duplicate).", key);
+                }
             }
 
         } catch (ClassCastException e) {
@@ -332,14 +349,14 @@ public class MsGraphGroup {
 
         page.getValue().forEach(member -> {
             AzureGroupMembership azureGroupMembership = new AzureGroupMembership(azureGroup.getId(), member);
-            if(azureGroupMembershipCache != null
-                    && azureGroupMembershipCache.contains(azureGroupMembership.getId()))
+            if(membershipCache != null
+                    && membershipCache.contains(azureGroupMembership.getId()))
             {
                 log.debug("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.getId(), azureGroup.getId());
             }
             else {
                 azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
-                azureGroupMembershipCache.add(azureGroupMembership.getId());
+                membershipCache.add(azureGroupMembership.getId());
                 membersCount.getAndIncrement();
                 numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());

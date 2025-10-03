@@ -82,6 +82,7 @@ public class AzureGroupMembershipProducerService {
     }
 
     public void publishDeletedMembership(String membershipKey) {
+        log.debug("Starting publishDeletedMemberships function {}.", membershipKey);
         azureGroupMembershipTemplate.send(
                 ParameterizedProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
@@ -91,6 +92,7 @@ public class AzureGroupMembershipProducerService {
         );
     }
     public void publishAddedMembership(AzureGroupMembership object) {
+        log.debug("Starting publishAddedMembership function {}.", object.id);
         azureGroupMembershipTemplate.send(
                 ParameterizedProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
