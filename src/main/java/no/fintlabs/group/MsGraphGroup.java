@@ -37,12 +37,14 @@ public class MsGraphGroup {
     protected final ConfigGroup configGroup;
     protected final GraphServiceClient graphServiceClient;
     private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
+    private final Set<String> membershipCache = ConcurrentHashMap.newKeySet();
+    //private final ConcurrentHashMap.KeySetView<String, boolean> membershipCache;
     private final ConcurrentHashMap<String, AzureGroup> azureGroupCache;
     //private final HashSet<String> azureGroupMembershipCache;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final ExecutorService groupExecutor = Executors.newFixedThreadPool(10);
-    private final Set<String> membershipCache = ConcurrentHashMap.newKeySet();
+
     private String odataGroupDeltaLink;
     private AtomicInteger numMembers = new AtomicInteger(0);
     private final AtomicInteger addedMemberships  = new AtomicInteger(0);

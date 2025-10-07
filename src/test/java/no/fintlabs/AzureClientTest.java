@@ -31,10 +31,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
@@ -112,6 +117,9 @@ class AzureClientTest {
     private ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache =
             new ConcurrentHashMap<>();
 
+    @Spy
+    private Set<String> membershipCache = ConcurrentHashMap.newKeySet();
+
     @Mock
     private AzureUserProducerService azureUserProducerService;
 
@@ -159,8 +167,6 @@ class AzureClientTest {
         );
         resourceGroupMembershipCache.clear();
     }
-
-
 
     private UntypedObject getTestUser(boolean removed) {
         Map<String, UntypedNode> userMap = new HashMap<>();
@@ -570,6 +576,9 @@ class AzureClientTest {
     @Test
     void makeSure18NewUsersArePublishedOnKafkaAnd9RemovedUsersAreIgnoredSinceTheyAreNotInCache() {
 
+        // Override the constructor for cache
+        ReflectionTestUtils.setField(msGraphGroup, "membershipCache", membershipCache);
+
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute())
                 .thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
@@ -588,7 +597,7 @@ class AzureClientTest {
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-            verify(resourceGroupMembershipCache, times(9)).remove(anyString());
+            verify(membershipCache, times(9)).remove(anyString());
             verify(azureGroupMembershipProducerService, never()).removeMembership(any(AzureGroupMembership.class));
         });
 
@@ -605,8 +614,23 @@ class AzureClientTest {
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
         DeltaGetResponse delta = new DeltaGetResponse();
-        delta.setValue(getTestGrouplistAddedRemoved(3, 6, 3)); // 18 adds, 9 removes
+        List<Group> testGroups = getTestGrouplistAddedRemoved(3, 6, 3);
+        delta.setValue(testGroups); // 18 adds, 9 removes
         delta.setOdataDeltaLink("delta link");
+
+        // Create a clean cache
+        Set<String> fullMemberCache = ConcurrentHashMap.newKeySet();
+
+        // Pre-populate the cache with only users that should be removed
+
+        List<Group> filteredGroups = testGroups.stream()
+                .filter(group -> group.getMembers().stream()
+                        .anyMatch(user -> user.getAdditionalData().containsKey("@removed")))
+                .collect(Collectors.toList());
+
+        // Override the constructor for cache
+        ReflectionTestUtils.setField(msGraphGroup, "membershipCache", fullMemberCache);
+
 
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
 
@@ -615,9 +639,14 @@ class AzureClientTest {
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-            verify(resourceGroupMembershipCache, times(9)).remove(anyString());
+            verify(membershipCache, times(9)).remove(anyString());
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
         });
+    }
+
+    @Test
+    void makeSure18NewUsersAreIgnoredSinceTheyAlreadyAreInCacheAnd9IsremovedFromCacheAndArePublishedAsRemovedOnKafka() {
+        assert(false);
     }
 
     @Test
