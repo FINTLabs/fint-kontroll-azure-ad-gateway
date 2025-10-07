@@ -568,7 +568,8 @@ class AzureClientTest {
     }
 
     @Test
-    void makeSure18NewUsersArePublishedOnKafkaAnd9ArePublishedAsRemovedOnKafkaAnd9IsremovedFromCache() {
+    void makeSure18NewUsersArePublishedOnKafkaAnd9RemovedUsersAreIgnoredSinceTheyAreNotInCache() {
+
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute())
                 .thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
@@ -579,6 +580,7 @@ class AzureClientTest {
         DeltaGetResponse delta = new DeltaGetResponse();
         delta.setValue(getTestGrouplistAddedRemoved(3, 6, 3)); // 18 adds, 9 removes
         delta.setOdataDeltaLink("delta link");
+
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
 
         msGraphGroup.pullAllGroupsDelta();
@@ -586,10 +588,35 @@ class AzureClientTest {
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
+            verify(resourceGroupMembershipCache, times(9)).remove(anyString());
+            verify(azureGroupMembershipProducerService, never()).removeMembership(any(AzureGroupMembership.class));
+        });
+
+    }
+
+    @Test
+    void makeSure18NewUsersArePublishedOnKafkaAnd9ArePublishedAsRemovedOnKafkaAnd9IsremovedFromCache() {
+
+        when(configGroup.getSuffix()).thenReturn("-suff-");
+        when(configGroup.getFintkontrollidattribute())
+                .thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+
+        DeltaGetResponse delta = new DeltaGetResponse();
+        delta.setValue(getTestGrouplistAddedRemoved(3, 6, 3)); // 18 adds, 9 removes
+        delta.setOdataDeltaLink("delta link");
+
+        when(deltaRequestBuilder.get(any())).thenReturn(delta);
+
+        msGraphGroup.pullAllGroupsDelta();
+
+        await().atMost(5, SECONDS).untilAsserted(() -> {
+            verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
+            verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
+            verify(resourceGroupMembershipCache, times(9)).remove(anyString());
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
-            //TODO: this verifier is not stable and as for now commented
-            //verify(resourceGroupMembershipCache, times(9)).put(anyString(), eq(Optional.empty()));
-            //verify(resourceGroupMembershipCache, never()).remove(anyString());
         });
     }
 
