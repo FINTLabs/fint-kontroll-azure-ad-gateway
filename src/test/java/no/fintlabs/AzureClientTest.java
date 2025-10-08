@@ -168,6 +168,29 @@ class AzureClientTest {
         resourceGroupMembershipCache.clear();
     }
 
+    public TestUtils.TestGroupData toTestGroupData(List<Group> groups) {
+        List<String> createdKeys = new ArrayList<>();
+        List<String> removedKeys = new ArrayList<>();
+
+        for (Group g : groups) {
+            String groupId = g.getId();
+            UntypedArray members = (UntypedArray) g.getAdditionalData().get("members@delta");
+
+            for (UntypedNode n : members.getValue()) {
+                UntypedObject uo = (UntypedObject) n;
+                String userId = ((UntypedString) uo.getValue().get("id")).getValue();
+                String key = groupId + "_" + userId;
+
+                if (uo.getValue().containsKey("@removed")) {
+                    removedKeys.add(key);
+                } else {
+                    createdKeys.add(key);
+                }
+            }
+        }
+        return new TestUtils.TestGroupData(groups, removedKeys, createdKeys);
+    }
+
     private UntypedObject getTestUser(boolean removed) {
         Map<String, UntypedNode> userMap = new HashMap<>();
         userMap.put("@odata.type", new UntypedString("#microsoft.graph.user"));
@@ -615,21 +638,12 @@ class AzureClientTest {
 
         DeltaGetResponse delta = new DeltaGetResponse();
         List<Group> testGroups = getTestGrouplistAddedRemoved(3, 6, 3);
+        TestUtils.TestGroupData testGroupData = toTestGroupData(testGroups);
         delta.setValue(testGroups); // 18 adds, 9 removes
         delta.setOdataDeltaLink("delta link");
 
-        // Create a clean cache
-        Set<String> fullMemberCache = ConcurrentHashMap.newKeySet();
-
-        // Pre-populate the cache with only users that should be removed
-
-        List<Group> filteredGroups = testGroups.stream()
-                .filter(group -> group.getMembers().stream()
-                        .anyMatch(user -> user.getAdditionalData().containsKey("@removed")))
-                .collect(Collectors.toList());
-
-        // Override the constructor for cache
-        ReflectionTestUtils.setField(msGraphGroup, "membershipCache", fullMemberCache);
+        membershipCache.addAll(testGroupData.removedMemberships);
+        ReflectionTestUtils.setField(msGraphGroup, "membershipCache", membershipCache);
 
 
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
@@ -646,7 +660,36 @@ class AzureClientTest {
 
     @Test
     void makeSure18NewUsersAreIgnoredSinceTheyAlreadyAreInCacheAnd9IsremovedFromCacheAndArePublishedAsRemovedOnKafka() {
-        assert(false);
+        when(configGroup.getSuffix()).thenReturn("-suff-");
+        when(configGroup.getFintkontrollidattribute())
+                .thenReturn("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId");
+        when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
+        when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
+        when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+
+        DeltaGetResponse delta = new DeltaGetResponse();
+        List<Group> testGroups = getTestGrouplistAddedRemoved(3, 6, 3);
+        TestUtils.TestGroupData testGroupData = toTestGroupData(testGroups);
+        delta.setValue(testGroups); // 18 adds, 9 removes
+        delta.setOdataDeltaLink("delta link");
+
+        membershipCache.addAll(testGroupData.createdMemberships);
+        membershipCache.addAll(testGroupData.removedMemberships);
+        ReflectionTestUtils.setField(msGraphGroup, "membershipCache", membershipCache);
+
+
+        when(deltaRequestBuilder.get(any())).thenReturn(delta);
+
+        msGraphGroup.pullAllGroupsDelta();
+
+        await().atMost(5, SECONDS).untilAsserted(() -> {
+            verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
+            verify(membershipCache, times(18)).add(anyString());
+            verify(azureGroupMembershipProducerService, never()).addMembership(any(AzureGroupMembership.class));
+            verify(membershipCache, times(9)).remove(anyString());
+            verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
+        });
+
     }
 
     @Test
@@ -807,19 +850,28 @@ class AzureClientTest {
         DeltaGetResponse thirdPage = new DeltaGetResponse();
         thirdPage.setValue(getTestGrouplistAddedRemoved(4, 2, 1));
         thirdPage.setOdataDeltaLink("delta link"); // final
-
+        DeltaRequestBuilder page2Builder      = mock(DeltaRequestBuilder.class);
+        DeltaRequestBuilder page3Builder      = mock(DeltaRequestBuilder.class);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
-        when(deltaRequestBuilder.get(any())).thenReturn(firstPage, secondPage, thirdPage);
-        when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
-        when(deltaRequestBuilder.withUrl("LinkToThirdPage")).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.get(any())).thenReturn(firstPage);
+        when(deltaRequestBuilder.withUrl("LinkToSecondPage"))
+                .thenReturn(page2Builder);
+        when(page2Builder.get())
+                .thenReturn(secondPage);
+        when(deltaRequestBuilder.withUrl("LinkToThirdPage"))
+                .thenReturn(page3Builder);
+        when(page3Builder.get())
+                .thenReturn(thirdPage);
 
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> msGraphGroup.pullAllGroupsDelta()).join();
 
         await().atMost(15, SECONDS).untilAsserted(() -> {
             verify(groupsRequestBuilder, atLeastOnce()).delta();
-            verify(deltaRequestBuilder, times(3)).get(any()); // 3 pages fetched
+            verify(deltaRequestBuilder, times(1)).get(any());
+            verify(page2Builder, times(1)).get();
+            verify(page3Builder, times(1)).get();
             verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
             verify(deltaRequestBuilder, times(1)).withUrl("LinkToThirdPage");
             assertNull(thirdPage.getOdataNextLink());
@@ -847,21 +899,30 @@ class AzureClientTest {
         thirdPage.setOdataNextLink(null);
         thirdPage.setOdataDeltaLink("delta link");
 
+        DeltaRequestBuilder page2Builder      = mock(DeltaRequestBuilder.class);
+        DeltaRequestBuilder page3Builder      = mock(DeltaRequestBuilder.class);
+
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
         when(deltaRequestBuilder.get(any()))
-                .thenReturn(firstPage)
-                .thenReturn(secondPage)
-                .thenReturn(thirdPage);
+                .thenReturn(firstPage);
 
-        when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
-        when(deltaRequestBuilder.withUrl("LinkToThirdPage")).thenReturn(deltaRequestBuilder);
+        when(deltaRequestBuilder.withUrl("LinkToSecondPage"))
+                .thenReturn(page2Builder);
+        when(page2Builder.get())
+                .thenReturn(secondPage);
+        when(deltaRequestBuilder.withUrl("LinkToThirdPage"))
+                .thenReturn(page3Builder);
+        when(page3Builder.get())
+                .thenReturn(thirdPage);
 
         new ForkJoinPool(2).submit(() -> msGraphGroup.pullAllGroupsDelta()).join();
 
         verify(graphServiceClient, atLeastOnce()).groups();
         verify(groupsRequestBuilder, atLeastOnce()).delta();
-        verify(deltaRequestBuilder, times(3)).get(any()); // 3 pages fetched
+        verify(deltaRequestBuilder, times(1)).get(any());
+        verify(page2Builder, times(1)).get();
+        verify(page3Builder, times(1)).get();
         verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
         verify(deltaRequestBuilder, times(1)).withUrl("LinkToThirdPage");
 
@@ -878,6 +939,9 @@ class AzureClientTest {
         when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+        com.microsoft.graph.users.delta.DeltaRequestBuilder userDeltaRequestBuilder = mock(com.microsoft.graph.users.delta.DeltaRequestBuilder.class);
+
+        when(usersRequestBuilder.delta()).thenReturn(userDeltaRequestBuilder);
 
         OnPremisesExtensionAttributes onPremAttributes = new OnPremisesExtensionAttributes();
         onPremAttributes.setExtensionAttribute10("1236");
@@ -887,6 +951,7 @@ class AzureClientTest {
         user.setUserPrincipalName("testuser1@mail.com");
         user.setAccountEnabled(true);
         user.setOnPremisesExtensionAttributes(onPremAttributes);
+        user.setEmployeeId("1236");
 
         OnPremisesExtensionAttributes onPremAttributes2 = new OnPremisesExtensionAttributes();
         onPremAttributes2.setExtensionAttribute10("4566");
@@ -896,6 +961,8 @@ class AzureClientTest {
         user2.setUserPrincipalName("testuser2@mail.com");
         user2.setAccountEnabled(true);
         user2.setOnPremisesExtensionAttributes(onPremAttributes2);
+        user2.setUserType("Member");
+        user2.setEmployeeId("1236");
 
 
         User extUser = new User();
@@ -906,18 +973,19 @@ class AzureClientTest {
         OnPremisesExtensionAttributes onPremAttributes3 = new OnPremisesExtensionAttributes();
         onPremAttributes3.setExtensionAttribute11("novari");
         extUser.setOnPremisesExtensionAttributes(onPremAttributes3);
+        extUser.setUserType("Member");
+        extUser.setEmployeeId("1236");
 
         List<User> userList = new ArrayList<>();
         userList.add(user);
         userList.add(user2);
         userList.add(extUser);
 
-        UserCollectionResponse firstPage = new UserCollectionResponse();
+        com.microsoft.graph.users.delta.DeltaGetResponse firstPage = new com.microsoft.graph.users.delta.DeltaGetResponse();
         firstPage.setValue(userList);
-        when(usersRequestBuilder.get(any())).thenReturn(firstPage);
+        when(userDeltaRequestBuilder.get(any())).thenReturn(firstPage);
         when(configUser.getEnableExternalUsers()).thenReturn(true);
         when(configUser.getUserpagingsize()).thenReturn(1000);
-
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser nonCachedUser = new AzureUser(user2, configUser);
@@ -926,8 +994,8 @@ class AzureClientTest {
 
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
-//        assertTrue(testPool.awaitQuiescence(15, SECONDS));
         await().atMost(5, SECONDS).untilAsserted(() -> {
+            verify(azureUserProducerService, never()).publish(cachedUser);
             verify(azureUserProducerService, times(1)).publish(nonCachedUser);
             verify(azureUserExternalProducerService, times(1)).publish(any(AzureUserExternal.class));
         });
@@ -1021,7 +1089,9 @@ class AzureClientTest {
         when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.users()).thenReturn(usersRequestBuilder);
+        com.microsoft.graph.users.delta.DeltaRequestBuilder userDeltaRequestBuilder = mock(com.microsoft.graph.users.delta.DeltaRequestBuilder.class);
 
+        when(usersRequestBuilder.delta()).thenReturn(userDeltaRequestBuilder);
 
         OnPremisesExtensionAttributes onPremAttributes = new OnPremisesExtensionAttributes();
         onPremAttributes.setExtensionAttribute10("123");
@@ -1031,6 +1101,9 @@ class AzureClientTest {
         user.setUserPrincipalName("testuser1@mail.com");
         user.setAccountEnabled(true);
         user.setOnPremisesExtensionAttributes(onPremAttributes);
+        user.setUserType("Member");
+        user.setEmployeeId("1236");
+
 
         OnPremisesExtensionAttributes onPremAttributes2 = new OnPremisesExtensionAttributes();
         onPremAttributes2.setExtensionAttribute10("456");
@@ -1040,14 +1113,17 @@ class AzureClientTest {
         user2.setUserPrincipalName("testuser2@mail.com");
         user2.setAccountEnabled(true);
         user2.setOnPremisesExtensionAttributes(onPremAttributes2);
+        user2.setUserType("Member");
+        user2.setEmployeeId("1236");
+
 
         List<User> userList = new ArrayList<>();
         userList.add(user);
         userList.add(user2);
 
-        UserCollectionResponse firstPage = new UserCollectionResponse();
+        com.microsoft.graph.users.delta.DeltaGetResponse firstPage = new com.microsoft.graph.users.delta.DeltaGetResponse();
         firstPage.setValue(userList);
-        when(usersRequestBuilder.get(any())).thenReturn(firstPage);
+        when(userDeltaRequestBuilder.get(any())).thenReturn(firstPage);
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser notCachedUser = new AzureUser(user2, configUser);
@@ -1211,30 +1287,34 @@ class AzureClientTest {
         thirdPage.setOdataDeltaLink("delta link");
 
         DeltaRequestBuilder deltaRequestBuilder = mock(DeltaRequestBuilder.class);
-
+        DeltaRequestBuilder page2Builder      = mock(DeltaRequestBuilder.class);
+        DeltaRequestBuilder page3Builder      = mock(DeltaRequestBuilder.class);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
         when(deltaRequestBuilder.get(any()))
-                .thenReturn(firstPage)
-                .thenReturn(secondPage)
+                .thenReturn(firstPage);
+        when(deltaRequestBuilder.withUrl("LinkToSecondPage"))
+                .thenReturn(page2Builder);
+        when(page2Builder.get())
+                .thenReturn(secondPage);
+        when(deltaRequestBuilder.withUrl("LinkToThirdPage"))
+                .thenReturn(page3Builder);
+        when(page3Builder.get())
                 .thenReturn(thirdPage);
-
-        when(deltaRequestBuilder.withUrl("LinkToSecondPage")).thenReturn(deltaRequestBuilder);
-        when(deltaRequestBuilder.withUrl("LinkToThirdPage")).thenReturn(deltaRequestBuilder);
-
         new ForkJoinPool(2).submit(() -> msGraphGroup.pullAllGroupsDelta()).join();
 
         verify(graphServiceClient, atLeastOnce()).groups();
         verify(groupsRequestBuilder, atLeastOnce()).delta();
 
-        verify(deltaRequestBuilder, times(3)).get(any());
+        verify(deltaRequestBuilder, times(1)).get(any());
+        verify(page2Builder, times(1)).get();
+        verify(page3Builder, times(1)).get();
         verify(deltaRequestBuilder, times(1)).withUrl("LinkToSecondPage");
         verify(deltaRequestBuilder, times(1)).withUrl("LinkToThirdPage");
         assertNull(thirdPage.getOdataNextLink(), "Last page should not have a next link.");
         assertEquals("delta link", thirdPage.getOdataDeltaLink(), "Delta link should match expected value.");
     }
-
 
     @Test
     public void makeSureTrownErrorIsSwallowedAndNotThrown() {
