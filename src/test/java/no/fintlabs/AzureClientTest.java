@@ -49,6 +49,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.slf4j.LoggerFactory;
+
 
 
 @ExtendWith(MockitoExtension.class)
@@ -1234,13 +1240,12 @@ class AzureClientTest {
          when(configGroup.getSuffix()).thenReturn("-suff-");
          when(configGroup.getFintkontrollidattribute()).thenReturn("fintkontrollId");
 
-         msGraphGroup.deleteGroup(g.getId());
+         msGraphGroup.deleteGroupAsync(g.getId());
          await().atMost(5, SECONDS).untilAsserted(() -> {
              verify(groupItemRequestBuilder, times(1)).delete();
          });
      }
 
-    // TODO: To be fixed to actually Throw Error as deleteGroupAsync function has been refactored [FKS-946]
     @Test
     void multiplePagesWhenDeletingSingleGroupShouldThrowError() {
         Group g1 = new Group();
@@ -1261,10 +1266,25 @@ class AzureClientTest {
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute()).thenReturn("fintkontrollId");
 
-        msGraphGroup.deleteGroup("refGroupID");
+        Logger logger = (Logger) LoggerFactory.getLogger(MsGraphGroup.class);
+        ListAppender<ILoggingEvent> app = new ListAppender<>();
+        app.start();
+        logger.addAppender(app);
+
+        msGraphGroup.deleteGroupAsync("refGroupID");
+
         await().atMost(5, SECONDS).untilAsserted(() -> {
-            verify(groupItemRequestBuilder, times(1)).delete();
+            assertTrue(app.list.stream().anyMatch(e ->
+                    e.getLevel() == Level.ERROR &&
+                            e.getFormattedMessage().contains("Expected exactly 1 group, found 2") &&
+                            e.getFormattedMessage().contains("fintkontrollId=refGroupID")
+            ));
+
+            verify(groupsRequestBuilder, never()).byGroupId(anyString());
+            verify(groupItemRequestBuilder, never()).delete();
         });
+
+        logger.detachAppender(app);
     }
 
     @Test
