@@ -214,7 +214,7 @@ public class ResourceGroupConsumerServiceTest {
 
         verify(msGraphGroup, times(1)).addGroupToAzureAsync(any());
         verify(msGraphGroup, times(0)).updateGroup(any());
-        verify(msGraphGroup, times(0)).deleteGroup(any());
+        verify(msGraphGroup, times(0)).deleteGroupAsync(any());
     }
     @Test
     void updateAzure_UpdatedGroup_if_allowed() throws Exception {
@@ -228,7 +228,7 @@ public class ResourceGroupConsumerServiceTest {
 
         verify(msGraphGroup, times(0)).addGroupToAzureAsync(any());
         verify(msGraphGroup, times(1)).updateGroup(any());
-        verify(msGraphGroup, times(0)).deleteGroup(any());
+        verify(msGraphGroup, times(0)).deleteGroupAsync(any());
     }
 
     @Test
@@ -243,7 +243,7 @@ public class ResourceGroupConsumerServiceTest {
 
         verify(msGraphGroup, times(0)).addGroupToAzureAsync(any());
         verify(msGraphGroup, times(0)).updateGroup(any());
-        verify(msGraphGroup, times(0)).deleteGroup(any());
+        verify(msGraphGroup, times(0)).deleteGroupAsync(any());
     }
 
     @Test
@@ -255,7 +255,7 @@ public class ResourceGroupConsumerServiceTest {
 
         verify(msGraphGroup, times(0)).addGroupToAzureAsync(any());
         verify(msGraphGroup, times(0)).updateGroup(any());
-        verify(msGraphGroup, times(1)).deleteGroup(any());
+        verify(msGraphGroup, times(1)).deleteGroupAsync(any());
     }
 
     @Test
@@ -267,6 +267,6 @@ public class ResourceGroupConsumerServiceTest {
 
         verify(msGraphGroup, times(0)).addGroupToAzureAsync(any());
         verify(msGraphGroup, times(0)).updateGroup(any());
-        verify(msGraphGroup, times(0)).deleteGroup(any());
+        verify(msGraphGroup, times(0)).deleteGroupAsync(any());
     }
 }
