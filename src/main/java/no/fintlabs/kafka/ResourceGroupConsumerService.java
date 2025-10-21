@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
@@ -49,17 +50,22 @@ public class ResourceGroupConsumerService {
         subscribeToSink();
     }
 
+    private static final int CORES = Runtime.getRuntime().availableProcessors();
+    private static final int CONCURRENCY = Math.min(CORES * 8, 256);
+
     private void subscribeToSink() {
         resourceGroupSink.asFlux()
-                .parallel(20)
-                .runOn(Schedulers.boundedElastic())
-                .subscribe(kv -> {
-                    try {
-                        updateAzure(kv.getT1(), kv.getT2());
-                    } catch (Exception e) {
-                        log.error("Failed to update Azure", e);
-                    }
-                });
+                .flatMap(kv ->
+                                Mono.fromCallable(() -> {
+                                            updateAzure(kv.getT1(), kv.getT2());
+                                            return 1;
+                                        })
+                                        .subscribeOn(Schedulers.boundedElastic()),
+                        CONCURRENCY,
+                        1024
+                )
+                .onErrorContinue((e, o) -> log.error("Failed to update Azure", e))
+                .subscribe();
     }
 
 
@@ -76,7 +82,7 @@ public class ResourceGroupConsumerService {
                 ListenerConfiguration.builder(ResourceGroup.class)
                         .groupIdApplicationDefault()
                         .maxPollRecords(kafkaConfig.getMaxpollrecords())
-                        .maxPollInterval(Duration.ofMinutes(5))
+                        .maxPollInterval(Duration.ofMinutes(kafkaConfig.getMaxpollinterval()))
                         .errorHandler(new DefaultErrorHandler())
                         .continueFromPreviousOffsetOnAssignment()
                         .build();

@@ -3,60 +3,92 @@ package no.fintlabs.group;
 import com.microsoft.graph.core.tasks.PageIterator;
 import com.microsoft.graph.groups.delta.DeltaGetResponse;
 import com.microsoft.graph.groups.delta.DeltaRequestBuilder;
-import com.microsoft.graph.models.*;
+import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
+import com.microsoft.graph.models.Group;
+import com.microsoft.graph.models.GroupCollectionResponse;
+import com.microsoft.graph.models.ReferenceCreate;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
 import com.microsoft.kiota.serialization.UntypedArray;
 import com.microsoft.kiota.serialization.UntypedObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.azure.*;
+import no.fintlabs.azure.AzureGroup;
+import no.fintlabs.azure.AzureGroupMembership;
+import no.fintlabs.azure.AzureGroupMembershipProducerService;
+import no.fintlabs.azure.AzureGroupProducerService;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
-import no.fintlabs.config.ConfigUser;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import jakarta.annotation.PostConstruct;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
-
 public class MsGraphGroup {
     protected final Config config;
     protected final ConfigGroup configGroup;
     protected final GraphServiceClient graphServiceClient;
     private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private final Set<String> membershipCache = ConcurrentHashMap.newKeySet();
-    //private final ConcurrentHashMap.KeySetView<String, boolean> membershipCache;
     private final ConcurrentHashMap<String, AzureGroup> azureGroupCache;
-    //private final HashSet<String> azureGroupMembershipCache;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final ExecutorService groupExecutor = Executors.newFixedThreadPool(10);
 
     private String odataGroupDeltaLink;
     private AtomicInteger numMembers = new AtomicInteger(0);
-    private final AtomicInteger addedMemberships  = new AtomicInteger(0);
+    private final AtomicInteger addedMemberships = new AtomicInteger(0);
     private final AtomicInteger removedMemberships = new AtomicInteger(0);
     private AtomicInteger groupCounter;
     private Set<String> processedGroupIds;
+    private final Sinks.Many<Group> membershipSink =
+            Sinks.many().unicast().onBackpressureBuffer();
+
+    private static final int CORES = Runtime.getRuntime().availableProcessors();
+    private static final int MEMBERSHIP_CONCURRENCY = Math.min(CORES * 8, 128);
+
+    @PostConstruct
+    private void startMembershipWorkers() {
+        membershipSink.asFlux()
+                .flatMap(g ->
+                                Mono.fromCallable(() -> {
+                                    processMembersDelta(g);
+                                    return 1;
+                                }).subscribeOn(Schedulers.boundedElastic()),
+                        MEMBERSHIP_CONCURRENCY,
+                        1024
+                )
+                .onErrorContinue((e, g) -> log.error("Membership processing failed for group {}", ((Group) g).getId(), e))
+                .subscribe();
+    }
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
     public void clearCaches() {
         odataGroupDeltaLink = null;
         azureGroupCache.clear();
-        //azureGroupMembershipCache.clear();
         membershipCache.clear();
         log.info("Delta caches for group has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
     }
@@ -76,45 +108,50 @@ public class MsGraphGroup {
         try {
             Consumer<DeltaRequestBuilder.GetRequestConfiguration> initialCfg = req -> {
                 req.queryParameters.select = new String[]{
-                        "id", "displayName", "description", "members",
-                        configGroup.getFintkontrollidattribute()
+                        "id", "displayName", configGroup.getFintkontrollidattribute(), "members"
                 };
                 req.queryParameters.top = configGroup.getGrouppagingsize();
             };
 
-            DeltaGetResponse firstPage =
+            DeltaGetResponse current =
                     (odataGroupDeltaLink != null && !odataGroupDeltaLink.isBlank())
                             ? graphServiceClient.groups().delta().withUrl(odataGroupDeltaLink).get()
                             : graphServiceClient.groups().delta().get(initialCfg);
 
-            List<CompletableFuture<Void>> tasks = new ArrayList<>();
-
-            DeltaGetResponse current = firstPage;
-            DeltaGetResponse lastPage  = firstPage;
-
-            Set<String> seenNextLinks = new HashSet<>();
+            DeltaGetResponse lastPage = current;
+            CompletableFuture<DeltaGetResponse> nextFuture = null;
+            final String attr = configGroup.getFintkontrollidattribute();
 
             while (current != null) {
-
                 if (current.getValue() != null) {
-                    current.getValue().forEach(grp ->
-                            tasks.add(CompletableFuture.runAsync(() -> processSingleGroup(grp), groupExecutor))
-                    );
+                    for (Group g : current.getValue()) {
+                        String name = g.getDisplayName();
+                        Map<String, Object> ad = g.getAdditionalData();
+                        if (name == null || !name.endsWith(configGroup.getSuffix()) || ad == null || !ad.containsKey(attr)) {
+                            continue;
+                        }
+                        processSingleGroup(g);
+                    }
                 }
 
                 String next = current.getOdataNextLink();
                 if (next == null) break;
 
-                if (!seenNextLinks.add(next)) {
-                    log.error("Detected nextLink cycle; stopping paging. nextLink={}", next);
-                    break;
+                if (nextFuture == null) {
+                    nextFuture = CompletableFuture.supplyAsync(
+                            () -> graphServiceClient.groups().delta().withUrl(next).get(), groupExecutor);
+                    current = nextFuture.join();
+                    lastPage = current;
+                } else {
+                    current = nextFuture.join();
+                    lastPage = current;
+                    String following = current.getOdataNextLink();
+                    nextFuture = (following == null) ? null
+                            : CompletableFuture.supplyAsync(
+                            () -> graphServiceClient.groups().delta().withUrl(following).get(), groupExecutor);
+                    if (nextFuture == null) break;
                 }
-
-                current  = graphServiceClient.groups().delta().withUrl(next).get();
-                lastPage = current;
             }
-
-            if (!tasks.isEmpty()) CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
 
             String newDelta = (lastPage != null) ? lastPage.getOdataDeltaLink() : null;
             if (newDelta == null || newDelta.isBlank()) {
@@ -162,19 +199,12 @@ public class MsGraphGroup {
         try {
             String groupId = group.getId();
 
-            if (group.getDisplayName() == null
-                    || !group.getDisplayName().endsWith(configGroup.getSuffix())
-                    || group.getAdditionalData().isEmpty()
-                    || !group.getAdditionalData().containsKey(configGroup.getFintkontrollidattribute())) {
-                return;
-            }
-
             if (processedGroupIds.add(groupId)) {
                 AzureGroup newGroup = new AzureGroup(group, configGroup);
                 azureGroupProducerService.processGroup(newGroup);
             }
 
-            processMembersDelta(group);
+            membershipSink.tryEmitNext(group);
 
         } catch (Exception e) {
             log.error("Error processing group {}. Skipping.", group.getId(), e);
@@ -351,12 +381,10 @@ public class MsGraphGroup {
 
         page.getValue().forEach(member -> {
             AzureGroupMembership azureGroupMembership = new AzureGroupMembership(azureGroup.getId(), member);
-            if(membershipCache != null
-                    && membershipCache.contains(azureGroupMembership.getId()))
-            {
+            if (membershipCache != null
+                    && membershipCache.contains(azureGroupMembership.getId())) {
                 log.debug("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.getId(), azureGroup.getId());
-            }
-            else {
+            } else {
                 azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
                 membershipCache.add(azureGroupMembership.getId());
                 membersCount.getAndIncrement();
@@ -388,6 +416,7 @@ public class MsGraphGroup {
 
         return CompletableFuture.completedFuture(null);
     }
+
     public boolean doesGroupExist(String resourceGroupId) throws Exception {
         // TODO: Attributes should not be hard-coded [FKS-210]
         String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
@@ -469,12 +498,9 @@ public class MsGraphGroup {
                 GroupCollectionResponse page = graphServiceClient
                         .groups()
                         .get(rc -> {
-                            rc.queryParameters.select = new String[] { "id," + attr };
+                            rc.queryParameters.select = new String[]{"id," + attr};
                             rc.queryParameters.filter = attr + " eq '" + resourceGroupId + "'";
                             rc.queryParameters.top = 2;
-                            // If use counts:
-                            // rc.headers.add("ConsistencyLevel", "eventual");
-                            // rc.queryParameters.count = true;
                         });
 
                 if (page == null || page.getValue() == null || page.getValue().isEmpty()) {
@@ -551,7 +577,6 @@ public class MsGraphGroup {
     }
 
     public void updateGroup(ResourceGroup resourceGroup) {
-
         Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
         //group.setOwners(null);
         //group.setAdditionalData(null);
@@ -578,10 +603,9 @@ public class MsGraphGroup {
 
     public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
         if (resourceGroupMembership.getAzureUserRef() != null && resourceGroupMembership.getAzureGroupRef() != null) {
-
-            DirectoryObject directoryObject = new DirectoryObject();
+            com.microsoft.graph.models.DirectoryObject directoryObject = new com.microsoft.graph.models.DirectoryObject();
             directoryObject.setId(resourceGroupMembership.getAzureUserRef());
-            ReferenceCreate referenceMember = new com.microsoft.graph.models.ReferenceCreate();
+            ReferenceCreate referenceMember = new ReferenceCreate();
             referenceMember.setOdataId(String.format("https://graph.microsoft.com/v1.0/directoryObjects/%s", resourceGroupMembership.getAzureUserRef()));
             CompletableFuture.runAsync(() -> {
                 try {
@@ -600,17 +624,13 @@ public class MsGraphGroup {
                     if (e.getResponseStatusCode() == 400) {
                         if (e.getMessage().contains("object references already exist")) {
                             azureGroupMembershipProducerService.addMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-
-                            log.info("Republished to Kafka, UserId {} already added to GroupId {}",
-                                    resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                            log.info("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                             return;
                         }
                         if (e.getMessage().contains("Request_ResourceNotFound")) {
-                            log.warn("AzureGroupRef is not correct on user ObjectId {} and group ObjectId {}",
-                                    resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
+                            log.warn("AzureGroupRef is not correct on user ObjectId {} and group ObjectId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                             return;
                         }
-
                         log.warn("Bad request: userRef: {} - groupRef: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         log.warn(e.getMessage());
                     }
@@ -680,5 +700,4 @@ public class MsGraphGroup {
             return null;
         });
     }
-
 }

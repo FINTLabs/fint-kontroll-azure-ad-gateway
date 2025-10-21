@@ -1,42 +1,41 @@
 package no.fintlabs.azure;
 
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.kafka.producing.ParameterizedTemplateFactory;
-import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
-import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
 import no.fintlabs.kafka.model.ParameterizedProducerRecord;
 import no.fintlabs.kafka.producing.ParameterizedTemplate;
+import no.fintlabs.kafka.producing.ParameterizedTemplateFactory;
 import no.fintlabs.kafka.topic.EntityTopicService;
 import no.fintlabs.kafka.topic.configuration.CleanupFrequency;
 import no.fintlabs.kafka.topic.configuration.EntityTopicConfiguration;
+import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
+import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Sinks;
-import reactor.core.scheduler.Schedulers;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
+
 import java.time.Duration;
-import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
-
 public class AzureGroupMembershipProducerService {
 
     private final ParameterizedTemplate<AzureGroupMembership> azureGroupMembershipTemplate;
     private final EntityTopicNameParameters entityTopicNameParameters;
-    private Sinks.Many<Tuple2<String,AzureGroupMembership>> azureGroupMembershipSink;
+    private final ExecutorService senderExec =
+            new ThreadPoolExecutor(
+                    1, 1,
+                    0L, TimeUnit.MILLISECONDS,
+                    new ArrayBlockingQueue<>(50_000),
+                    r -> { Thread t = new Thread(r, "membership-sender"); t.setDaemon(true); return t; },
+                    new ThreadPoolExecutor.CallerRunsPolicy()
+            );
 
     public AzureGroupMembershipProducerService(
             ParameterizedTemplateFactory parameterizedTemplateFactory,
-            EntityTopicService entityTopicService)
-    {
-        this.azureGroupMembershipSink = Sinks.many().unicast().onBackpressureBuffer();
-        this.azureGroupMembershipSink.asFlux()
-                .parallel(20) // Parallelism with up to 20 threads
-                .runOn(Schedulers.boundedElastic())
-                .subscribe(keyAndAzureMembership ->
-                        publishMembership(keyAndAzureMembership.getT1(), keyAndAzureMembership.getT2()));
-
+            EntityTopicService entityTopicService
+    ) {
         azureGroupMembershipTemplate = parameterizedTemplateFactory.createTemplate(AzureGroupMembership.class);
 
         TopicNamePrefixParameters topicNamePrefixParameters = TopicNamePrefixParameters.builder()
@@ -59,30 +58,14 @@ public class AzureGroupMembershipProducerService {
     }
 
     public void addMembership(AzureGroupMembership azureMembership) {
-        azureGroupMembershipSink.tryEmitNext(Tuples.of("add", azureMembership));
+        senderExec.execute(() -> publishAddedMembership(azureMembership));
     }
 
     public void removeMembership(AzureGroupMembership azureMembership) {
-        azureGroupMembershipSink.tryEmitNext(Tuples.of("removed", azureMembership));
-    }
-
-    /*public void processMembership(String action, AzureGroupMembership azureMembership) {
-        azureGroupMembershipSink.tryEmitNext(Tuples.of(action, azureMembership));
-    }*/
-
-    private void publishMembership(String action, AzureGroupMembership azureMembership) {
-        log.debug("Starting publishMemberships function {}.", azureMembership.getId());
-        String kafkaKey = azureMembership.getId();
-        if (Objects.equals(action, "removed")) {
-            publishDeletedMembership(kafkaKey);
-        } else {
-            publishAddedMembership(azureMembership);
-        }
-        log.debug("Stopping publishMemberships function {}.", kafkaKey);
+        senderExec.execute(() -> publishDeletedMembership(azureMembership.getId()));
     }
 
     public void publishDeletedMembership(String membershipKey) {
-        log.debug("Starting publishDeletedMemberships function {}.", membershipKey);
         azureGroupMembershipTemplate.send(
                 ParameterizedProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)
@@ -91,8 +74,8 @@ public class AzureGroupMembershipProducerService {
                         .build()
         );
     }
+
     public void publishAddedMembership(AzureGroupMembership object) {
-        log.debug("Starting publishAddedMembership function {}.", object.id);
         azureGroupMembershipTemplate.send(
                 ParameterizedProducerRecord.<AzureGroupMembership>builder()
                         .topicNameParameters(entityTopicNameParameters)

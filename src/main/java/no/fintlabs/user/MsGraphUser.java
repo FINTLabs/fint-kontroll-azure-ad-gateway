@@ -3,6 +3,7 @@ package no.fintlabs.user;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.ApiException;
+import com.microsoft.kiota.serialization.UntypedObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.*;
@@ -146,7 +147,7 @@ public class MsGraphUser {
 
         if (!initialRun) {
             if (changedUsers.get() > 0) {
-                log.info("*** <<< Found total {} users in Entra ID. Published {} changed users to Kafka >>> ***",
+                log.info("*** <<< Found total of {} scoped users in Entra ID. Published {} changed users to Kafka >>> ***",
                         users.get(), changedUsers.get());
             } else {
                 log.info("*** <<< No changes since last call on users from Graph >>> ***");
@@ -156,7 +157,7 @@ public class MsGraphUser {
             }
         } else {
             if (changedUsers.get() > 0) {
-                log.info("*** <<< Found total {} users in Entra ID. {} published to Kafka >>> ***",
+                log.info("*** <<< Found total of {} scoped users in Entra ID. {} published to Kafka >>> ***",
                         users.get(), changedUsers.get());
             } else {
                 log.info("*** <<< No changes since initial call >>> ***");
@@ -175,26 +176,23 @@ public class MsGraphUser {
             AtomicInteger changedUsers,
             AtomicInteger changedExtUsers
     ) {
-        // 1) Deletion / tombstone check FIRST
         Map<String, Object> ad = user.getAdditionalData();
         if (ad != null && ad.containsKey("@removed")) {
             String userId = user.getId();
-            // optional: reason = ((UntypedObject) ad.get("@removed")).getValue().get("reason").getValue()
             handleUserDeleted(userId);
             return;
         }
 
-        // 2) Continue with your existing logic (filters, external users, etc.)
         if (user.getUserType() == null || !user.getUserType().equalsIgnoreCase("Member")) return;
 
-        users.incrementAndGet();
+
 
         if (entraIdUserCache != null) {
             final AzureUser cached = entraIdUserCache.get(user.getId());
             if (cached != null) {
                 final AzureUser fresh = new AzureUser(user, configUser);
                 if (fresh.equals(cached)) {
-                    log.info("User {} unchanged. Skipping Kafka.", user.getId());
+                    log.debug("User {} unchanged. Skipping Kafka.", user.getId());
                     return;
                 }
             }
@@ -205,7 +203,7 @@ public class MsGraphUser {
         if (Boolean.TRUE.equals(configUser.getEnableExternalUsers())
                 && externalUserAttribute != null
                 && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
-
+            users.incrementAndGet();
             final AzureUserExternal ext = new AzureUserExternal(user, configUser);
             if (entraIdExternalUserCache != null) {
                 final AzureUserExternal cachedExt = entraIdExternalUserCache.get(user.getId());
@@ -224,6 +222,7 @@ public class MsGraphUser {
         final AzureUser az = new AzureUser(user, configUser);
         if ((az.getEmployeeId() != null && !az.getEmployeeId().isEmpty())
                 || (az.getStudentId() != null && !az.getStudentId().isEmpty())) {
+            users.incrementAndGet();
             log.debug("Publishing user to Kafka: {}", user.getUserPrincipalName());
             azureUserProducerService.publish(az);
             log.debug("Updating cache for user: {}", user.getId());
@@ -232,7 +231,7 @@ public class MsGraphUser {
                 entraIdUserCache.put(user.getId(), az);
             }
         } else {
-            log.warn("UserId: {} is missing employeeId/studentId. Not published to kafka.", user.getId());
+            log.debug("UserId: {} is missing employeeId/studentId. Not published to kafka.", user.getId());
         }
     }
     private void handleUserDeleted(String userId) {

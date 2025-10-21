@@ -52,7 +52,9 @@ public class Config {
     @ConfigurationProperties(prefix = "fint.kafka")
     public static class KafkaConfig {
         private int maxpollrecords;
-        private boolean seekingOffsetResetOnAssignment;
+        private int maxpollinterval;
+        private int maxretentiontime;
+        //private boolean seekingOffsetResetOnAssignment;
 
     }
 
@@ -68,7 +70,16 @@ public class Config {
                 .clientSecret(credentials.getClientsecret())
                 .build();
 
-        OkHttpClient okHttpClient = new OkHttpClient().newBuilder()
+        okhttp3.Dispatcher dispatcher = new okhttp3.Dispatcher();
+        dispatcher.setMaxRequests(128);
+        dispatcher.setMaxRequestsPerHost(64);
+
+        okhttp3.ConnectionPool pool = new okhttp3.ConnectionPool(
+                100, 5, java.util.concurrent.TimeUnit.MINUTES);
+
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .dispatcher(dispatcher)
+                .connectionPool(pool)
                 .callTimeout(timeout, TimeUnit.MINUTES)
                 .connectTimeout(timeout, TimeUnit.MINUTES)
                 .readTimeout(timeout, TimeUnit.MINUTES)
@@ -76,7 +87,7 @@ public class Config {
                 .retryOnConnectionFailure(true)
                 .build();
 
-        if (null == scopes || null == credential) {
+        if (null == credential) {
             log.error("Unexpected error");
         }
 
