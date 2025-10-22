@@ -21,6 +21,7 @@ import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -57,7 +58,7 @@ public class MsGraphGroup {
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final ExecutorService groupExecutor = Executors.newFixedThreadPool(10);
-
+    private boolean fullImport = false;
     private String odataGroupDeltaLink;
     private AtomicInteger numMembers = new AtomicInteger(0);
     private final AtomicInteger addedMemberships = new AtomicInteger(0);
@@ -69,6 +70,9 @@ public class MsGraphGroup {
 
     private static final int CORES = Runtime.getRuntime().availableProcessors();
     private static final int MEMBERSHIP_CONCURRENCY = Math.min(CORES * 8, 128);
+
+    @Value("${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.qlikstart}")
+    private boolean quickDeltaStart;
 
     @PostConstruct
     private void startMembershipWorkers() {
@@ -87,10 +91,10 @@ public class MsGraphGroup {
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
     public void clearCaches() {
-        odataGroupDeltaLink = null;
+        fullImport = true;
         azureGroupCache.clear();
         membershipCache.clear();
-        log.info("Delta caches for group has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
+        log.info("Delta caches for group has been reset to null due to scheduler. Next call will fetch all groups from Entra ID using delta call");
     }
 
     @Scheduled(
@@ -104,6 +108,13 @@ public class MsGraphGroup {
         processedGroupIds = ConcurrentHashMap.newKeySet();
         addedMemberships.set(0);
         removedMemberships.set(0);
+
+        if (fullImport) odataGroupDeltaLink = null;
+        if (!fullImport && quickDeltaStart && azureGroupCache.isEmpty()) {
+            odataGroupDeltaLink = "https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=latest";
+            quickDeltaStart = false;
+        }
+
 
         try {
             Consumer<DeltaRequestBuilder.GetRequestConfiguration> initialCfg = req -> {
@@ -151,6 +162,7 @@ public class MsGraphGroup {
                             () -> graphServiceClient.groups().delta().withUrl(following).get(), groupExecutor);
                     if (nextFuture == null) break;
                 }
+                log.info("Processed memberships so far: {}", addedMemberships.get());
             }
 
             String newDelta = (lastPage != null) ? lastPage.getOdataDeltaLink() : null;
@@ -169,6 +181,9 @@ public class MsGraphGroup {
             log.error("ApiException when trying to get groups using delta: {}", e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected exception when processing groups: {}", e.getMessage());
+        }
+        finally {
+            fullImport = false;
         }
 
         long elapsedSec = (System.currentTimeMillis() - startMs) / 1000;

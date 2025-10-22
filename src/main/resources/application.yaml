@@ -46,6 +46,7 @@ fint:
           initial-delay-ms: 5000
           delta-delay-ms: 600000
         delta-pull:
+          qlikstart: false #no full download of all groups and members initially on startup. Listens on /groups/delta?$deltatoken=latest
           initial-delay-ms: 5000
           delta-delay-ms: 600000
         clear-cache: "0 0 23 ? * SUN"
@@ -56,6 +57,7 @@ fint:
           fixed-delay-ms: 450000
         refresh:
           interval-ms: 518400000
+        clear-cache: "0 0 23 ? * SUN"
 
 #placeholders. Do not add creds
 #azure:

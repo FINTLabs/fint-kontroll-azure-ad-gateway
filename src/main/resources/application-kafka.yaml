@@ -1,7 +1,9 @@
 fint:
   kafka:
-    maxpollrecords: 500
-    seekingOffsetResetOnAssignment: false
+    maxpollrecords: 5000
+    maxretentiontime: 7 #days
+    maxpollinterval: 5 #minutes
+    #seekingOffsetResetOnAssignment: false
     default-replicas: 1
     topic:
        domain-context: kontroll
