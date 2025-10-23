@@ -5,7 +5,6 @@ logging:
     com.microsoft: WARN
     org.apache: WARN
     no.fintlabs: INFO
-    no.fintlabs.cache.ehcache: WARN
     okhttp3: WARN
     #org.apache: ERROR
 fint:

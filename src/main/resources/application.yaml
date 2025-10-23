@@ -12,7 +12,6 @@ logging:
   level:
     root: INFO
     no.fintlabs: INFO
-    no.fintlabs.cache.ehcache: WARN
     com.azure: WARN
     com.microsoft: WARN
     org.apache: WARN

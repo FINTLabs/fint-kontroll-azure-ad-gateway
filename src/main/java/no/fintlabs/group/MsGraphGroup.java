@@ -65,29 +65,9 @@ public class MsGraphGroup {
     private final AtomicInteger removedMemberships = new AtomicInteger(0);
     private AtomicInteger groupCounter;
     private Set<String> processedGroupIds;
-    private final Sinks.Many<Group> membershipSink =
-            Sinks.many().unicast().onBackpressureBuffer();
-
-    private static final int CORES = Runtime.getRuntime().availableProcessors();
-    private static final int MEMBERSHIP_CONCURRENCY = Math.min(CORES * 8, 128);
 
     @Value("${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.qlikstart}")
     private boolean quickDeltaStart;
-
-    @PostConstruct
-    private void startMembershipWorkers() {
-        membershipSink.asFlux()
-                .flatMap(g ->
-                                Mono.fromCallable(() -> {
-                                    processMembersDelta(g);
-                                    return 1;
-                                }).subscribeOn(Schedulers.boundedElastic()),
-                        MEMBERSHIP_CONCURRENCY,
-                        1024
-                )
-                .onErrorContinue((e, g) -> log.error("Membership processing failed for group {}", ((Group) g).getId(), e))
-                .subscribe();
-    }
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
     public void clearCaches() {
@@ -117,11 +97,9 @@ public class MsGraphGroup {
 
 
         try {
-            Consumer<DeltaRequestBuilder.GetRequestConfiguration> initialCfg = req -> {
-                req.queryParameters.select = new String[]{
-                        "id", "displayName", configGroup.getFintkontrollidattribute(), "members"
-                };
-                req.queryParameters.top = configGroup.getGrouppagingsize();
+            Consumer<DeltaRequestBuilder.GetRequestConfiguration> initialCfg = requestConfiguration -> {
+                requestConfiguration.queryParameters.select = configGroup.getAllGroupAttributes();
+                requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
             };
 
             DeltaGetResponse current =
@@ -218,8 +196,7 @@ public class MsGraphGroup {
                 AzureGroup newGroup = new AzureGroup(group, configGroup);
                 azureGroupProducerService.processGroup(newGroup);
             }
-
-            membershipSink.tryEmitNext(group);
+            processMembersDelta(group);
 
         } catch (Exception e) {
             log.error("Error processing group {}. Skipping.", group.getId(), e);
@@ -279,13 +256,12 @@ public class MsGraphGroup {
         long startTime = System.currentTimeMillis();
         numMembers = new AtomicInteger(0);
         groupCounter = new AtomicInteger(0);
-        String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
 
         CompletableFuture.supplyAsync(() -> {
             try {
                 return pageThroughGroups(graphServiceClient.groups()
                         .get(requestConfiguration -> {
-                            requestConfiguration.queryParameters.select = selectionCriteria;
+                            requestConfiguration.queryParameters.select = configGroup.getAllGroupAttributes();
                             requestConfiguration.queryParameters.top = configGroup.getGrouppagingsize();
                         }));
             } catch (ApiException | ReflectiveOperationException e) {
@@ -433,13 +409,11 @@ public class MsGraphGroup {
     }
 
     public boolean doesGroupExist(String resourceGroupId) throws Exception {
-        // TODO: Attributes should not be hard-coded [FKS-210]
-        String[] selectionCriteria = new String[]{String.format("id,displayName,description,%s", configGroup.getFintkontrollidattribute())};
         String filterCriteria = String.format(configGroup.getFintkontrollidattribute() + " eq '%s'", resourceGroupId);
 
         GroupCollectionResponse groupCollectionPage = graphServiceClient.groups()
                 .get(requestConfiguration -> {
-                    requestConfiguration.queryParameters.select = selectionCriteria;
+                    requestConfiguration.queryParameters.select = configGroup.getGroupAttributesNotMembers();
                     requestConfiguration.queryParameters.filter = filterCriteria;
                 });
 
