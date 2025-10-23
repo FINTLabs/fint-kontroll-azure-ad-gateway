@@ -486,10 +486,10 @@ public class MsGraphGroup {
             try {
                 GroupCollectionResponse page = graphServiceClient
                         .groups()
-                        .get(rc -> {
-                            rc.queryParameters.select = new String[]{"id," + attr};
-                            rc.queryParameters.filter = attr + " eq '" + resourceGroupId + "'";
-                            rc.queryParameters.top = 2;
+                        .get(requestConfiguration -> {
+                            requestConfiguration.queryParameters.select = new String[]{"id," + attr};
+                            requestConfiguration.queryParameters.filter = attr + " eq '" + resourceGroupId + "'";
+                            requestConfiguration.queryParameters.top = 2;
                         });
 
                 if (page == null || page.getValue() == null || page.getValue().isEmpty()) {
