@@ -83,7 +83,11 @@ public class MsGraphGroup {
 
         if (fullImport) odataGroupDeltaLink = null;
         if (!fullImport && quickDeltaStart && azureGroupCache.isEmpty()) {
-            odataGroupDeltaLink = "https://graph.microsoft.com/v1.0/groups/delta?$deltatoken=latest";
+            odataGroupDeltaLink = graphServiceClient
+                    .getRequestAdapter()
+                    .getBaseUrl()
+                    + "/groups/delta?$deltatoken=latest&$select="
+                    + String.join(",", configGroup.getAllGroupAttributes());
             quickDeltaStart = false;
         }
 
