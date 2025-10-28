@@ -21,6 +21,7 @@ import no.fintlabs.azure.*;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
 import no.fintlabs.config.ConfigUser;
+import no.fintlabs.db.*;
 import no.fintlabs.group.MsGraphGroup;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
@@ -110,8 +111,19 @@ class AzureClientTest {
     private MsGraphUser msGraphUser;
 
 
+    //@Mock
+    //private ConcurrentHashMap<String, AzureUser> entraIdUserCache;
     @Mock
-    private ConcurrentHashMap<String, AzureUser> entraIdUserCache;
+    DBObjectListOrchestrator orchestrator;
+
+    @Mock
+    DBObjectList<DBUser> orchestratoruserlist;
+
+    @Mock
+    DBObjectList<DBMembership> orchestratormemberships;
+
+    @Mock
+    DBObjectList<DBGroup> orchestratorgrouplist;
 
     @Mock
     private HashSet<String> azureGroupMembershipCache;
@@ -119,12 +131,12 @@ class AzureClientTest {
     @Mock
     private ResourceGroupMembership resourceGroupMembership;
 
-    @Spy
+    /*@Spy
     private ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache =
-            new ConcurrentHashMap<>();
+            new ConcurrentHashMap<>();**/
 
-    @Spy
-    private Set<String> membershipCache = ConcurrentHashMap.newKeySet();
+    /*@Spy
+    private Set<String> membershipCache = ConcurrentHashMap.newKeySet();*/
 
     @Mock
     private AzureUserProducerService azureUserProducerService;
@@ -164,14 +176,14 @@ class AzureClientTest {
                 configGroup,
                 configUser,
                 config,
-                entraIdUserCache,
+                orchestrator,
                 azureUserProducerService,
                 azureUserExternalProducerService,
                 membersRequestBuilder,
                 apiException,
                 refRequestBuilder
         );
-        resourceGroupMembershipCache.clear();
+        orchestrator.clear();
     }
 
     public TestUtils.TestGroupData toTestGroupData(List<Group> groups) {
@@ -237,7 +249,6 @@ class AzureClientTest {
             group.setAdditionalData(additionalData);
             retGroupList.add(group);
         }
-
         return retGroupList;
     }
 
@@ -606,7 +617,7 @@ class AzureClientTest {
     void makeSure18NewUsersArePublishedOnKafkaAnd9RemovedUsersAreIgnoredSinceTheyAreNotInCache() {
 
         // Override the constructor for cache
-        ReflectionTestUtils.setField(msGraphGroup, "membershipCache", membershipCache);
+        ReflectionTestUtils.setField(msGraphGroup, "orchestrator", orchestrator);
 
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute())
@@ -626,7 +637,7 @@ class AzureClientTest {
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-            verify(membershipCache, times(9)).remove(anyString());
+            verify(orchestrator.getMemberships(), times(9)).remove(anyString());
             verify(azureGroupMembershipProducerService, never()).removeMembership(any(AzureGroupMembership.class));
         });
 
@@ -642,14 +653,23 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
+        TestUtils.DBObjectListOrchestratorTest testdata = new TestUtils.DBObjectListOrchestratorTest();
+        testdata.generateNRandomUsers(50);
+        // TODO: Should fail harder if generation fails
+        testdata.generateNRandomGroupsWithNMemberships(5,2,6);
+
+        when(orchestrator.getUsers()).thenReturn(testdata.getUsers());
+
         DeltaGetResponse delta = new DeltaGetResponse();
         List<Group> testGroups = getTestGrouplistAddedRemoved(3, 6, 3);
         TestUtils.TestGroupData testGroupData = toTestGroupData(testGroups);
         delta.setValue(testGroups); // 18 adds, 9 removes
         delta.setOdataDeltaLink("delta link");
 
-        membershipCache.addAll(testGroupData.removedMemberships);
-        ReflectionTestUtils.setField(msGraphGroup, "membershipCache", membershipCache);
+        for (String group_id: testGroupData.removedMemberships) {
+            orchestrator.getUsers().put(group_id, new DBUser(UUID.randomUUID()));
+        }
+        ReflectionTestUtils.setField(msGraphGroup, "orchestrator", testdata);
 
 
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
@@ -659,7 +679,7 @@ class AzureClientTest {
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-            verify(membershipCache, times(9)).remove(anyString());
+            verify(orchestrator.getMemberships(), times(9)).remove(anyString());
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
         });
     }
@@ -679,9 +699,13 @@ class AzureClientTest {
         delta.setValue(testGroups); // 18 adds, 9 removes
         delta.setOdataDeltaLink("delta link");
 
-        membershipCache.addAll(testGroupData.createdMemberships);
-        membershipCache.addAll(testGroupData.removedMemberships);
-        ReflectionTestUtils.setField(msGraphGroup, "membershipCache", membershipCache);
+        for (String group_id: testGroupData.removedMemberships) {
+            orchestrator.getUsers().put(group_id, new DBUser(UUID.randomUUID()));
+        }
+        for (String group_id: testGroupData.createdMemberships) {
+            orchestrator.getUsers().put(group_id, new DBUser(UUID.randomUUID()));
+        }
+        ReflectionTestUtils.setField(msGraphGroup, "orchestrator", orchestrator);
 
 
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
@@ -690,9 +714,9 @@ class AzureClientTest {
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
-            verify(membershipCache, times(18)).add(anyString());
+            verify(orchestrator.getMemberships(), times(18)).put(anyString(), any(DBMembership.class));
             verify(azureGroupMembershipProducerService, never()).addMembership(any(AzureGroupMembership.class));
-            verify(membershipCache, times(9)).remove(anyString());
+            verify(orchestrator.getMemberships(), times(9)).remove(anyString());
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
         });
 
@@ -995,8 +1019,8 @@ class AzureClientTest {
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser nonCachedUser = new AzureUser(user2, configUser);
-        lenient().when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
-        lenient().when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
+        lenient().when(orchestrator.getUsers().containsKey(user.getId())).thenReturn(true);
+        lenient().when(orchestrator.getUsers().get(user.getId())).thenReturn(DBUserMapper.toDBUser(cachedUser));
 
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
@@ -1046,8 +1070,8 @@ class AzureClientTest {
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser notCachedUser = new AzureUser(user2, configUser);
-        lenient().when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
-        lenient().when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
+        lenient().when(orchestrator.getUsers().containsKey(user.getId())).thenReturn(true);
+        lenient().when(orchestrator.getUsers().get(user.getId())).thenReturn(DBUserMapper.toDBUser(cachedUser));
 
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
@@ -1133,8 +1157,8 @@ class AzureClientTest {
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser notCachedUser = new AzureUser(user2, configUser);
-        lenient().when(entraIdUserCache.containsKey(user.getId())).thenReturn(true);
-        lenient().when(entraIdUserCache.get(user.getId())).thenReturn(cachedUser);
+        lenient().when(orchestrator.getUsers().containsKey(user.getId())).thenReturn(true);
+        lenient().when(orchestrator.getUsers().get(user.getId())).thenReturn(DBUserMapper.toDBUser(cachedUser));
 
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
