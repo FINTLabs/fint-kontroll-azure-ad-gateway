@@ -12,6 +12,7 @@ import java.util.Objects;
 @AllArgsConstructor
 
 @Log4j2
+@EqualsAndHashCode
 public class AzureUser {
         private String mail;
         private String id;
@@ -53,25 +54,6 @@ public class AzureUser {
                         }
                 }
                 return null;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-                if (this == o) return true; // If the references are the same
-                if (o == null || getClass() != o.getClass()) return false; // Check type compatibility
-                AzureUser azureUser = (AzureUser) o; // Cast and compare
-                return Objects.equals(mail, azureUser.mail) &&
-                        Objects.equals(id, azureUser.id) &&
-                        Objects.equals(userPrincipalName, azureUser.userPrincipalName) &&
-                        Objects.equals(employeeId, azureUser.employeeId) &&
-                        Objects.equals(studentId, azureUser.studentId) &&
-                        Objects.equals(idpUserObjectId, azureUser.idpUserObjectId) &&
-                        Objects.equals(accountEnabled, azureUser.accountEnabled);
-        }
-
-        @Override
-        public int hashCode() {
-                return Objects.hash(mail, id, userPrincipalName, employeeId, studentId, idpUserObjectId, accountEnabled);
         }
 }
 

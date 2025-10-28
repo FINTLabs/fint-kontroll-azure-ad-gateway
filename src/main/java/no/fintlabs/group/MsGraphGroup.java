@@ -19,6 +19,7 @@ import no.fintlabs.azure.AzureGroupMembershipProducerService;
 import no.fintlabs.azure.AzureGroupProducerService;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
+import no.fintlabs.db.*;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,9 +45,13 @@ public class MsGraphGroup {
     protected final Config config;
     protected final ConfigGroup configGroup;
     protected final GraphServiceClient graphServiceClient;
-    private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
-    private final Set<String> membershipCache = ConcurrentHashMap.newKeySet();
-    private final ConcurrentHashMap<String, AzureGroup> azureGroupCache;
+    //private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
+    //private final Set<String> membershipCache = ConcurrentHashMap.newKeySet();
+    //private final ConcurrentHashMap<String, AzureGroup> azureGroupCache;
+    //DBObjectList<DBGroup> azureGroupCache;
+    //DBObjectList<AzureGroup> resourceGroupMembershipCache;
+    //DBObjectList<DBMembership> membershipCache;
+    DBObjectListOrchestrator orchestrator;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final ExecutorService groupExecutor = Executors.newFixedThreadPool(10);
@@ -64,8 +69,7 @@ public class MsGraphGroup {
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
     public void clearCaches() {
         fullImport = true;
-        azureGroupCache.clear();
-        membershipCache.clear();
+        orchestrator.clear();
         log.info("Delta caches for group has been reset to null due to scheduler. Next call will fetch all groups from Entra ID using delta call");
     }
 
@@ -82,7 +86,7 @@ public class MsGraphGroup {
         removedMemberships.set(0);
 
         if (fullImport) odataGroupDeltaLink = null;
-        if (!fullImport && quickDeltaStart && azureGroupCache.isEmpty()) {
+        if (!fullImport && quickDeltaStart && orchestrator.getGroups().isEmpty()) {
             odataGroupDeltaLink = graphServiceClient
                     .getRequestAdapter()
                     .getBaseUrl()
@@ -220,7 +224,8 @@ public class MsGraphGroup {
                 String key = group.getId() + "_" + memberId;
 
                 if (untypedMember.getValue().containsKey("@removed")) {
-                    if (membershipCache.remove(key)) {
+                    if (orchestrator.getMemberships().containsKey(key)) {
+                        orchestrator.getMemberships().remove(key);
                         azureGroupMembershipProducerService.removeMembership(
                                 new AzureGroupMembership(memberId, group.getId(), key)
                         );
@@ -232,7 +237,9 @@ public class MsGraphGroup {
                     continue;
                 }
 
-                if (membershipCache.add(key)) {
+                // TODO: This should never happen. ID is updated with new object.
+                DBMembership oldval = orchestrator.getMemberships().putIfAbsent(key, DBMembershipMapper.toDBMembership(memberId, group.getId(), orchestrator.getUsers(), orchestrator.getGroups()));
+                if (oldval != null) {
                     AzureGroupMembership m = new AzureGroupMembership(memberId, group.getId(), key);
                     azureGroupMembershipProducerService.addMembership(m);
                     addedMemberships.incrementAndGet();
@@ -306,14 +313,14 @@ public class MsGraphGroup {
                     if (!shouldProcess) return true;
 
                     AzureGroup newGroup = new AzureGroup(group, configGroup);
-                    if (azureGroupCache != null
-                            && azureGroupCache.containsKey(newGroup.getId())
-                            && newGroup.equals(azureGroupCache.get(newGroup.getId()))) {
+                    if (orchestrator.getGroups() != null
+                            && orchestrator.getGroups().containsKey(newGroup.getId())
+                            && newGroup.equals(orchestrator.getGroups().get(newGroup.getId()))) {
                         log.info("{} groupID already published and in cache. Not republished to kafka", newGroup.getId());
                     } else {
                         groupCounter.incrementAndGet();
                         azureGroupProducerService.processGroup(newGroup);
-                        azureGroupCache.put(newGroup.getId(), newGroup);
+                        orchestrator.getGroups().put(newGroup.getId(), DBGroupMapper.toDBGroup(newGroup));
                         allGroups.add(newGroup);
                     }
                     return true;
@@ -368,12 +375,12 @@ public class MsGraphGroup {
 
         page.getValue().forEach(member -> {
             AzureGroupMembership azureGroupMembership = new AzureGroupMembership(azureGroup.getId(), member);
-            if (membershipCache != null
-                    && membershipCache.contains(azureGroupMembership.getId())) {
+            if (orchestrator.getMemberships() != null
+                    && orchestrator.getMemberships().containsKey(azureGroupMembership.getId())) {
                 log.debug("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.getId(), azureGroup.getId());
             } else {
                 azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
-                membershipCache.add(azureGroupMembership.getId());
+                orchestrator.getMemberships().put(azureGroupMembership.getId(), DBMembershipMapper.toDBMembership(azureGroupMembership, orchestrator.getUsers(), orchestrator.getGroups()));
                 membersCount.getAndIncrement();
                 numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
@@ -662,7 +669,7 @@ public class MsGraphGroup {
                 log.info("UserId: {} removed from GroupId: {}", userId, groupId);
 
                 azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
-                resourceGroupMembershipCache.remove(resourceGroupMembershipKey);
+                orchestrator.getMemberships().remove(resourceGroupMembershipKey);
                 log.info("Produced message to Kafka on deleted UserId: {} from GroupId: {}", userId, groupId);
 
             } catch (ApiException e) {
@@ -670,7 +677,7 @@ public class MsGraphGroup {
                     log.warn("User {} not found in group {}", userId, groupId);
 
                     azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
-                    resourceGroupMembershipCache.remove(resourceGroupMembershipKey);
+                    orchestrator.getMemberships().remove(resourceGroupMembershipKey);
                     log.warn("Produced message to Kafka on deleted UserId: {} from GroupId: {} as user not found in group", userId, groupId);
 
                 } else {

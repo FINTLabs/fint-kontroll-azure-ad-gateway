@@ -9,13 +9,14 @@ import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.*;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigUser;
+import no.fintlabs.db.DBObjectList;
+import no.fintlabs.db.DBObjectListOrchestrator;
+import no.fintlabs.db.DBUser;
+import no.fintlabs.db.DBUserMapper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -28,8 +29,11 @@ public class MsGraphUser {
     protected final Config config;
     protected final ConfigUser configUser;
     protected final GraphServiceClient graphServiceClient;
-    private final ConcurrentHashMap<String, AzureUser> entraIdUserCache;
-    private final ConcurrentHashMap<String, AzureUserExternal> entraIdExternalUserCache;
+    private DBObjectListOrchestrator orchestrator;
+    //private final ConcurrentHashMap<String, AzureUser> entraIdUserCache;
+    //private final DBObjectList<DBUser> entraIdUserCache;
+    //private final ConcurrentHashMap<String, AzureUserExternal> entraIdExternalUserCache;
+    //private final DBObjectList<DBUser> entraIdExternalUserCache;
     private final AzureUserProducerService azureUserProducerService;
     private final AzureUserExternalProducerService azureUserExternalProducerService;
     private final ExecutorService userExecutor = Executors.newFixedThreadPool(4);
@@ -38,8 +42,7 @@ public class MsGraphUser {
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.user-scheduler.clear-cache}")
     public void clearCaches() {
-        entraIdUserCache.clear();
-        entraIdExternalUserCache.clear();
+        orchestrator.clearUsers();
         log.info("Delta caches for user has been reset to null due to scheduler. Next call will try to fetch all users and groups from Entra ID");
     }
 
@@ -187,8 +190,8 @@ public class MsGraphUser {
 
 
 
-        if (entraIdUserCache != null) {
-            final AzureUser cached = entraIdUserCache.get(user.getId());
+        if (orchestrator.getUsers() != null) {
+            final DBUser cached = orchestrator.getUsers().get(user.getId());
             if (cached != null) {
                 final AzureUser fresh = new AzureUser(user, configUser);
                 if (fresh.equals(cached)) {
@@ -205,13 +208,13 @@ public class MsGraphUser {
                 && externalUserAttribute.equalsIgnoreCase(configUser.getExternaluservalue())) {
             users.incrementAndGet();
             final AzureUserExternal ext = new AzureUserExternal(user, configUser);
-            if (entraIdExternalUserCache != null) {
-                final AzureUserExternal cachedExt = entraIdExternalUserCache.get(user.getId());
+            if (orchestrator.getUsersExternal() != null) {
+                final DBUser cachedExt = orchestrator.getUsersExternal().get(user.getId());
                 if (ext.equals(cachedExt)) {
                     log.info("External user {} unchanged. Skipping Kafka.", user.getId());
                     return;
                 }
-                entraIdExternalUserCache.put(user.getId(), ext);
+                orchestrator.getUsersExternal().put(user.getId(), DBUserMapper.toDBUser(ext));
             }
             log.debug("Publishing external user to Kafka: {}", user.getUserPrincipalName());
             azureUserExternalProducerService.publish(ext);
@@ -227,20 +230,20 @@ public class MsGraphUser {
             azureUserProducerService.publish(az);
             log.debug("Updating cache for user: {}", user.getId());
             changedUsers.incrementAndGet();
-            if (entraIdUserCache != null) {
-                entraIdUserCache.put(user.getId(), az);
+            if (orchestrator.getUsers() != null) {
+                orchestrator.getUsers().put(user.getId(), DBUserMapper.toDBUser(az));
             }
         } else {
             log.debug("UserId: {} is missing employeeId/studentId. Not published to kafka.", user.getId());
         }
     }
     private void handleUserDeleted(String userId) {
-        if (entraIdUserCache != null) {
-            entraIdUserCache.remove(userId);
+        if (orchestrator.getUsers() != null) {
+            orchestrator.getUsers().remove(userId);
             azureUserProducerService.publishDeletedUser(userId);
         }
-        if (entraIdExternalUserCache != null) {
-            entraIdExternalUserCache.remove(userId);
+        if (orchestrator.getUsersExternal() != null) {
+            orchestrator.getUsersExternal().remove(userId);
             azureUserExternalProducerService.publishDeletedUser(userId);
         }
 
