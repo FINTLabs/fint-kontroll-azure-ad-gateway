@@ -1,6 +1,7 @@
 package no.fintlabs.azure;
 
 import com.microsoft.graph.models.User;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -13,6 +14,8 @@ import java.util.Objects;
 @Getter
 @RequiredArgsConstructor
 @Slf4j
+@EqualsAndHashCode
+
 
 public class AzureUserExternal  {
     private String firstName;
@@ -42,23 +45,5 @@ public class AzureUserExternal  {
             this.mainOrganisationUnitId = user.getAdditionalData().get(configUser.getMainorgunitidattribute()).toString();
         }
         this.userName = user.getMail();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true; // If the references are the same
-        if (o == null || getClass() != o.getClass()) return false; // Check type compatibility
-        AzureUserExternal azureUserExternal = (AzureUserExternal) o; // Cast and compare
-        return Objects.equals(email, azureUserExternal.email) &&
-                Objects.equals(idpUserObjectId, azureUserExternal.idpUserObjectId) &&
-                Objects.equals(userPrincipalName, azureUserExternal.userPrincipalName) &&
-                Objects.equals(accountEnabled, azureUserExternal.accountEnabled) &&
-                Objects.equals(mainOrganisationUnitName, azureUserExternal.mainOrganisationUnitName) &&
-                Objects.equals(mainOrganisationUnitId, azureUserExternal.mainOrganisationUnitId);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(email, idpUserObjectId, userPrincipalName, accountEnabled, mainOrganisationUnitName, mainOrganisationUnitId);
     }
 }
