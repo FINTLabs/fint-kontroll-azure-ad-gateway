@@ -63,7 +63,7 @@ public class MsGraphGroup {
     private AtomicInteger groupCounter;
     private Set<String> processedGroupIds;
 
-    @Value("${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.qlikstart}")
+    @Value("${fint.kontroll.azure-ad-gateway.group-scheduler.delta-pull.quickstart}")
     private boolean quickDeltaStart;
 
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
