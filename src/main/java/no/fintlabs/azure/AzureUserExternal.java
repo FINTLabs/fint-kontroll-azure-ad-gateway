@@ -4,7 +4,7 @@ import com.microsoft.graph.models.User;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.config.ConfigUser;
 
 import java.util.Objects;
@@ -12,7 +12,7 @@ import java.util.Objects;
 @Setter
 @Getter
 @RequiredArgsConstructor
-@Log4j2
+@Slf4j
 
 public class AzureUserExternal  {
     private String firstName;

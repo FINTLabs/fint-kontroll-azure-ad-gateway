@@ -2,7 +2,7 @@ package no.fintlabs.azure;
 
 import com.microsoft.graph.models.*;
 import lombok.*;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.config.ConfigUser;
 import java.util.Objects;
 
@@ -11,7 +11,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 
-@Log4j2
+@Slf4j
 @EqualsAndHashCode
 public class AzureUser {
         private String mail;

@@ -5,7 +5,7 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.item.getmembergroups.GetMemberGroupsPostRequestBody;
 import com.microsoft.kiota.ApiException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.config.ConfigGroup;
 import no.fintlabs.config.ConfigUser;
 import no.fintlabs.azure.AzureGroup;
@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@Log4j2
+@Slf4j
 @RequiredArgsConstructor
 public class LookupService {
     protected final ConfigUser configUser;
