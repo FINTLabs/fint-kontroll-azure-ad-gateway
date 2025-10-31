@@ -652,6 +652,7 @@ class AzureClientTest {
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
+        when(orchestrator.getMemberships()).thenReturn(orchestratormemberships);
 
         TestUtils.DBObjectListOrchestratorTest testdata = new TestUtils.DBObjectListOrchestratorTest();
         testdata.generateNRandomUsers(50);
@@ -679,7 +680,7 @@ class AzureClientTest {
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-            verify(orchestrator.getMemberships(), times(9)).remove(anyString());
+            verify(orchestratormemberships, times(9)).remove(anyString());
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
         });
     }

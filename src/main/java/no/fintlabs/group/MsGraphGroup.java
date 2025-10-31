@@ -239,7 +239,7 @@ public class MsGraphGroup {
 
                 // TODO: This should never happen. ID is updated with new object.
                 DBMembership oldval = orchestrator.getMemberships().putIfAbsent(key, DBMembershipMapper.toDBMembership(memberId, group.getId(), orchestrator.getUsers(), orchestrator.getGroups()));
-                if (oldval != null) {
+                if (oldval == null) {
                     AzureGroupMembership m = new AzureGroupMembership(memberId, group.getId(), key);
                     azureGroupMembershipProducerService.addMembership(m);
                     addedMemberships.incrementAndGet();

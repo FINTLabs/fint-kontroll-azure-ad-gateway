@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class DBObjectList<T extends DBObject> {
     private ConcurrentHashMap<String, T> hashMap = new ConcurrentHashMap<>();
+
     private int kafkaOffset = 0;
     public void clear() {
         hashMap.clear();
