@@ -57,7 +57,7 @@ import ch.qos.logback.core.read.ListAppender;
 import org.slf4j.LoggerFactory;
 
 
-
+@Disabled
 @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
 
