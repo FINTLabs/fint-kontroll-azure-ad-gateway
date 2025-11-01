@@ -635,7 +635,6 @@ class AzureClientTest {
 
         msGraphGroup.pullAllGroupsDelta();
         DBObjectList<DBMembership> memberships = spy(DBObjectList.class);
-        when(orchestrator.getMemberships()).thenReturn(testGroupData.removedMemberships);
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
