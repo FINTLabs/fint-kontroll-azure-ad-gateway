@@ -50,14 +50,18 @@ dependencies {
     implementation 'no.fintlabs:fint-kafka:5.0.0-rc-3'
     implementation 'org.apache.commons:commons-lang3:3.18.0'
     implementation 'org.springframework.cloud:spring-cloud-function-context:4.2.3'
+    implementation 'org.flywaydb:flyway-core'
 
     compileOnly 'org.projectlombok:lombok:1.18.38'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus:1.16.0-M2'
+    runtimeOnly 'org.postgresql:postgresql'
+
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor:3.5.5'
     annotationProcessor 'org.projectlombok:lombok:1.18.38'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test:3.5.5'
     testImplementation 'org.projectlombok:lombok:1.18.38'
+
 }
 
 test {
