@@ -29,7 +29,7 @@ public class MsGraphUser {
     protected final Config config;
     protected final ConfigUser configUser;
     protected final GraphServiceClient graphServiceClient;
-    private DBObjectListOrchestrator orchestrator;
+    private final DBObjectListOrchestrator orchestrator;
     //private final ConcurrentHashMap<String, AzureUser> entraIdUserCache;
     //private final DBObjectList<DBUser> entraIdUserCache;
     //private final ConcurrentHashMap<String, AzureUserExternal> entraIdExternalUserCache;

@@ -51,7 +51,7 @@ public class MsGraphGroup {
     //DBObjectList<DBGroup> azureGroupCache;
     //DBObjectList<AzureGroup> resourceGroupMembershipCache;
     //DBObjectList<DBMembership> membershipCache;
-    DBObjectListOrchestrator orchestrator;
+    private final DBObjectListOrchestrator orchestrator;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final ExecutorService groupExecutor = Executors.newFixedThreadPool(10);
