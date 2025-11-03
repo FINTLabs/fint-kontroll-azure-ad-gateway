@@ -36,6 +36,7 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation "org.xmlunit:xmlunit-core:2.10.3"
     implementation "org.springframework:spring-webflux:6.2.10"
     implementation "org.springframework:spring-webmvc:6.2.10"
