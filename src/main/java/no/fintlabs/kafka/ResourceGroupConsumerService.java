@@ -33,7 +33,7 @@ public class ResourceGroupConsumerService {
     private final MsGraphGroup msGraphGroup;
     private final Config.KafkaConfig kafkaConfig;
     private final ConfigGroup configGroup;
-    private final ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache;
+    private final ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = new ConcurrentHashMap<>();
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
 
     @PostConstruct
