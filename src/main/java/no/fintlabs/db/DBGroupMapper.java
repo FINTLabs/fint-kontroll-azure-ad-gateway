@@ -3,6 +3,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import no.fintlabs.azure.AzureGroup;
+import no.fintlabs.db.entity.DBGroup;
 import no.fintlabs.kafka.ResourceGroup;
 
 import java.util.UUID;

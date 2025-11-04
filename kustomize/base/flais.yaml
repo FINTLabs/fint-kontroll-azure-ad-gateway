@@ -22,3 +22,5 @@ spec:
         permission: admin
       - topic: 'placeholder-fintlabs-no.kontroll.entity.resource-group*'
         permission: read
+  database:
+    database: fint-kontroll

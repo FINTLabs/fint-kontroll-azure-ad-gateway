@@ -3,11 +3,13 @@ package no.fintlabs;
 import com.microsoft.graph.models.Group;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.db.*;
+import no.fintlabs.db.entity.DBGroup;
+import no.fintlabs.db.entity.DBMembership;
+import no.fintlabs.db.entity.DBUser;
 
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class TestUtils {

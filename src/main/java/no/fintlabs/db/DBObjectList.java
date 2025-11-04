@@ -3,6 +3,7 @@ package no.fintlabs.db;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import no.fintlabs.db.entity.DBObject;
 
 import java.util.concurrent.ConcurrentHashMap;
 

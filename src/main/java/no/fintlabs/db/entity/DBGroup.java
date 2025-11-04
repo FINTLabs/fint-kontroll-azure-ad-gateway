@@ -1,8 +1,7 @@
-package no.fintlabs.db;
+package no.fintlabs.db.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 import java.util.UUID;
@@ -10,8 +9,6 @@ import java.util.UUID;
 @Setter
 @Getter
 @AllArgsConstructor
-public class DBMembership extends DBObject{
+public class DBGroup extends DBObject {
     private UUID id;
-    private DBUser user;
-    private DBGroup group;
 }

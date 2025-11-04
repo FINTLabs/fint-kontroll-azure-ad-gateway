@@ -1,6 +1,9 @@
 package no.fintlabs.db;
 
 import no.fintlabs.azure.AzureGroupMembership;
+import no.fintlabs.db.entity.DBGroup;
+import no.fintlabs.db.entity.DBMembership;
+import no.fintlabs.db.entity.DBUser;
 
 import java.util.UUID;
 
