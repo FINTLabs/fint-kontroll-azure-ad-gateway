@@ -13,10 +13,7 @@ import com.microsoft.kiota.serialization.UntypedArray;
 import com.microsoft.kiota.serialization.UntypedObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.azure.AzureGroup;
-import no.fintlabs.azure.AzureGroupMembership;
-import no.fintlabs.azure.AzureGroupMembershipProducerService;
-import no.fintlabs.azure.AzureGroupProducerService;
+import no.fintlabs.azure.*;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
 import no.fintlabs.db.*;
@@ -218,13 +215,19 @@ public class MsGraphGroup {
                     continue;
                 }
 
-                String key = group.getId() + "_" + memberId;
+                HashKey key;
+                try {
+                    key = DBMembershipMapper.toDBMembershipHashKey(UUID.fromString(group.getId()), UUID.fromString(memberId));
+                } catch (Exception e) {
+                    log.error(e.getMessage());
+                    continue;
+                }
 
                 if (untypedMember.getValue().containsKey("@removed")) {
                     if (orchestrator.getMemberships().containsKey(key)) {
                         orchestrator.getMemberships().remove(key);
                         azureGroupMembershipProducerService.removeMembership(
-                                new AzureGroupMembership(memberId, group.getId(), key)
+                                new AzureGroupMembership(memberId, group.getId(), key.toString())
                         );
                         removedMemberships.incrementAndGet();
                         log.debug("User {} is no longer member of group {}", memberId, group.getId());
@@ -235,9 +238,9 @@ public class MsGraphGroup {
                 }
 
                 // TODO: This should never happen. ID is updated with new object.
-                DBMembership oldval = orchestrator.getMemberships().putIfAbsent(key, DBMembershipMapper.toDBMembership(memberId, group.getId(), orchestrator.getUsers(), orchestrator.getGroups()));
+                DBMembership oldval = orchestrator.getMemberships().putIfAbsent(key, DBMembershipMapper.toDBMembership(UUID.fromString(memberId), UUID.fromString(group.getId()), orchestrator.getUsers(), orchestrator.getGroups()));
                 if (oldval == null) {
-                    AzureGroupMembership m = new AzureGroupMembership(memberId, group.getId(), key);
+                    AzureGroupMembership m = new AzureGroupMembership(memberId, group.getId(), key.toString());
                     azureGroupMembershipProducerService.addMembership(m);
                     addedMemberships.incrementAndGet();
                     log.debug("User {} is member of group {}", memberId, group.getId());
@@ -311,13 +314,13 @@ public class MsGraphGroup {
 
                     AzureGroup newGroup = new AzureGroup(group, configGroup);
                     if (orchestrator.getGroups() != null
-                            && orchestrator.getGroups().containsKey(newGroup.getId())
-                            && newGroup.equals(orchestrator.getGroups().get(newGroup.getId()))) {
+                            && orchestrator.getGroups().containsKey(UUID.fromString(newGroup.getId()))
+                            && newGroup.equals(orchestrator.getGroups().get(UUID.fromString(newGroup.getId())))) {
                         log.info("{} groupID already published and in cache. Not republished to kafka", newGroup.getId());
                     } else {
                         groupCounter.incrementAndGet();
                         azureGroupProducerService.processGroup(newGroup);
-                        orchestrator.getGroups().put(newGroup.getId(), DBGroupMapper.toDBGroup(newGroup));
+                        orchestrator.getGroups().put(UUID.fromString(newGroup.getId()), DBGroupMapper.toDBGroup(newGroup));
                         allGroups.add(newGroup);
                     }
                     return true;
@@ -373,11 +376,11 @@ public class MsGraphGroup {
         page.getValue().forEach(member -> {
             AzureGroupMembership azureGroupMembership = new AzureGroupMembership(azureGroup.getId(), member);
             if (orchestrator.getMemberships() != null
-                    && orchestrator.getMemberships().containsKey(azureGroupMembership.getId())) {
+                    && orchestrator.getMemberships().containsKey(DBMembershipMapper.toDBMembershipHashKey(azureGroupMembership))) {
                 log.debug("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.getId(), azureGroup.getId());
             } else {
                 azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
-                orchestrator.getMemberships().put(azureGroupMembership.getId(), DBMembershipMapper.toDBMembership(azureGroupMembership, orchestrator.getUsers(), orchestrator.getGroups()));
+                orchestrator.getMemberships().put(DBMembershipMapper.toDBMembershipHashKey(azureGroupMembership), DBMembershipMapper.toDBMembership(azureGroupMembership, orchestrator.getUsers(), orchestrator.getGroups()));
                 membersCount.getAndIncrement();
                 numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
@@ -651,6 +654,7 @@ public class MsGraphGroup {
         }
         String groupId = splitString[0];
         String userId = splitString[1];
+        HashKey membershipKey = DBMembershipMapper.toDBMembershipHashKey(UUID.fromString(userId), UUID.fromString(groupId));
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -666,7 +670,7 @@ public class MsGraphGroup {
                 log.info("UserId: {} removed from GroupId: {}", userId, groupId);
 
                 azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
-                orchestrator.getMemberships().remove(resourceGroupMembershipKey);
+                orchestrator.getMemberships().remove(membershipKey);
                 log.info("Produced message to Kafka on deleted UserId: {} from GroupId: {}", userId, groupId);
 
             } catch (ApiException e) {
@@ -674,7 +678,7 @@ public class MsGraphGroup {
                     log.warn("User {} not found in group {}", userId, groupId);
 
                     azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
-                    orchestrator.getMemberships().remove(resourceGroupMembershipKey);
+                    orchestrator.getMemberships().remove(membershipKey);
                     log.warn("Produced message to Kafka on deleted UserId: {} from GroupId: {} as user not found in group", userId, groupId);
 
                 } else {

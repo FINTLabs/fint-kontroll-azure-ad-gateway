@@ -1,28 +1,32 @@
 package no.fintlabs;
 
 import com.microsoft.graph.models.Group;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.azure.HashKey;
 import no.fintlabs.db.*;
 import no.fintlabs.db.entity.DBGroup;
 import no.fintlabs.db.entity.DBMembership;
 import no.fintlabs.db.entity.DBUser;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
 @Slf4j
+
 public class TestUtils {
 
+    @AllArgsConstructor
     public static class TestGroupData {
         public final List<Group> groups;
-        public final List<String> removedMemberships;
-        public final List<String> createdMemberships;
-
-        public TestGroupData(List<Group> groups, List<String> removed, List<String> created) {
+        public final List<UUID> removedMemberships;
+        public final List<UUID> createdMemberships;
+        public TestGroupData(List<Group> groups, List<UUID> removedMemberships, List<UUID> createdMemberships) {
             this.groups = groups;
-            this.removedMemberships = removed;
-            this.createdMemberships = created;
+            this.removedMemberships = removedMemberships;
+            this.createdMemberships = createdMemberships;
         }
     }
 
@@ -32,7 +36,7 @@ public class TestUtils {
         }
         public void generateNRandomUsers(int nUsers) {
             for (int i = 0; i < nUsers; i++) {
-                this.getUsers().put(UUID.randomUUID().toString(), new DBUser(UUID.randomUUID()));
+                this.getUsers().put(UUID.randomUUID(), new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
             }
         }
         public void generateNRandomGroupsWithNMemberships(int nGroups, int lowMemberNumber, int highMemberNumber) {
@@ -44,21 +48,19 @@ public class TestUtils {
                 // log.error("Asked for members with more than " + highMemberNumber + " members");
                 return;
             }
-            List<String> userList = getUsers().getHashMap().keySet().stream().toList();
+            List<UUID> userList = getUsers().getHashMap().keySet().stream().toList();
             for (int i=0; i<nGroups; i++) {
-                DBGroup newGroup = new DBGroup(UUID.randomUUID());
-                String newString = UUID.randomUUID().toString();
-                getGroups().put(newString, newGroup);
+                DBGroup newGroup = new DBGroup(HashKey.createHashKey(UUID.randomUUID().toString()));
+                UUID newGroupID = UUID.randomUUID();
+                getGroups().put(newGroupID, newGroup);
                 for (int j=0; j < rand.nextInt((highMemberNumber - lowMemberNumber) + 1) + lowMemberNumber; j++) {
+                    // Pick random user
+                    UUID userId = userList.get(rand.nextInt(userList.size()));
                     getMemberships().put(
-                            UUID.randomUUID().toString(),
+                            DBMembershipMapper.toDBMembershipHashKey(userId, newGroupID),
                             new DBMembership(
-                                    UUID.randomUUID(),
-                                    getUsers().get(
-                                            userList.get(
-                                                    rand.nextInt(userList.size())
-                                            )
-                                    ),
+                                    HashKey.createHashKey(UUID.randomUUID()),
+                                    getUsers().get(userId),
                                     newGroup) );
                 }
             }

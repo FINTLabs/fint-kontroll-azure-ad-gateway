@@ -7,15 +7,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 @RequiredArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
 @Slf4j
-public class AzureGroupMembership {
+public class AzureGroupMembership implements Serializable {
+    @Serial
     private String user_id;
+    @Serial
     private String group_id;
-
+    @Serial
     protected String id;
 
     public AzureGroupMembership(String group_id, DirectoryObject directoryObject) {

@@ -186,10 +186,8 @@ public class MsGraphUser {
 
         if (user.getUserType() == null || !user.getUserType().equalsIgnoreCase("Member")) return;
 
-
-
-        if (orchestrator.getUsers() != null) {
-            final DBUser cached = orchestrator.getUsers().get(user.getId());
+        if (orchestrator.getUsers().isEmpty() == false) {
+            final DBUser cached = orchestrator.getUsers().get(UUID.fromString(user.getId()));
             if (cached != null) {
                 final AzureUser fresh = new AzureUser(user, configUser);
                 if (fresh.equals(cached)) {
@@ -207,12 +205,12 @@ public class MsGraphUser {
             users.incrementAndGet();
             final AzureUserExternal ext = new AzureUserExternal(user, configUser);
             if (orchestrator.getUsersExternal() != null) {
-                final DBUser cachedExt = orchestrator.getUsersExternal().get(user.getId());
+                final DBUser cachedExt = orchestrator.getUsersExternal().get(UUID.fromString(user.getId()));
                 if (ext.equals(cachedExt)) {
                     log.info("External user {} unchanged. Skipping Kafka.", user.getId());
                     return;
                 }
-                orchestrator.getUsersExternal().put(user.getId(), DBUserMapper.toDBUser(ext));
+                orchestrator.getUsersExternal().put(UUID.fromString(user.getId()), DBUserMapper.toDBUser(ext));
             }
             log.debug("Publishing external user to Kafka: {}", user.getUserPrincipalName());
             azureUserExternalProducerService.publish(ext);
@@ -229,7 +227,7 @@ public class MsGraphUser {
             log.debug("Updating cache for user: {}", user.getId());
             changedUsers.incrementAndGet();
             if (orchestrator.getUsers() != null) {
-                orchestrator.getUsers().put(user.getId(), DBUserMapper.toDBUser(az));
+                orchestrator.getUsers().put(UUID.fromString(user.getId()), DBUserMapper.toDBUser(az));
             }
         } else {
             log.debug("UserId: {} is missing employeeId/studentId. Not published to kafka.", user.getId());
@@ -237,11 +235,11 @@ public class MsGraphUser {
     }
     private void handleUserDeleted(String userId) {
         if (orchestrator.getUsers() != null) {
-            orchestrator.getUsers().remove(userId);
+            orchestrator.getUsers().remove(UUID.fromString(userId));
             azureUserProducerService.publishDeletedUser(userId);
         }
         if (orchestrator.getUsersExternal() != null) {
-            orchestrator.getUsersExternal().remove(userId);
+            orchestrator.getUsersExternal().remove(UUID.fromString(userId));
             azureUserExternalProducerService.publishDeletedUser(userId);
         }
 

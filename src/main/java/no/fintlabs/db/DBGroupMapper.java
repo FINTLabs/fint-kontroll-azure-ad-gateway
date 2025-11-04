@@ -2,6 +2,8 @@ package no.fintlabs.db;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.extern.log4j.Log4j;
+import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.HashKey;
 import no.fintlabs.db.entity.DBGroup;
@@ -12,32 +14,42 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
+@Log4j2
 @Setter
 @Getter
 @RequiredArgsConstructor
 public class DBGroupMapper {
-    static public DBGroup toDBGroup(AzureGroup azureGroup) throws NoSuchAlgorithmException {
+
+    private static final ThreadLocal<MessageDigest> SHA_256 = ThreadLocal.withInitial(() -> {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
+    });
+
+    static public DBGroup toDBGroup(AzureGroup azureGroup) {
         return new DBGroup(
                 new HashKey(
-                        MessageDigest
-                                .getInstance("SHA-256")
-                                .digest(
-                                        SerializationUtils.serialize(azureGroup)
-                                )
+                        SHA_256.get().digest(
+                                SerializationUtils.serialize(azureGroup)
+                        )
                 )
         );
     }
 
-    static public DBGroup toDBGroup(ResourceGroup resourceGroup) throws NoSuchAlgorithmException {
-        return new DBGroup(
-                new HashKey(
-                        MessageDigest
-                                .getInstance("SHA-256")
-                                .digest(
-                                        SerializationUtils.serialize(resourceGroup)
-                                )
-                )
-        );
+    static public DBGroup toDBGroup(ResourceGroup resourceGroup) {
+        try {
+            return new DBGroup(
+                    new HashKey(
+                        SHA_256.get().digest(
+                            SerializationUtils.serialize(resourceGroup)
+                        )
+                    )
+            );
+        } catch (Exception e) {
+            return null;
+        }
     }
 
 }

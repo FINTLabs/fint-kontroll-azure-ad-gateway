@@ -24,7 +24,7 @@ public class DBObjectList<I, T extends DBObject> {
     public T remove(I key) {
         return hashMap.remove(key);
     }
-    public boolean containsKey(String key) {
+    public boolean containsKey(I key) {
         return hashMap.containsKey(key);
     }
 
@@ -49,6 +49,6 @@ public class DBObjectList<I, T extends DBObject> {
     private void persist(I key, T obj) {
         sink.persist(key, obj);
     }
-    
+
     public void loadFromDB() {};
 }

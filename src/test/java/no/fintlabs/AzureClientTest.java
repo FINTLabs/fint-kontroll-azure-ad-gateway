@@ -118,13 +118,13 @@ class AzureClientTest {
 
 
     @Mock
-    DBObjectList<DBUser> orchestratoruserlist;
+    DBObjectList<UUID, DBUser> orchestratoruserlist;
 
     @Mock
-    DBObjectList<DBMembership> orchestratormemberships;
+    DBObjectList<HashKey, DBMembership> orchestratormemberships;
 
     @Mock
-    DBObjectList<DBGroup> orchestratorgrouplist;
+    DBObjectList<UUID, DBGroup> orchestratorgrouplist;
 
     @Mock
     private HashSet<String> azureGroupMembershipCache;
@@ -188,8 +188,8 @@ class AzureClientTest {
     }
 
     public TestUtils.TestGroupData toTestGroupData(List<Group> groups) {
-        List<String> createdKeys = new ArrayList<>();
-        List<String> removedKeys = new ArrayList<>();
+        List<UUID> userIdsAdded = new ArrayList<>();
+        List<UUID> userIdsRemoved = new ArrayList<>();
 
         for (Group g : groups) {
             String groupId = g.getId();
@@ -197,17 +197,16 @@ class AzureClientTest {
 
             for (UntypedNode n : members.getValue()) {
                 UntypedObject uo = (UntypedObject) n;
-                String userId = ((UntypedString) uo.getValue().get("id")).getValue();
-                String key = groupId + "_" + userId;
+                UUID userId = UUID.fromString( uo.getValue().get("id").toString() );
 
                 if (uo.getValue().containsKey("@removed")) {
-                    removedKeys.add(key);
+                    userIdsAdded.add(userId);
                 } else {
-                    createdKeys.add(key);
+                    userIdsRemoved.add(userId);
                 }
             }
         }
-        return new TestUtils.TestGroupData(groups, removedKeys, createdKeys);
+        return new TestUtils.TestGroupData(groups, userIdsAdded, userIdsRemoved);
     }
 
     private UntypedObject getTestUser(boolean removed) {
@@ -629,18 +628,18 @@ class AzureClientTest {
         DeltaGetResponse delta = new DeltaGetResponse();
         var testGroups = getTestGrouplistAddedRemoved(3, 6, 3);
         delta.setValue(testGroups);
-        TestUtils.TestGroupData testGroupData = toTestGroupData(testGroups);
+        //TestUtils.TestGroupData testGroupData = toTestGroupData(testGroups);
         delta.setOdataDeltaLink("delta link");
 
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
 
         msGraphGroup.pullAllGroupsDelta();
-        DBObjectList<DBMembership> memberships = spy(DBObjectList.class);
+        DBObjectList<UUID, DBMembership> memberships = spy(DBObjectList.class);
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-            verify(memberships, times(9)).remove(anyString());
+            verify(memberships, times(9)).remove(any(UUID.class));
             verify(azureGroupMembershipProducerService, never()).removeMembership(any(AzureGroupMembership.class));
         });
 
@@ -664,14 +663,18 @@ class AzureClientTest {
 
         when(orchestrator.getUsers()).thenReturn(testdata.getUsers());
 
+        // Initialize Azure test-data
         DeltaGetResponse delta = new DeltaGetResponse();
         List<Group> testGroups = getTestGrouplistAddedRemoved(3, 6, 3);
-        TestUtils.TestGroupData testGroupData = toTestGroupData(testGroups);
         delta.setValue(testGroups); // 18 adds, 9 removes
         delta.setOdataDeltaLink("delta link");
 
-        for (String group_id: testGroupData.removedMemberships) {
-            orchestrator.getUsers().put(group_id, new DBUser(UUID.randomUUID()));
+        // Transform to processable structure
+        TestUtils.TestGroupData testGroupData = toTestGroupData(testGroups);
+
+        // Create relevant user objects from testGroups into testdata
+        for (UUID userId: testGroupData.removedMemberships) {
+            orchestrator.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
         }
         ReflectionTestUtils.setField(msGraphGroup, "orchestrator", testdata);
 
@@ -683,7 +686,7 @@ class AzureClientTest {
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-            verify(orchestratormemberships, times(9)).remove(anyString());
+            verify(orchestratormemberships, times(9)).remove(any(HashKey.class));
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
         });
     }
@@ -703,11 +706,11 @@ class AzureClientTest {
         delta.setValue(testGroups); // 18 adds, 9 removes
         delta.setOdataDeltaLink("delta link");
 
-        for (String group_id: testGroupData.removedMemberships) {
-            orchestrator.getUsers().put(group_id, new DBUser(UUID.randomUUID()));
+        for (UUID userId: testGroupData.removedMemberships) {
+            orchestrator.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
         }
-        for (String group_id: testGroupData.createdMemberships) {
-            orchestrator.getUsers().put(group_id, new DBUser(UUID.randomUUID()));
+        for (UUID userId: testGroupData.createdMemberships) {
+            orchestrator.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
         }
         ReflectionTestUtils.setField(msGraphGroup, "orchestrator", orchestrator);
 
@@ -718,9 +721,9 @@ class AzureClientTest {
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
-            verify(orchestrator.getMemberships(), times(18)).put(anyString(), any(DBMembership.class));
+            verify(orchestrator.getMemberships(), times(18)).put(any(HashKey.class), any(DBMembership.class));
             verify(azureGroupMembershipProducerService, never()).addMembership(any(AzureGroupMembership.class));
-            verify(orchestrator.getMemberships(), times(9)).remove(anyString());
+            verify(orchestrator.getMemberships(), times(9)).remove(any(HashKey.class));
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
         });
 
@@ -1023,8 +1026,8 @@ class AzureClientTest {
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser nonCachedUser = new AzureUser(user2, configUser);
-        lenient().when(orchestrator.getUsers().containsKey(user.getId())).thenReturn(true);
-        lenient().when(orchestrator.getUsers().get(user.getId())).thenReturn(DBUserMapper.toDBUser(cachedUser));
+        lenient().when(orchestrator.getUsers().containsKey(UUID.fromString(user.getId()))).thenReturn(true);
+        lenient().when(orchestrator.getUsers().get(UUID.fromString(user.getId()))).thenReturn(DBUserMapper.toDBUser(cachedUser));
 
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
@@ -1074,8 +1077,8 @@ class AzureClientTest {
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser notCachedUser = new AzureUser(user2, configUser);
-        lenient().when(orchestrator.getUsers().containsKey(user.getId())).thenReturn(true);
-        lenient().when(orchestrator.getUsers().get(user.getId())).thenReturn(DBUserMapper.toDBUser(cachedUser));
+        lenient().when(orchestrator.getUsers().containsKey(UUID.fromString(user.getId()))).thenReturn(true);
+        lenient().when(orchestrator.getUsers().get(UUID.fromString(user.getId()))).thenReturn(DBUserMapper.toDBUser(cachedUser));
 
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
@@ -1163,8 +1166,8 @@ class AzureClientTest {
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser notCachedUser = new AzureUser(user2, configUser);
         DBUser dbUser = DBUserMapper.toDBUser(cachedUser);
-        DBObjectList<String,DBUser> dbObjectList = new DBObjectList<>();
-        dbObjectList.put(dbUser.getId().toString(), dbUser);
+        DBObjectList<UUID,DBUser> dbObjectList = new DBObjectList<>();
+        dbObjectList.put(UUID.fromString(cachedUser.getIdpUserObjectId()), dbUser);
         when(orchestrator.getUsers()).thenReturn(dbObjectList);
 
 //        lenient().when(orchestrator.getUsers().containsKey(user.getId())).thenReturn(true);

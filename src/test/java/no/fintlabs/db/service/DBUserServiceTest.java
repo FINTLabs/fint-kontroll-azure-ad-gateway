@@ -1,6 +1,7 @@
 package no.fintlabs.db.service;
 
 import no.fintlabs.azure.AzureUser;
+import no.fintlabs.azure.HashKey;
 import no.fintlabs.db.DBUserMapper;
 import no.fintlabs.db.entity.DBUser;
 import no.fintlabs.db.repository.DBUserRepository;
@@ -34,8 +35,7 @@ class DBUserServiceTest {
     @BeforeEach
     void setUp() {
         validUuid = UUID.randomUUID();
-        mockDBUser = new DBUser();
-
+        mockDBUser = new DBUser(HashKey.createHashKey(UUID.randomUUID()));
         mockAzureUser = AzureUser.builder().idpUserObjectId(UUID.randomUUID().toString()).build();
     }
 
@@ -43,7 +43,7 @@ class DBUserServiceTest {
     void getUserById_WithValidId_ReturnsUser() {
         when(dbUserRepository.findById(validUuid)).thenReturn(Optional.of(mockDBUser));
 
-        DBUser result = buUserService.getUserById(validUuid.toString());
+        DBUser result = buUserService.getUserById(validUuid);
 
         assertNotNull(result);
         assertEquals(mockDBUser, result);
@@ -51,7 +51,7 @@ class DBUserServiceTest {
 
     @Test
     void getUserById_WithInvalidUUID_ThrowsIllegalArgumentException() {
-        String invalidUuid = "invalid-uuid";
+        UUID invalidUuid = UUID.randomUUID();
 
         assertThrows(IllegalArgumentException.class,
                 () -> buUserService.getUserById(invalidUuid));
@@ -62,7 +62,7 @@ class DBUserServiceTest {
         when(dbUserRepository.findById(validUuid)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class,
-                () -> buUserService.getUserById(validUuid.toString()));
+                () -> buUserService.getUserById(validUuid));
     }
 
     @Test
