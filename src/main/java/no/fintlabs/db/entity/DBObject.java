@@ -1,16 +1,13 @@
-package no.fintlabs.db;
+package no.fintlabs.db.entity;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.RequiredArgsConstructor;
-
-import java.lang.reflect.Member;
-import java.security.MessageDigest;
 import java.sql.Timestamp;
 
 @Setter
 @Getter
 @RequiredArgsConstructor
-public class DBObject extends Object{
+public class DBObject extends Object {
     private Timestamp timestamp;
 }

@@ -1,9 +1,10 @@
-package no.fintlabs.db;
+package no.fintlabs.db.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import no.fintlabs.azure.HashKey;
 
 import java.util.UUID;
 
@@ -11,7 +12,7 @@ import java.util.UUID;
 @Getter
 @AllArgsConstructor
 public class DBMembership extends DBObject{
-    private UUID id;
+    private HashKey hash;
     private DBUser user;
     private DBGroup group;
 }

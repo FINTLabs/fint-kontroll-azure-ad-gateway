@@ -6,10 +6,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.db.entity.DBObject;
-import no.fintlabs.kafka.ResourceGroupMembership;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 @Slf4j
 @Setter
@@ -22,6 +22,10 @@ public class DBSink<I, T extends DBObject> {
         sink.tryEmitNext(object);
     }
 
+    public void persist(I key, T object) {
+        sink.tryEmitNext(Tuples.of(key, object));
+    }
+
     @PostConstruct
     private void init() {
         sink.asFlux()
@@ -30,7 +34,7 @@ public class DBSink<I, T extends DBObject> {
                 .subscribe(t -> updateDatabase(t.getT1(), t.getT2()));
     }
 
-    public void updateDatabase(I key, DBObject T) {
+    public void updateDatabase(I key, T object) {
         log.info("Update function being called");
     }
 }

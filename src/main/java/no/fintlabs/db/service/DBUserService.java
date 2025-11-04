@@ -14,13 +14,13 @@ public class DBUserService {
 
     private final DBUserRepository dbUserRepository;
 
-    public DBUser getUserById(String id){
+    /*public DBUser getUserById(String id){
         UUID userId = UUID.fromString(id);
         return dbUserRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("No user with id " + id));
     }
 
     public DBUser saveUser(no.fintlabs.azure.AzureUser user){
         return dbUserRepository.save(DBUserMapper.toDBUser(user));
-    }
+    }*/
 
 }

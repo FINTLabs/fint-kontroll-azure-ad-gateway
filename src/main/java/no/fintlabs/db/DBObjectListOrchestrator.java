@@ -2,20 +2,20 @@ package no.fintlabs.db;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import no.fintlabs.db.entity.DBGroup;
-import no.fintlabs.db.entity.DBMembership;
-import no.fintlabs.db.entity.DBUser;
+import no.fintlabs.db.entity.*;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Getter
 @RequiredArgsConstructor
 @Service
 public class DBObjectListOrchestrator {
-    private DBDelta delta;
-    private DBObjectList<DBUser> users = new DBObjectList<>();
-    private DBObjectList<DBUser> usersExternal = new DBObjectList<>();
-    private DBObjectList<DBGroup> groups = new DBObjectList<>();
-    private DBObjectList<DBMembership> memberships = new DBObjectList<>();
+    private DBObjectList<String, DBDelta> delta = new DBObjectList<>();
+    private DBObjectList<UUID, DBUser> users = new DBObjectList<>();
+    private DBObjectList<UUID, DBUser> usersExternal = new DBObjectList<>();
+    private DBObjectList<UUID, DBGroup> groups = new DBObjectList<>();
+    private DBObjectList<UUID, DBMembership> memberships = new DBObjectList<>();
 
     public void clear() {
         users.clear();

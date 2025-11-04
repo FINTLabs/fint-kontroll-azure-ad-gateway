@@ -10,9 +10,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Setter
 @Getter
 @RequiredArgsConstructor
-public class DBObjectList<T extends DBObject> {
-    private ConcurrentHashMap<String, T> hashMap = new ConcurrentHashMap<>();
-    private DBSink<String, T> sink = new DBSink<>();
+public class DBObjectList<I, T extends DBObject> {
+    private ConcurrentHashMap<I, T> hashMap = new ConcurrentHashMap<>();
+    private DBSink<I, T> sink = new DBSink<>();
 
     private int kafkaOffset = 0;
     public void clear() {
@@ -21,29 +21,34 @@ public class DBObjectList<T extends DBObject> {
     public boolean isEmpty() {
         return hashMap.isEmpty();
     }
-    public T remove(String key) {
+    public T remove(I key) {
         return hashMap.remove(key);
     }
     public boolean containsKey(String key) {
         return hashMap.containsKey(key);
     }
-    public T get(String key) {
+
+    public T get(I key) {
         return hashMap.get(key);
     }
-    public T put(String key, T obj) {
+
+    public T put(I key, T obj) {
         T ret = hashMap.put(key, obj);
         persist(key, obj);
         return ret;
     }
-    public T putIfAbsent(String key, T obj) {
+
+    public T putIfAbsent(I key, T obj) {
         T ret = hashMap.putIfAbsent(key, obj);
         if (ret == null) {
-            persist(obj);
+            persist(key, obj);
         }
         return ret;
     }
-    private void persist(String key, T obj) {
+
+    private void persist(I key, T obj) {
         sink.persist(key, obj);
     }
+    
     public void loadFromDB() {};
 }

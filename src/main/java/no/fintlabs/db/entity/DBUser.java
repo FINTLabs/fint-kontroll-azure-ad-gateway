@@ -1,5 +1,6 @@
-package no.fintlabs.db;
+package no.fintlabs.db.entity;
 import lombok.*;
+import no.fintlabs.azure.HashKey;
 
 import java.util.UUID;
 
@@ -7,5 +8,5 @@ import java.util.UUID;
 @Getter
 @AllArgsConstructor
 public class DBUser extends DBObject {
-    private UUID id;
+    private HashKey hash;
 }

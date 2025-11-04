@@ -6,13 +6,19 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.config.ConfigGroup;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 @Setter
 @Getter
 @Slf4j
-public class AzureGroup {
+public class AzureGroup implements Serializable {
 
+    @Serial
     protected String id;
+    @Serial
     protected String displayName;
+    @Serial
     protected Long resourceGroupID;
 
     public AzureGroup(Group group, ConfigGroup configGroup) {

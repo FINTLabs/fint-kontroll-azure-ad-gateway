@@ -1163,7 +1163,7 @@ class AzureClientTest {
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser notCachedUser = new AzureUser(user2, configUser);
         DBUser dbUser = DBUserMapper.toDBUser(cachedUser);
-        DBObjectList<DBUser> dbObjectList = new DBObjectList<>();
+        DBObjectList<String,DBUser> dbObjectList = new DBObjectList<>();
         dbObjectList.put(dbUser.getId().toString(), dbUser);
         when(orchestrator.getUsers()).thenReturn(dbObjectList);
 

@@ -8,6 +8,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.config.ConfigUser;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 @Setter
@@ -17,7 +18,7 @@ import java.util.Objects;
 @EqualsAndHashCode
 
 
-public class AzureUserExternal  {
+public class AzureUserExternal implements Serializable {
     private String firstName;
     private String lastName;
     private String mobilePhone;
