@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class DBObjectList<T extends DBObject> {
     private ConcurrentHashMap<String, T> hashMap = new ConcurrentHashMap<>();
+    private DBSink<String, T> sink = new DBSink<>();
 
     private int kafkaOffset = 0;
     public void clear() {
@@ -30,9 +31,19 @@ public class DBObjectList<T extends DBObject> {
         return hashMap.get(key);
     }
     public T put(String key, T obj) {
-        return hashMap.put(key, obj);
+        T ret = hashMap.put(key, obj);
+        persist(key, obj);
+        return ret;
     }
     public T putIfAbsent(String key, T obj) {
-        return hashMap.putIfAbsent(key, obj);
+        T ret = hashMap.putIfAbsent(key, obj);
+        if (ret == null) {
+            persist(obj);
+        }
+        return ret;
     }
+    private void persist(String key, T obj) {
+        sink.persist(key, obj);
+    }
+    public void loadFromDB() {};
 }
