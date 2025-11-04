@@ -2,6 +2,9 @@ package no.fintlabs.db;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import no.fintlabs.db.entity.DBGroup;
+import no.fintlabs.db.entity.DBMembership;
+import no.fintlabs.db.entity.DBUser;
 import org.springframework.stereotype.Service;
 
 @Getter

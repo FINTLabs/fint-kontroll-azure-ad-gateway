@@ -22,6 +22,9 @@ import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
 import no.fintlabs.config.ConfigUser;
 import no.fintlabs.db.*;
+import no.fintlabs.db.entity.DBGroup;
+import no.fintlabs.db.entity.DBMembership;
+import no.fintlabs.db.entity.DBUser;
 import no.fintlabs.group.MsGraphGroup;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
@@ -38,8 +41,6 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;

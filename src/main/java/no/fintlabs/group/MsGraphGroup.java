@@ -20,6 +20,7 @@ import no.fintlabs.azure.AzureGroupProducerService;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
 import no.fintlabs.db.*;
+import no.fintlabs.db.entity.DBMembership;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,10 +34,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import jakarta.annotation.PostConstruct;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
-import reactor.core.scheduler.Schedulers;
 
 @Component
 @Slf4j
