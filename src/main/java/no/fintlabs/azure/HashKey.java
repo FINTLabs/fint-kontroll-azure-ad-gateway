@@ -3,6 +3,7 @@ package no.fintlabs.azure;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.SerializationUtils;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +19,7 @@ public class HashKey {
         }
     });
 
+    @Serial
     private final byte[] hash;
 
     @Override
@@ -38,5 +40,14 @@ public class HashKey {
                     SerializationUtils.serialize(object)
                 )
         );
+    }
+
+    @Override
+    public String toString() {
+        StringBuffer buffer = new StringBuffer();
+        for (byte b: hash) {
+            buffer.append(String.format("%02X ", b));
+        }
+        return buffer.toString();
     }
 }

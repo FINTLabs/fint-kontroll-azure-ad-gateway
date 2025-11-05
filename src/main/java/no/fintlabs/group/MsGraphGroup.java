@@ -217,7 +217,7 @@ public class MsGraphGroup {
 
                 HashKey key;
                 try {
-                    key = DBMembershipMapper.toDBMembershipHashKey(UUID.fromString(group.getId()), UUID.fromString(memberId));
+                    key = DBMembershipMapper.toDBMembershipHashKey(UUID.fromString(memberId), UUID.fromString(group.getId()));
                 } catch (Exception e) {
                     log.error(e.getMessage());
                     continue;

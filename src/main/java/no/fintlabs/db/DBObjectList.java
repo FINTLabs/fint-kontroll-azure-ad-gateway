@@ -32,6 +32,10 @@ public class DBObjectList<I, T extends DBObject> {
         return hashMap.get(key);
     }
 
+    public int size () {
+        return hashMap.size();
+    }
+
     public T put(I key, T obj) {
         T ret = hashMap.put(key, obj);
         persist(key, obj);

@@ -8,6 +8,8 @@ import no.fintlabs.db.*;
 import no.fintlabs.db.entity.DBGroup;
 import no.fintlabs.db.entity.DBMembership;
 import no.fintlabs.db.entity.DBUser;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 import java.util.HashMap;
 import java.util.List;
@@ -18,15 +20,18 @@ import java.util.UUID;
 
 public class TestUtils {
 
-    @AllArgsConstructor
     public static class TestGroupData {
         public final List<Group> groups;
-        public final List<UUID> removedMemberships;
-        public final List<UUID> createdMemberships;
-        public TestGroupData(List<Group> groups, List<UUID> removedMemberships, List<UUID> createdMemberships) {
+        public final List<Tuple2<HashKey,Tuple2<UUID, UUID>>> removedMemberships;
+        public final List<Tuple2<HashKey,Tuple2<UUID, UUID>>> createdMemberships;
+        public final List<UUID> removedUsers;
+        public final List<UUID> addedUsers;
+        public TestGroupData(List<Group> groups, List<Tuple2<HashKey,Tuple2<UUID, UUID>>> createdMemberships, List<Tuple2<HashKey,Tuple2<UUID, UUID>>> removedMemberships, List<UUID> addedUsers, List<UUID> removedUsers) {
             this.groups = groups;
-            this.removedMemberships = removedMemberships;
             this.createdMemberships = createdMemberships;
+            this.removedMemberships = removedMemberships;
+            this.removedUsers = removedUsers;
+            this.addedUsers = addedUsers;
         }
     }
 

@@ -17,6 +17,8 @@ import com.microsoft.kiota.serialization.UntypedArray;
 import com.microsoft.kiota.serialization.UntypedNode;
 import com.microsoft.kiota.serialization.UntypedObject;
 import com.microsoft.kiota.serialization.UntypedString;
+import jdk.jfr.Enabled;
+import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.*;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
@@ -32,6 +34,8 @@ import no.fintlabs.user.MsGraphUser;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -41,6 +45,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -56,9 +61,10 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import org.slf4j.LoggerFactory;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
-
-@Disabled
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
 
@@ -104,18 +110,15 @@ class AzureClientTest {
 
     @Mock
     private Config.Credentials configcredentials;
+
     @Spy
     DBObjectListOrchestrator orchestrator;
+
     @InjectMocks
     private MsGraphGroup msGraphGroup;
 
     @InjectMocks
     private MsGraphUser msGraphUser;
-
-
-    //@Mock
-    //private ConcurrentHashMap<String, AzureUser> entraIdUserCache;
-
 
     @Mock
     DBObjectList<UUID, DBUser> orchestratoruserlist;
@@ -131,13 +134,6 @@ class AzureClientTest {
 
     @Mock
     private ResourceGroupMembership resourceGroupMembership;
-
-    /*@Spy
-    private ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache =
-            new ConcurrentHashMap<>();**/
-
-    /*@Spy
-    private Set<String> membershipCache = ConcurrentHashMap.newKeySet();*/
 
     @Mock
     private AzureUserProducerService azureUserProducerService;
@@ -187,29 +183,38 @@ class AzureClientTest {
         orchestrator.clear();
     }
 
+    public void write(String out) {
+        System.out.println(out);
+    }
+
     public TestUtils.TestGroupData toTestGroupData(List<Group> groups) {
-        List<UUID> userIdsAdded = new ArrayList<>();
-        List<UUID> userIdsRemoved = new ArrayList<>();
+        List<Tuple2<HashKey,Tuple2<UUID, UUID>>> memberShipsAdded = new ArrayList<>();
+        List<Tuple2<HashKey,Tuple2<UUID, UUID>>> memberShipsRemoved = new ArrayList<>();
+        List<UUID> usersAdded = new ArrayList<>();
+        List<UUID> usersRemoved = new ArrayList<>();
 
         for (Group g : groups) {
-            String groupId = g.getId();
+            UUID groupId = UUID.fromString(g.getId());
             UntypedArray members = (UntypedArray) g.getAdditionalData().get("members@delta");
 
             for (UntypedNode n : members.getValue()) {
                 UntypedObject uo = (UntypedObject) n;
-                UUID userId = UUID.fromString( uo.getValue().get("id").toString() );
+                UUID userId = UUID.fromString( uo.getValue().get("id").getValue().toString() );
+                HashKey membershipKey = DBMembershipMapper.toDBMembershipHashKey(userId, groupId);
 
                 if (uo.getValue().containsKey("@removed")) {
-                    userIdsAdded.add(userId);
+                    memberShipsRemoved.add(Tuples.of(membershipKey, Tuples.of(userId, groupId)));
+                    usersRemoved.add(userId);
                 } else {
-                    userIdsRemoved.add(userId);
+                    memberShipsAdded.add(Tuples.of(membershipKey, Tuples.of(userId, groupId)));
+                    usersAdded.add(userId);
                 }
             }
         }
-        return new TestUtils.TestGroupData(groups, userIdsAdded, userIdsRemoved);
+        return new TestUtils.TestGroupData(groups, memberShipsAdded, memberShipsRemoved, usersAdded, usersRemoved);
     }
 
-    private UntypedObject getTestUser(boolean removed) {
+    private UntypedObject getTestUser(boolean removed, DBObjectListOrchestrator orchestrator) {
         Map<String, UntypedNode> userMap = new HashMap<>();
         userMap.put("@odata.type", new UntypedString("#microsoft.graph.user"));
         userMap.put("id", new UntypedString(UUID.randomUUID().toString()));
@@ -224,7 +229,7 @@ class AzureClientTest {
         return new UntypedObject(userMap);
     }
 
-    private UntypedArray getDeltaMembers(int numUsersAdded, int numUsersRemoved) {
+    private UntypedArray getDeltaMembers(int numUsersAdded, int numUsersRemoved, DBObjectListOrchestrator orchestrator) {
         List<UntypedNode> users = new ArrayList<>();
         for (int i = 0; i < numUsersAdded; i++) {
             users.add(getTestUser(false));
@@ -236,15 +241,35 @@ class AzureClientTest {
     }
 
     private List<Group> getTestGrouplistAddedRemoved(int numberOfGroups, int nUsersAdded, int nUsersRemoved) {
+        return getTestGrouplistAddedRemoved(numberOfGroups, nUsersAdded, nUsersRemoved, null);
+    }
+
+    private List<Group> getTestGrouplistAddedRemoved(int numberOfGroups, int nUsersAdded, int nUsersRemoved, DBObjectListOrchestrator orchestrator) {
         List<Group> retGroupList = new ArrayList<>();
+        if (orchestrator != null && numberOfGroups > orchestrator.getGroups().size()) {
+            write("ERROR: Please supply number of groups <= '" + orchestrator.getGroups().size() + "'");
+            return retGroupList;
+        }
+
+        List<UUID> groupIds;
+
+        if (orchestrator != null) {
+            groupIds = new ArrayList<>(orchestrator.getGroups().getHashMap().keySet());
+            java.util.Collections.shuffle(groupIds);
+        } else {
+            groupIds = java.util.stream.IntStream.range(0, 5)
+                    .mapToObj(i -> UUID.randomUUID())
+                    .collect(Collectors.toList());
+        }
+
         for (int i=0; i<numberOfGroups; i++) {
-            //String randomIntInRange = String.valueOf(new Random().nextInt(100) + 1);
             Group group = new Group();
-            group.setId(String.valueOf(i));
+            group.setId(groupIds.get(i).toString());
+
             group.setDisplayName("testgroup" + i + "-suff-");
             HashMap<String, Object> additionalData = new HashMap<>() {{
-                put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", group.getId());
-                put("members@delta", getDeltaMembers(nUsersAdded, nUsersRemoved));
+                put("extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId", Long.toString(new Random().nextLong()));
+                put("members@delta", getDeltaMembers(nUsersAdded, nUsersRemoved, orchestrator));
             }};
             group.setAdditionalData(additionalData);
             retGroupList.add(group);
@@ -257,6 +282,7 @@ class AzureClientTest {
     }
 
     @Test
+    @Disabled
     void doesGroupExist_found() throws Exception {
         // TEST OK
         List<Group> groupList = getTestGrouplist(1, 1);
@@ -514,6 +540,7 @@ class AzureClientTest {
     }
 
     @Test
+    @Disabled
     void makeSureDeleteGroupMembershipCallsHTTPDelete() {
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
@@ -613,6 +640,7 @@ class AzureClientTest {
     }
 
     @Test
+    @Disabled
     void makeSure18NewUsersArePublishedOnKafkaAnd9RemovedUsersAreIgnoredSinceTheyAreNotInCache() {
 
         // Override the constructor for cache
@@ -645,8 +673,9 @@ class AzureClientTest {
 
     }
 
+    @Disabled
     @Test
-    void makeSure18NewUsersArePublishedOnKafkaAnd9ArePublishedAsRemovedOnKafkaAnd9IsremovedFromCache() {
+    void assert18NewUsersArePublishedOnKafka9ArePubAsRemOnKafkaAnd9IsRemFromCache() {
 
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute())
@@ -654,16 +683,18 @@ class AzureClientTest {
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
-        when(orchestrator.getMemberships()).thenReturn(orchestratormemberships);
+        //when(orchestrator.getMemberships()).thenReturn(orchestratormemberships);
 
         TestUtils.DBObjectListOrchestratorTest testdata = new TestUtils.DBObjectListOrchestratorTest();
         testdata.generateNRandomUsers(50);
         // TODO: Should fail harder if generation fails
         testdata.generateNRandomGroupsWithNMemberships(5,2,6);
+        write("Initial group setup: " + testdata.getUsers().size());
+        write("  Number of users: " + testdata.getUsers().size());
+        write("  Number of groups: " + testdata.getGroups().size());
+        write("  Number of memberships: " + testdata.getMemberships().size());
 
-        when(orchestrator.getUsers()).thenReturn(testdata.getUsers());
-
-        // Initialize Azure test-data
+        // Initialize Azure-like test-data
         DeltaGetResponse delta = new DeltaGetResponse();
         List<Group> testGroups = getTestGrouplistAddedRemoved(3, 6, 3);
         delta.setValue(testGroups); // 18 adds, 9 removes
@@ -672,10 +703,35 @@ class AzureClientTest {
         // Transform to processable structure
         TestUtils.TestGroupData testGroupData = toTestGroupData(testGroups);
 
-        // Create relevant user objects from testGroups into testdata
-        for (UUID userId: testGroupData.removedMemberships) {
-            orchestrator.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
+        // Add testgroups to testdata
+        for (Group group : testGroups) {
+            testdata.getGroups().put(UUID.fromString(group.getId()), new DBGroup(HashKey.createHashKey(UUID.randomUUID().toString())));
+            write("  Adding group IDs : " + group.getId());
         }
+        // Add testusers to testdata
+        for (UUID userId : testGroupData.removedUsers) {
+            testdata.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
+            write("  Adding user IDs : " + userId.toString());
+        }
+
+        // Add memberships to testdata
+        for (Tuple2<HashKey,Tuple2<UUID, UUID>> membership : testGroupData.removedMemberships) {
+            testdata.getMemberships().put(
+                    membership.getT1(),
+                    new DBMembership(
+                            HashKey.createHashKey(UUID.randomUUID().toString()),
+                            testdata.getUsers().get(membership.getT2().getT1()),
+                            testdata.getGroups().get(membership.getT2().getT2())
+                    )
+            );
+            write("  Adding membership IDs : " + membership.getT1());
+        }
+
+        write("After populating group setup: " + testdata.getUsers().size());
+        write("  Number of users: " + testdata.getUsers().size());
+        write("  Number of groups: " + testdata.getGroups().size());
+        write("  Number of memberships: " + testdata.getMemberships().size());
+
         ReflectionTestUtils.setField(msGraphGroup, "orchestrator", testdata);
 
 
@@ -686,12 +742,13 @@ class AzureClientTest {
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-            verify(orchestratormemberships, times(9)).remove(any(HashKey.class));
+            verify(testdata.getMemberships(), times(9)).remove(any(HashKey.class));
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
         });
     }
 
     @Test
+    @Disabled
     void makeSure18NewUsersAreIgnoredSinceTheyAlreadyAreInCacheAnd9IsremovedFromCacheAndArePublishedAsRemovedOnKafka() {
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute())
@@ -706,10 +763,12 @@ class AzureClientTest {
         delta.setValue(testGroups); // 18 adds, 9 removes
         delta.setOdataDeltaLink("delta link");
 
-        for (UUID userId: testGroupData.removedMemberships) {
+        //for (UUID userId: testGroupData.removedMemberships) {
+        for (UUID userId: testGroupData.removedUsers) {
             orchestrator.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
         }
-        for (UUID userId: testGroupData.createdMemberships) {
+        //for (UUID userId: testGroupData.createdMemberships) {
+        for (UUID userId: testGroupData.addedUsers) {
             orchestrator.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
         }
         ReflectionTestUtils.setField(msGraphGroup, "orchestrator", orchestrator);
@@ -918,6 +977,7 @@ class AzureClientTest {
     }
 
     @Test
+    @Disabled
     void makeSurePageThroughGroupsDeltaPagesThroughPages() {
         when(configGroup.getSuffix()).thenReturn("-suff-");
         when(configGroup.getFintkontrollidattribute())
@@ -968,6 +1028,7 @@ class AzureClientTest {
 
 
     @Test
+    @Disabled
     void makeSureUserIsnotRepublishedIfUserCacheContainsUserAndExternalUserIsPublished()
     {
         when(configUser.getExternaluserattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute11");
@@ -1040,6 +1101,7 @@ class AzureClientTest {
     }
 
     @Test
+    @Disabled
     void makeSureAzureUserIsNotPublishedIfAzureUserGetAttributeValueIsNull()
     {
         when(configUser.getExternaluserattribute()).thenReturn("state");
@@ -1118,6 +1180,7 @@ class AzureClientTest {
     }
 
     @Test
+    @Disabled
     void makeSureUserIsnotRepublishedIfUserCacheContainsUser()
     {
         when(configUser.getExternaluserattribute()).thenReturn("state");
