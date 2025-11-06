@@ -232,10 +232,10 @@ class AzureClientTest {
     private UntypedArray getDeltaMembers(int numUsersAdded, int numUsersRemoved, DBObjectListOrchestrator orchestrator) {
         List<UntypedNode> users = new ArrayList<>();
         for (int i = 0; i < numUsersAdded; i++) {
-            users.add(getTestUser(false));
+            users.add(getTestUser(false,orchestrator));
         }
         for (int i = 0; i < numUsersRemoved; i++) {
-            users.add(getTestUser(true));
+            users.add(getTestUser(true,orchestrator));
         }
         return new UntypedArray(users);
     }
@@ -673,7 +673,7 @@ class AzureClientTest {
 
     }
 
-    @Disabled
+    //@Disabled
     @Test
     void assert18NewUsersArePublishedOnKafka9ArePubAsRemOnKafkaAnd9IsRemFromCache() {
 
@@ -683,7 +683,6 @@ class AzureClientTest {
         when(graphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
-        //when(orchestrator.getMemberships()).thenReturn(orchestratormemberships);
 
         TestUtils.DBObjectListOrchestratorTest testdata = new TestUtils.DBObjectListOrchestratorTest();
         testdata.generateNRandomUsers(50);
@@ -733,7 +732,8 @@ class AzureClientTest {
         write("  Number of memberships: " + testdata.getMemberships().size());
 
         ReflectionTestUtils.setField(msGraphGroup, "orchestrator", testdata);
-
+        var membershipsSpy = Mockito.spy(testdata.getMemberships());
+        ReflectionTestUtils.setField(testdata, "memberships", membershipsSpy);
 
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
 
@@ -742,7 +742,7 @@ class AzureClientTest {
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
             verify(azureGroupMembershipProducerService, times(18)).addMembership(any(AzureGroupMembership.class));
-            verify(testdata.getMemberships(), times(9)).remove(any(HashKey.class));
+            verify(membershipsSpy, times(9)).remove(any(HashKey.class));
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
         });
     }
@@ -1488,8 +1488,18 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
+        TestUtils.DBObjectListOrchestratorTest orchestrator = new TestUtils.DBObjectListOrchestratorTest();
+        for (int i = 0; i < groups; i++) {
+            orchestrator.getGroups().put(
+                    UUID.randomUUID(),
+                    new DBGroup(HashKey.createHashKey(UUID.randomUUID().toString()))
+            );
+        }
+        orchestrator.generateNRandomUsers(groups * membersPrGroups);
+        ReflectionTestUtils.setField(msGraphGroup, "orchestrator", orchestrator);
+
         DeltaGetResponse delta = new DeltaGetResponse();
-        delta.setValue(getTestGrouplistAddedRemoved(groups, membersPrGroups, 0)); // 10 groups, 1000 adds/group, 0 removes
+        delta.setValue(getTestGrouplistAddedRemoved(groups, membersPrGroups, 0, orchestrator));
         delta.setOdataDeltaLink("delta link");
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
 
