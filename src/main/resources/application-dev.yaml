@@ -8,6 +8,10 @@ logging:
     okhttp3: WARN
     #org.apache: ERROR
 fint:
+  database:
+    username: ${POSTGRES_USER}
+    url: jdbc:postgresql://localhost:5432/kontroll?currentSchema=${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
   kontroll:
     azure-ad-gateway:
       user-scheduler:
