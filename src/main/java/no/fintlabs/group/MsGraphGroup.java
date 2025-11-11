@@ -16,8 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.*;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
-import no.fintlabs.db.*;
-import no.fintlabs.db.entity.DBMembership;
+import no.fintlabs.core.*;
+import no.fintlabs.core.entity.CoreMembership;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,7 +45,7 @@ public class MsGraphGroup {
     //DBObjectList<DBGroup> azureGroupCache;
     //DBObjectList<AzureGroup> resourceGroupMembershipCache;
     //DBObjectList<DBMembership> membershipCache;
-    private final DBObjectListOrchestrator orchestrator;
+    private final CoreObjectListOrchestrator orchestrator;
     private final AzureGroupProducerService azureGroupProducerService;
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final ExecutorService groupExecutor = Executors.newFixedThreadPool(10);
@@ -217,7 +217,7 @@ public class MsGraphGroup {
 
                 HashKey key;
                 try {
-                    key = DBMembershipMapper.toDBMembershipHashKey(UUID.fromString(memberId), UUID.fromString(group.getId()));
+                    key = CoreMembershipMapper.toDBMembershipHashKey(UUID.fromString(memberId), UUID.fromString(group.getId()));
                 } catch (Exception e) {
                     log.error(e.getMessage());
                     continue;
@@ -238,7 +238,7 @@ public class MsGraphGroup {
                 }
 
                 // TODO: This should never happen. ID is updated with new object.
-                DBMembership oldval = orchestrator.getMemberships().putIfAbsent(key, DBMembershipMapper.toDBMembership(UUID.fromString(memberId), UUID.fromString(group.getId()), orchestrator.getUsers(), orchestrator.getGroups()));
+                CoreMembership oldval = orchestrator.getMemberships().putIfAbsent(key, CoreMembershipMapper.toDBMembership(UUID.fromString(memberId), UUID.fromString(group.getId()), orchestrator.getUsers(), orchestrator.getGroups()));
                 if (oldval == null) {
                     AzureGroupMembership m = new AzureGroupMembership(memberId, group.getId(), key.toString());
                     azureGroupMembershipProducerService.addMembership(m);
@@ -320,7 +320,7 @@ public class MsGraphGroup {
                     } else {
                         groupCounter.incrementAndGet();
                         azureGroupProducerService.processGroup(newGroup);
-                        orchestrator.getGroups().put(UUID.fromString(newGroup.getId()), DBGroupMapper.toDBGroup(newGroup));
+                        orchestrator.getGroups().put(UUID.fromString(newGroup.getId()), CoreGroupMapper.toDBGroup(newGroup));
                         allGroups.add(newGroup);
                     }
                     return true;
@@ -376,11 +376,11 @@ public class MsGraphGroup {
         page.getValue().forEach(member -> {
             AzureGroupMembership azureGroupMembership = new AzureGroupMembership(azureGroup.getId(), member);
             if (orchestrator.getMemberships() != null
-                    && orchestrator.getMemberships().containsKey(DBMembershipMapper.toDBMembershipHashKey(azureGroupMembership))) {
+                    && orchestrator.getMemberships().containsKey(CoreMembershipMapper.toDBMembershipHashKey(azureGroupMembership))) {
                 log.debug("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.getId(), azureGroup.getId());
             } else {
                 azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
-                orchestrator.getMemberships().put(DBMembershipMapper.toDBMembershipHashKey(azureGroupMembership), DBMembershipMapper.toDBMembership(azureGroupMembership, orchestrator.getUsers(), orchestrator.getGroups()));
+                orchestrator.getMemberships().put(CoreMembershipMapper.toDBMembershipHashKey(azureGroupMembership), CoreMembershipMapper.toDBMembership(azureGroupMembership, orchestrator.getUsers(), orchestrator.getGroups()));
                 membersCount.getAndIncrement();
                 numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
@@ -654,7 +654,7 @@ public class MsGraphGroup {
         }
         String groupId = splitString[0];
         String userId = splitString[1];
-        HashKey membershipKey = DBMembershipMapper.toDBMembershipHashKey(UUID.fromString(userId), UUID.fromString(groupId));
+        HashKey membershipKey = CoreMembershipMapper.toDBMembershipHashKey(UUID.fromString(userId), UUID.fromString(groupId));
 
         CompletableFuture.runAsync(() -> {
             try {

@@ -1,18 +1,18 @@
-package no.fintlabs.db;
+package no.fintlabs.core;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import no.fintlabs.db.entity.DBObject;
+import no.fintlabs.core.entity.CoreObject;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 @Setter
 @Getter
 @RequiredArgsConstructor
-public class DBObjectList<I, T extends DBObject> {
+public class CoreObjectList<I, T extends CoreObject> {
     private ConcurrentHashMap<I, T> hashMap = new ConcurrentHashMap<>();
-    private DBSink<I, T> sink = new DBSink<>();
+    private CoreSink<I, T> sink = new CoreSink<>();
 
     private int kafkaOffset = 0;
     public void clear() {
@@ -53,6 +53,4 @@ public class DBObjectList<I, T extends DBObject> {
     private void persist(I key, T obj) {
         sink.persist(key, obj);
     }
-
-    public void loadFromDB() {};
 }

@@ -1,24 +1,22 @@
-package no.fintlabs.db;
+package no.fintlabs.core;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.log4j.Log4j2;
 import no.fintlabs.azure.AzureGroup;
 import no.fintlabs.azure.HashKey;
-import no.fintlabs.db.entity.DBGroup;
+import no.fintlabs.core.entity.CoreGroup;
 import no.fintlabs.kafka.ResourceGroup;
 import org.apache.commons.lang3.SerializationUtils;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.UUID;
 
 @Log4j2
 @Setter
 @Getter
 @RequiredArgsConstructor
-public class DBGroupMapper {
+public class CoreGroupMapper {
 
     private static final ThreadLocal<MessageDigest> SHA_256 = ThreadLocal.withInitial(() -> {
         try {
@@ -28,8 +26,8 @@ public class DBGroupMapper {
         }
     });
 
-    static public DBGroup toDBGroup(AzureGroup azureGroup) {
-        return new DBGroup(
+    static public CoreGroup toDBGroup(AzureGroup azureGroup) {
+        return new CoreGroup(
                 new HashKey(
                         SHA_256.get().digest(
                                 SerializationUtils.serialize(azureGroup)
@@ -38,9 +36,9 @@ public class DBGroupMapper {
         );
     }
 
-    static public DBGroup toDBGroup(ResourceGroup resourceGroup) {
+    static public CoreGroup toDBGroup(ResourceGroup resourceGroup) {
         try {
-            return new DBGroup(
+            return new CoreGroup(
                     new HashKey(
                         SHA_256.get().digest(
                             SerializationUtils.serialize(resourceGroup)

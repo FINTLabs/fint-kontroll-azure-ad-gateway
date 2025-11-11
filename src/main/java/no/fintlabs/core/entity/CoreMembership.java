@@ -1,23 +1,21 @@
-package no.fintlabs.db.entity;
+package no.fintlabs.core.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import no.fintlabs.azure.HashKey;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.UUID;
 
 @Setter
 @Getter
 @AllArgsConstructor
-public class DBMembership extends DBObject implements Serializable {
+public class CoreMembership extends CoreObject implements Serializable {
     @Serial
     private HashKey hash;
     @Serial
-    private DBUser user;
+    private CoreUser user;
     @Serial
-    private DBGroup group;
+    private CoreGroup group;
 }

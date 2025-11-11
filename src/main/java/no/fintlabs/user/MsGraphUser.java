@@ -8,9 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.*;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigUser;
-import no.fintlabs.db.DBObjectListOrchestrator;
-import no.fintlabs.db.entity.DBUser;
-import no.fintlabs.db.DBUserMapper;
+import no.fintlabs.core.CoreObjectListOrchestrator;
+import no.fintlabs.core.entity.CoreUser;
+import no.fintlabs.core.CoreUserMapper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +27,7 @@ public class MsGraphUser {
     protected final Config config;
     protected final ConfigUser configUser;
     protected final GraphServiceClient graphServiceClient;
-    private final DBObjectListOrchestrator orchestrator;
+    private final CoreObjectListOrchestrator orchestrator;
     //private final ConcurrentHashMap<String, AzureUser> entraIdUserCache;
     //private final DBObjectList<DBUser> entraIdUserCache;
     //private final ConcurrentHashMap<String, AzureUserExternal> entraIdExternalUserCache;
@@ -187,7 +187,7 @@ public class MsGraphUser {
         if (user.getUserType() == null || !user.getUserType().equalsIgnoreCase("Member")) return;
 
         if (orchestrator.getUsers().isEmpty() == false) {
-            final DBUser cached = orchestrator.getUsers().get(UUID.fromString(user.getId()));
+            final CoreUser cached = orchestrator.getUsers().get(UUID.fromString(user.getId()));
             if (cached != null) {
                 final AzureUser fresh = new AzureUser(user, configUser);
                 if (fresh.equals(cached)) {
@@ -205,12 +205,12 @@ public class MsGraphUser {
             users.incrementAndGet();
             final AzureUserExternal ext = new AzureUserExternal(user, configUser);
             if (orchestrator.getUsersExternal() != null) {
-                final DBUser cachedExt = orchestrator.getUsersExternal().get(UUID.fromString(user.getId()));
+                final CoreUser cachedExt = orchestrator.getUsersExternal().get(UUID.fromString(user.getId()));
                 if (ext.equals(cachedExt)) {
                     log.info("External user {} unchanged. Skipping Kafka.", user.getId());
                     return;
                 }
-                orchestrator.getUsersExternal().put(UUID.fromString(user.getId()), DBUserMapper.toDBUser(ext));
+                orchestrator.getUsersExternal().put(UUID.fromString(user.getId()), CoreUserMapper.toDBUser(ext));
             }
             log.debug("Publishing external user to Kafka: {}", user.getUserPrincipalName());
             azureUserExternalProducerService.publish(ext);
@@ -227,7 +227,7 @@ public class MsGraphUser {
             log.debug("Updating cache for user: {}", user.getId());
             changedUsers.incrementAndGet();
             if (orchestrator.getUsers() != null) {
-                orchestrator.getUsers().put(UUID.fromString(user.getId()), DBUserMapper.toDBUser(az));
+                orchestrator.getUsers().put(UUID.fromString(user.getId()), CoreUserMapper.toDBUser(az));
             }
         } else {
             log.debug("UserId: {} is missing employeeId/studentId. Not published to kafka.", user.getId());

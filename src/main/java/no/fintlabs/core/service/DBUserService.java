@@ -1,9 +1,9 @@
-package no.fintlabs.db.service;
+package no.fintlabs.core.service;
 
 import lombok.RequiredArgsConstructor;
-import no.fintlabs.db.DBUserMapper;
-import no.fintlabs.db.entity.DBUser;
-import no.fintlabs.db.repository.DBUserRepository;
+import no.fintlabs.core.CoreUserMapper;
+import no.fintlabs.core.entity.CoreUser;
+import no.fintlabs.core.repository.DBUserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -14,12 +14,12 @@ public class DBUserService {
 
     private final DBUserRepository dbUserRepository;
 
-    public DBUser getUserById(UUID id){
+    public CoreUser getUserById(UUID id){
         return dbUserRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("No user with id " + id));
     }
 
-    public DBUser saveUser(no.fintlabs.azure.AzureUser user){
-        return dbUserRepository.save(DBUserMapper.toDBUser(user));
+    public CoreUser saveUser(no.fintlabs.azure.AzureUser user){
+        return dbUserRepository.save(CoreUserMapper.toDBUser(user));
     }
 
 }

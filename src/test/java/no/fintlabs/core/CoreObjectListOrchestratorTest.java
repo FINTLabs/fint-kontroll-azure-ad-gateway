@@ -1,9 +1,9 @@
-package no.fintlabs.db;
+package no.fintlabs.core;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-public class DBObjectListOrchestratorTest {
+public class CoreObjectListOrchestratorTest {
 
     @Disabled
     @Test

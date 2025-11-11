@@ -1,13 +1,12 @@
-package no.fintlabs.db.entity;
+package no.fintlabs.core.entity;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import no.fintlabs.db.entity.DBObject;
 
 @Setter
 @Getter
 @RequiredArgsConstructor
-public class DBDelta extends DBObject {
+public class CoreDelta extends CoreObject {
     private String URL;
 }

@@ -1,10 +1,10 @@
-package no.fintlabs.db.service;
+package no.fintlabs.core.service;
 
 import no.fintlabs.azure.AzureUser;
 import no.fintlabs.azure.HashKey;
-import no.fintlabs.db.DBUserMapper;
-import no.fintlabs.db.entity.DBUser;
-import no.fintlabs.db.repository.DBUserRepository;
+import no.fintlabs.core.CoreUserMapper;
+import no.fintlabs.core.entity.CoreUser;
+import no.fintlabs.core.repository.DBUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,13 +29,13 @@ class DBUserServiceTest {
     private DBUserService buUserService;
 
     private UUID validUuid;
-    private DBUser mockDBUser;
+    private CoreUser mockDBUser;
     private AzureUser mockAzureUser;
 
     @BeforeEach
     void setUp() {
         validUuid = UUID.randomUUID();
-        mockDBUser = new DBUser(HashKey.createHashKey(UUID.randomUUID()));
+        mockDBUser = new CoreUser(HashKey.createHashKey(UUID.randomUUID()));
         mockAzureUser = AzureUser.builder().idpUserObjectId(UUID.randomUUID().toString()).build();
     }
 
@@ -43,7 +43,7 @@ class DBUserServiceTest {
     void getUserById_WithValidId_ReturnsUser() {
         when(dbUserRepository.findById(validUuid)).thenReturn(Optional.of(mockDBUser));
 
-        DBUser result = buUserService.getUserById(validUuid);
+        CoreUser result = buUserService.getUserById(validUuid);
 
         assertNotNull(result);
         assertEquals(mockDBUser, result);
@@ -67,10 +67,10 @@ class DBUserServiceTest {
 
     @Test
     void saveUser_WithValidUser_ReturnsSavedUser() {
-        DBUser mappedUser = DBUserMapper.toDBUser(mockAzureUser);
-        when(dbUserRepository.save(any(DBUser.class))).thenReturn(mappedUser);
+        CoreUser mappedUser = CoreUserMapper.toDBUser(mockAzureUser);
+        when(dbUserRepository.save(any(CoreUser.class))).thenReturn(mappedUser);
 
-        DBUser result = buUserService.saveUser(mockAzureUser);
+        CoreUser result = buUserService.saveUser(mockAzureUser);
 
         assertNotNull(result);
         assertEquals(mappedUser, result);

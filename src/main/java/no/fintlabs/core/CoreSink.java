@@ -1,11 +1,11 @@
-package no.fintlabs.db;
+package no.fintlabs.core;
 
 import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import no.fintlabs.db.entity.DBObject;
+import no.fintlabs.core.entity.CoreObject;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
@@ -15,7 +15,7 @@ import reactor.util.function.Tuples;
 @Setter
 @Getter
 @AllArgsConstructor
-public class DBSink<I, T extends DBObject> {
+public class CoreSink<I, T extends CoreObject> {
     private final Sinks.Many<Tuple2<I, T>> sink = Sinks.many().unicast().onBackpressureBuffer();
 
     public void persist(Tuple2<I, T> object) {

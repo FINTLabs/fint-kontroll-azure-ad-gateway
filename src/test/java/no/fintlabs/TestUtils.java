@@ -1,17 +1,14 @@
 package no.fintlabs;
 
 import com.microsoft.graph.models.Group;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.HashKey;
-import no.fintlabs.db.*;
-import no.fintlabs.db.entity.DBGroup;
-import no.fintlabs.db.entity.DBMembership;
-import no.fintlabs.db.entity.DBUser;
+import no.fintlabs.core.*;
+import no.fintlabs.core.entity.CoreGroup;
+import no.fintlabs.core.entity.CoreMembership;
+import no.fintlabs.core.entity.CoreUser;
 import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
@@ -35,13 +32,13 @@ public class TestUtils {
         }
     }
 
-    public static class DBObjectListOrchestratorTest extends DBObjectListOrchestrator {
+    public static class CoreObjectListOrchestratorTest extends CoreObjectListOrchestrator {
         private Random rand = new Random();
-        public DBObjectListOrchestratorTest() {
+        public CoreObjectListOrchestratorTest() {
         }
         public void generateNRandomUsers(int nUsers) {
             for (int i = 0; i < nUsers; i++) {
-                this.getUsers().put(UUID.randomUUID(), new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
+                this.getUsers().put(UUID.randomUUID(), new CoreUser(HashKey.createHashKey(UUID.randomUUID().toString())));
             }
         }
         public void generateNRandomGroupsWithNMemberships(int nGroups, int lowMemberNumber, int highMemberNumber) {
@@ -55,15 +52,15 @@ public class TestUtils {
             }
             List<UUID> userList = getUsers().getHashMap().keySet().stream().toList();
             for (int i=0; i<nGroups; i++) {
-                DBGroup newGroup = new DBGroup(HashKey.createHashKey(UUID.randomUUID().toString()));
+                CoreGroup newGroup = new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString()));
                 UUID newGroupID = UUID.randomUUID();
                 getGroups().put(newGroupID, newGroup);
                 for (int j=0; j < rand.nextInt((highMemberNumber - lowMemberNumber) + 1) + lowMemberNumber; j++) {
                     // Pick random user
                     UUID userId = userList.get(rand.nextInt(userList.size()));
                     getMemberships().put(
-                            DBMembershipMapper.toDBMembershipHashKey(userId, newGroupID),
-                            new DBMembership(
+                            CoreMembershipMapper.toDBMembershipHashKey(userId, newGroupID),
+                            new CoreMembership(
                                     HashKey.createHashKey(UUID.randomUUID()),
                                     getUsers().get(userId),
                                     newGroup) );

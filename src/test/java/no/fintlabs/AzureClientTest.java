@@ -17,16 +17,15 @@ import com.microsoft.kiota.serialization.UntypedArray;
 import com.microsoft.kiota.serialization.UntypedNode;
 import com.microsoft.kiota.serialization.UntypedObject;
 import com.microsoft.kiota.serialization.UntypedString;
-import jdk.jfr.Enabled;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.*;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
 import no.fintlabs.config.ConfigUser;
-import no.fintlabs.db.*;
-import no.fintlabs.db.entity.DBGroup;
-import no.fintlabs.db.entity.DBMembership;
-import no.fintlabs.db.entity.DBUser;
+import no.fintlabs.core.*;
+import no.fintlabs.core.entity.CoreGroup;
+import no.fintlabs.core.entity.CoreMembership;
+import no.fintlabs.core.entity.CoreUser;
 import no.fintlabs.group.MsGraphGroup;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
@@ -34,8 +33,6 @@ import no.fintlabs.user.MsGraphUser;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -112,7 +109,7 @@ class AzureClientTest {
     private Config.Credentials configcredentials;
 
     @Spy
-    DBObjectListOrchestrator orchestrator;
+    CoreObjectListOrchestrator orchestrator;
 
     @InjectMocks
     private MsGraphGroup msGraphGroup;
@@ -121,13 +118,13 @@ class AzureClientTest {
     private MsGraphUser msGraphUser;
 
     @Mock
-    DBObjectList<UUID, DBUser> orchestratoruserlist;
+    CoreObjectList<UUID, CoreUser> orchestratoruserlist;
 
     @Mock
-    DBObjectList<HashKey, DBMembership> orchestratormemberships;
+    CoreObjectList<HashKey, CoreMembership> orchestratormemberships;
 
     @Mock
-    DBObjectList<UUID, DBGroup> orchestratorgrouplist;
+    CoreObjectList<UUID, CoreGroup> orchestratorgrouplist;
 
     @Mock
     private HashSet<String> azureGroupMembershipCache;
@@ -200,7 +197,7 @@ class AzureClientTest {
             for (UntypedNode n : members.getValue()) {
                 UntypedObject uo = (UntypedObject) n;
                 UUID userId = UUID.fromString( uo.getValue().get("id").getValue().toString() );
-                HashKey membershipKey = DBMembershipMapper.toDBMembershipHashKey(userId, groupId);
+                HashKey membershipKey = CoreMembershipMapper.toDBMembershipHashKey(userId, groupId);
 
                 if (uo.getValue().containsKey("@removed")) {
                     memberShipsRemoved.add(Tuples.of(membershipKey, Tuples.of(userId, groupId)));
@@ -214,7 +211,7 @@ class AzureClientTest {
         return new TestUtils.TestGroupData(groups, memberShipsAdded, memberShipsRemoved, usersAdded, usersRemoved);
     }
 
-    private UntypedObject getTestUser(boolean removed, DBObjectListOrchestrator orchestrator) {
+    private UntypedObject getTestUser(boolean removed, CoreObjectListOrchestrator orchestrator) {
         Map<String, UntypedNode> userMap = new HashMap<>();
         userMap.put("@odata.type", new UntypedString("#microsoft.graph.user"));
         userMap.put("id", new UntypedString(UUID.randomUUID().toString()));
@@ -229,7 +226,7 @@ class AzureClientTest {
         return new UntypedObject(userMap);
     }
 
-    private UntypedArray getDeltaMembers(int numUsersAdded, int numUsersRemoved, DBObjectListOrchestrator orchestrator) {
+    private UntypedArray getDeltaMembers(int numUsersAdded, int numUsersRemoved, CoreObjectListOrchestrator orchestrator) {
         List<UntypedNode> users = new ArrayList<>();
         for (int i = 0; i < numUsersAdded; i++) {
             users.add(getTestUser(false,orchestrator));
@@ -244,7 +241,7 @@ class AzureClientTest {
         return getTestGrouplistAddedRemoved(numberOfGroups, nUsersAdded, nUsersRemoved, null);
     }
 
-    private List<Group> getTestGrouplistAddedRemoved(int numberOfGroups, int nUsersAdded, int nUsersRemoved, DBObjectListOrchestrator orchestrator) {
+    private List<Group> getTestGrouplistAddedRemoved(int numberOfGroups, int nUsersAdded, int nUsersRemoved, CoreObjectListOrchestrator orchestrator) {
         List<Group> retGroupList = new ArrayList<>();
         if (orchestrator != null && numberOfGroups > orchestrator.getGroups().size()) {
             write("ERROR: Please supply number of groups <= '" + orchestrator.getGroups().size() + "'");
@@ -662,7 +659,7 @@ class AzureClientTest {
         when(deltaRequestBuilder.get(any())).thenReturn(delta);
 
         msGraphGroup.pullAllGroupsDelta();
-        DBObjectList<UUID, DBMembership> memberships = spy(DBObjectList.class);
+        CoreObjectList<UUID, CoreMembership> memberships = spy(CoreObjectList.class);
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
@@ -684,7 +681,7 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
-        TestUtils.DBObjectListOrchestratorTest testdata = new TestUtils.DBObjectListOrchestratorTest();
+        TestUtils.CoreObjectListOrchestratorTest testdata = new TestUtils.CoreObjectListOrchestratorTest();
         testdata.generateNRandomUsers(50);
         // TODO: Should fail harder if generation fails
         testdata.generateNRandomGroupsWithNMemberships(5,2,6);
@@ -704,12 +701,12 @@ class AzureClientTest {
 
         // Add testgroups to testdata
         for (Group group : testGroups) {
-            testdata.getGroups().put(UUID.fromString(group.getId()), new DBGroup(HashKey.createHashKey(UUID.randomUUID().toString())));
+            testdata.getGroups().put(UUID.fromString(group.getId()), new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString())));
             write("  Adding group IDs : " + group.getId());
         }
         // Add testusers to testdata
         for (UUID userId : testGroupData.removedUsers) {
-            testdata.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
+            testdata.getUsers().put(userId, new CoreUser(HashKey.createHashKey(UUID.randomUUID().toString())));
             write("  Adding user IDs : " + userId.toString());
         }
 
@@ -717,7 +714,7 @@ class AzureClientTest {
         for (Tuple2<HashKey,Tuple2<UUID, UUID>> membership : testGroupData.removedMemberships) {
             testdata.getMemberships().put(
                     membership.getT1(),
-                    new DBMembership(
+                    new CoreMembership(
                             HashKey.createHashKey(UUID.randomUUID().toString()),
                             testdata.getUsers().get(membership.getT2().getT1()),
                             testdata.getGroups().get(membership.getT2().getT2())
@@ -765,11 +762,11 @@ class AzureClientTest {
 
         //for (UUID userId: testGroupData.removedMemberships) {
         for (UUID userId: testGroupData.removedUsers) {
-            orchestrator.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
+            orchestrator.getUsers().put(userId, new CoreUser(HashKey.createHashKey(UUID.randomUUID().toString())));
         }
         //for (UUID userId: testGroupData.createdMemberships) {
         for (UUID userId: testGroupData.addedUsers) {
-            orchestrator.getUsers().put(userId, new DBUser(HashKey.createHashKey(UUID.randomUUID().toString())));
+            orchestrator.getUsers().put(userId, new CoreUser(HashKey.createHashKey(UUID.randomUUID().toString())));
         }
         ReflectionTestUtils.setField(msGraphGroup, "orchestrator", orchestrator);
 
@@ -780,7 +777,7 @@ class AzureClientTest {
 
         await().atMost(5, SECONDS).untilAsserted(() -> {
             verify(azureGroupProducerService, times(3)).processGroup(any(AzureGroup.class));
-            verify(orchestrator.getMemberships(), times(18)).put(any(HashKey.class), any(DBMembership.class));
+            verify(orchestrator.getMemberships(), times(18)).put(any(HashKey.class), any(CoreMembership.class));
             verify(azureGroupMembershipProducerService, never()).addMembership(any(AzureGroupMembership.class));
             verify(orchestrator.getMemberships(), times(9)).remove(any(HashKey.class));
             verify(azureGroupMembershipProducerService, times(9)).removeMembership(any(AzureGroupMembership.class));
@@ -1088,7 +1085,7 @@ class AzureClientTest {
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser nonCachedUser = new AzureUser(user2, configUser);
         lenient().when(orchestrator.getUsers().containsKey(UUID.fromString(user.getId()))).thenReturn(true);
-        lenient().when(orchestrator.getUsers().get(UUID.fromString(user.getId()))).thenReturn(DBUserMapper.toDBUser(cachedUser));
+        lenient().when(orchestrator.getUsers().get(UUID.fromString(user.getId()))).thenReturn(CoreUserMapper.toDBUser(cachedUser));
 
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
@@ -1140,7 +1137,7 @@ class AzureClientTest {
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser notCachedUser = new AzureUser(user2, configUser);
         lenient().when(orchestrator.getUsers().containsKey(UUID.fromString(user.getId()))).thenReturn(true);
-        lenient().when(orchestrator.getUsers().get(UUID.fromString(user.getId()))).thenReturn(DBUserMapper.toDBUser(cachedUser));
+        lenient().when(orchestrator.getUsers().get(UUID.fromString(user.getId()))).thenReturn(CoreUserMapper.toDBUser(cachedUser));
 
         ForkJoinPool testPool = new ForkJoinPool(2);
         testPool.submit(() -> msGraphUser.pullAllUsersDelta()).join();
@@ -1228,10 +1225,10 @@ class AzureClientTest {
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser notCachedUser = new AzureUser(user2, configUser);
-        DBUser dbUser = DBUserMapper.toDBUser(cachedUser);
-        DBObjectList<UUID,DBUser> dbObjectList = new DBObjectList<>();
-        dbObjectList.put(UUID.fromString(cachedUser.getIdpUserObjectId()), dbUser);
-        when(orchestrator.getUsers()).thenReturn(dbObjectList);
+        CoreUser dbUser = CoreUserMapper.toDBUser(cachedUser);
+        CoreObjectList<UUID, CoreUser> coreObjectList = new CoreObjectList<>();
+        coreObjectList.put(UUID.fromString(cachedUser.getIdpUserObjectId()), dbUser);
+        when(orchestrator.getUsers()).thenReturn(coreObjectList);
 
 //        lenient().when(orchestrator.getUsers().containsKey(user.getId())).thenReturn(true);
 //        lenient().when(orchestrator.getUsers().get(user.getId())).thenReturn(DBUserMapper.toDBUser(cachedUser));
@@ -1488,11 +1485,11 @@ class AzureClientTest {
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
         when(groupsRequestBuilder.delta()).thenReturn(deltaRequestBuilder);
 
-        TestUtils.DBObjectListOrchestratorTest orchestrator = new TestUtils.DBObjectListOrchestratorTest();
+        TestUtils.CoreObjectListOrchestratorTest orchestrator = new TestUtils.CoreObjectListOrchestratorTest();
         for (int i = 0; i < groups; i++) {
             orchestrator.getGroups().put(
                     UUID.randomUUID(),
-                    new DBGroup(HashKey.createHashKey(UUID.randomUUID().toString()))
+                    new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString()))
             );
         }
         orchestrator.generateNRandomUsers(groups * membersPrGroups);

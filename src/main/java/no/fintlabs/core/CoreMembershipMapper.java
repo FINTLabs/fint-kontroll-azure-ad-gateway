@@ -1,27 +1,23 @@
-package no.fintlabs.db;
+package no.fintlabs.core;
 
-import jakarta.persistence.Tuple;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.HashKey;
-import no.fintlabs.db.entity.DBGroup;
-import no.fintlabs.db.entity.DBMembership;
-import no.fintlabs.db.entity.DBUser;
-import org.apache.commons.lang3.SerializationUtils;
+import no.fintlabs.core.entity.CoreGroup;
+import no.fintlabs.core.entity.CoreMembership;
+import no.fintlabs.core.entity.CoreUser;
 import reactor.util.function.Tuples;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 @Slf4j
-public class DBMembershipMapper {
-    static public DBMembership toDBMembership (
+public class CoreMembershipMapper {
+    static public CoreMembership toDBMembership (
             AzureGroupMembership membership,
-            DBObjectList<UUID, DBUser> users,
-            DBObjectList<UUID, DBGroup> groups) {
+            CoreObjectList<UUID, CoreUser> users,
+            CoreObjectList<UUID, CoreGroup> groups) {
         try {
-            return new DBMembership(
+            return new CoreMembership(
                     HashKey.createHashKey(membership),
                     users.get(UUID.fromString(membership.getUser_id())),
                     groups.get(UUID.fromString(membership.getGroup_id())));
@@ -30,13 +26,13 @@ public class DBMembershipMapper {
             return null;
         }
     }
-    static public DBMembership toDBMembership (
+    static public CoreMembership toDBMembership (
             UUID user_id,
             UUID group_id,
-            DBObjectList<UUID, DBUser> users,
-            DBObjectList<UUID, DBGroup> groups) {
+            CoreObjectList<UUID, CoreUser> users,
+            CoreObjectList<UUID, CoreGroup> groups) {
         try {
-            return new DBMembership(
+            return new CoreMembership(
                     HashKey.createHashKey("test123"),
                     users.get(user_id),
                     groups.get(group_id)

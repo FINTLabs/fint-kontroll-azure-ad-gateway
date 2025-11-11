@@ -1,12 +1,10 @@
-package no.fintlabs.db.entity;
+package no.fintlabs.core.entity;
 import lombok.*;
 import no.fintlabs.azure.HashKey;
-
-import java.util.UUID;
 
 @Setter
 @Getter
 @AllArgsConstructor
-public class DBUser extends DBObject {
+public class CoreUser extends CoreObject {
     private HashKey hash;
 }
