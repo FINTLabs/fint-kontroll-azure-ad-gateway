@@ -9,5 +9,5 @@ import java.sql.Timestamp;
 @Getter
 @RequiredArgsConstructor
 public class CoreObject {
-    private Timestamp timestamp;
+    private Timestamp lastSeen;
 }
