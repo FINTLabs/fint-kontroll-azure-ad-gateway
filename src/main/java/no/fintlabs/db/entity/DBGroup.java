@@ -12,5 +12,7 @@ import java.util.UUID;
 @Getter
 @AllArgsConstructor
 public class DBGroup extends DBObject {
-    private HashKey hash;
+    private HashKey kafkaChecksum;
+    private HashKey entraChecksum;
+    private String name;
 }

@@ -30,7 +30,7 @@ public class LookupService {
             requestBody.setSecurityEnabledOnly(true);
             List<String> groupIds = graphServiceClient.users().byUserId(userId).getMemberGroups().post(requestBody).getValue();
 
-            String[] selectionCriteriaGroup = new String[]{String.format("id,displayName,%s", configGroup.getFintkontrollidattribute())};
+            String[] selectionCriteriaGroup = configGroup.getGroupAttributesNotMembers();
             List<AzureGroup> azureGroups = new ArrayList<>();
             for (String groupId : groupIds) {
                 Group group = graphServiceClient

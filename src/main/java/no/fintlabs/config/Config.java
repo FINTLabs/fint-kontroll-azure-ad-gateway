@@ -75,7 +75,7 @@ public class Config {
         dispatcher.setMaxRequestsPerHost(64);
 
         okhttp3.ConnectionPool pool = new okhttp3.ConnectionPool(
-                100, 5, java.util.concurrent.TimeUnit.MINUTES);
+                100, 5, TimeUnit.MINUTES);
 
         OkHttpClient okHttpClient = new OkHttpClient.Builder()
                 .dispatcher(dispatcher)
