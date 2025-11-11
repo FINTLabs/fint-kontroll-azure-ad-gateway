@@ -55,7 +55,8 @@ public class ConfigUser {
         AllAttribs.add(this.getExternaluserattribute());
         AllAttribs.addAll(userAttributes);
         return AllAttribs;
-    };
+    }
+
     public String[] userAttributesDelta() {
         boolean wantsOnPremExtChild = false;
 

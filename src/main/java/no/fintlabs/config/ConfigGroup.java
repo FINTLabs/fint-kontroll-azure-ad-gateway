@@ -33,11 +33,11 @@ public class ConfigGroup {
         allAttribs.add(membersAttribute);
         allAttribs.add(this.getFintkontrollidattribute());
         return allAttribs.toArray(new String[0]);
-    };
+    }
 
     public String[] getGroupAttributesNotMembers() {
         List<String> allAttribs = new ArrayList<>(groupAttributes);
         allAttribs.add(this.getFintkontrollidattribute());
         return allAttribs.toArray(new String[0]);
-    };
+    }
 }

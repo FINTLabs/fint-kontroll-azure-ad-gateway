@@ -35,7 +35,7 @@ public class CoreGroupMapper {
     static class CompareGroup implements Serializable {
         private long id;
         private String name;
-    };
+    }
 
     static public CoreGroup toCoreGroup(CompareGroup compareGroup) {
         try {

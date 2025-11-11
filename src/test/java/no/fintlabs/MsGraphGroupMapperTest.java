@@ -9,8 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 @ExtendWith(MockitoExtension.class)
 public class MsGraphGroupMapperTest {
 
@@ -20,10 +18,8 @@ public class MsGraphGroupMapperTest {
     @Mock
     private Config config;
 
-    private ResourceGroup resourceGroup;
-
     public MsGraphGroupMapperTest() {
-        resourceGroup = ResourceGroup.builder()
+        ResourceGroup resourceGroup = ResourceGroup.builder()
                 .id("123")
                 .resourceType("licenseResource")
                 .resourceName("testResourceName")

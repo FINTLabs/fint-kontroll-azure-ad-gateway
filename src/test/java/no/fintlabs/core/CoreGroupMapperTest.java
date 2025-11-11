@@ -10,8 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import javax.swing.*;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class CoreGroupMapperTest {
@@ -40,5 +38,7 @@ class CoreGroupMapperTest {
         CoreGroup group2 = CoreGroupMapper.toCoreGroup(azureGroup);
 
         assertEquals(group1.getChecksum(), group2.getChecksum());
+
+
     }
 }

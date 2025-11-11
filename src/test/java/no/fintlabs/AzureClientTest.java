@@ -191,7 +191,8 @@ class AzureClientTest {
         List<UUID> usersRemoved = new ArrayList<>();
 
         for (Group g : groups) {
-            Long groupId = Long.getLong(g.getId());
+            String myId = g.getId();
+            Long groupId = Long.valueOf(g.getId());
             UntypedArray members = (UntypedArray) g.getAdditionalData().get("members@delta");
 
             for (UntypedNode n : members.getValue()) {
@@ -692,7 +693,7 @@ class AzureClientTest {
 
         // Add testgroups to testdata
         for (Group group : testGroups) {
-            testdata.getGroups().put(Long.getLong(group.getId()), new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString()), "TestGroup-" + group.getId()));
+            testdata.getGroups().put(Long.valueOf(group.getId()), new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString()), "TestGroup-" + group.getId()));
             write("  Adding group IDs : " + group.getId());
         }
         // Add testusers to testdata
@@ -1216,9 +1217,9 @@ class AzureClientTest {
 
         AzureUser cachedUser = new AzureUser(user, configUser);
         AzureUser notCachedUser = new AzureUser(user2, configUser);
-        CoreUser dbUser = CoreUserMapper.toDBUser(cachedUser);
-        CoreObjectList<UUID, CoreUser> coreObjectList = new CoreObjectList<>();
-        coreObjectList.put(UUID.fromString(cachedUser.getIdpUserObjectId()), dbUser);
+        CoreUser coreUser = CoreUserMapper.toDBUser(cachedUser);
+        CoreObjectListReactive<UUID, CoreUser> coreObjectList = new CoreObjectListReactive<>();
+        coreObjectList.put(UUID.fromString(cachedUser.getIdpUserObjectId()), coreUser);
         when(orchestrator.getUsers()).thenReturn(coreObjectList);
 
 //        lenient().when(orchestrator.getUsers().containsKey(user.getId())).thenReturn(true);

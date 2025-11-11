@@ -11,8 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Getter
 @RequiredArgsConstructor
 public class CoreObjectList<I, T extends CoreObject> {
-    private ConcurrentHashMap<I, T> hashMap = new ConcurrentHashMap<>();
-    private CoreSink<I, T> sink = new CoreSink<>();
+    protected ConcurrentHashMap<I, T> hashMap = new ConcurrentHashMap<>();
 
     private int kafkaOffset = 0;
     public void clear() {
@@ -37,20 +36,11 @@ public class CoreObjectList<I, T extends CoreObject> {
     }
 
     public T put(I key, T obj) {
-        T ret = hashMap.put(key, obj);
-        persist(key, obj);
-        return ret;
+        return hashMap.put(key, obj);
     }
 
     public T putIfAbsent(I key, T obj) {
-        T ret = hashMap.putIfAbsent(key, obj);
-        if (ret == null) {
-            persist(key, obj);
-        }
-        return ret;
+        return hashMap.putIfAbsent(key, obj);
     }
 
-    private void persist(I key, T obj) {
-        sink.persist(key, obj);
-    }
 }

@@ -33,7 +33,7 @@ public class TestUtils {
     }
 
     public static class CoreObjectListOrchestratorTest extends CoreObjectListOrchestrator {
-        private Random rand = new Random();
+        private final Random rand = new Random();
         public CoreObjectListOrchestratorTest() {
         }
         public void generateNRandomUsers(int nUsers) {
@@ -45,7 +45,7 @@ public class TestUtils {
             if (lowMemberNumber > highMemberNumber) {
                 // log.error("lowMemberNumber > highMemberNumber");
                 return;
-            };
+            }
             if (highMemberNumber > getUsers().getHashMap().size()) {
                 // log.error("Asked for members with more than " + highMemberNumber + " members");
                 return;

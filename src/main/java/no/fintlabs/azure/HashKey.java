@@ -3,11 +3,11 @@ package no.fintlabs.azure;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.SerializationUtils;
 
-import java.io.Serial;
 import java.io.Serializable;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.UUID;
 
 @AllArgsConstructor
 public class HashKey {
@@ -19,7 +19,6 @@ public class HashKey {
         }
     });
 
-    @Serial
     private final byte[] hash;
 
     @Override
@@ -42,9 +41,15 @@ public class HashKey {
         );
     }
 
+    public static HashKey createRandomHashKey() {
+        return new HashKey(
+                SHA_256.get().digest(UUID.randomUUID().toString().getBytes())
+        );
+    }
+
     @Override
     public String toString() {
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
         for (byte b: hash) {
             buffer.append(String.format("%02X ", b));
         }

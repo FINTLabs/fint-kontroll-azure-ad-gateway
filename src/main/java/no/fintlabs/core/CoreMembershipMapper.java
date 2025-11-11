@@ -20,7 +20,7 @@ public class CoreMembershipMapper {
             return new CoreMembership(
                     HashKey.createHashKey(membership),
                     users.get(UUID.fromString(membership.getUser_id())),
-                    groups.get(Long.getLong(membership.getGroup_id())));
+                    groups.get(Long.valueOf(membership.getGroup_id())));
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             return null;
