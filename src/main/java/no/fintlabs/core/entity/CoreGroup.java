@@ -10,4 +10,5 @@ import no.fintlabs.azure.HashKey;
 @AllArgsConstructor
 public class CoreGroup extends CoreObject {
     private HashKey checksum;
+    private String name;
 }

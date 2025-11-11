@@ -12,25 +12,25 @@ import java.util.UUID;
 
 @Slf4j
 public class CoreMembershipMapper {
-    static public CoreMembership toDBMembership (
+    static public CoreMembership toCoreMembership (
             AzureGroupMembership membership,
             CoreObjectList<UUID, CoreUser> users,
-            CoreObjectList<UUID, CoreGroup> groups) {
+            CoreObjectList<Long, CoreGroup> groups) {
         try {
             return new CoreMembership(
                     HashKey.createHashKey(membership),
                     users.get(UUID.fromString(membership.getUser_id())),
-                    groups.get(UUID.fromString(membership.getGroup_id())));
+                    groups.get(Long.getLong(membership.getGroup_id())));
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             return null;
         }
     }
-    static public CoreMembership toDBMembership (
+    static public CoreMembership toCoreMembership (
             UUID user_id,
-            UUID group_id,
+            Long group_id,
             CoreObjectList<UUID, CoreUser> users,
-            CoreObjectList<UUID, CoreGroup> groups) {
+            CoreObjectList<Long, CoreGroup> groups) {
         try {
             return new CoreMembership(
                     HashKey.createHashKey("test123"),
@@ -42,10 +42,10 @@ public class CoreMembershipMapper {
             return null;
         }
     }
-    static public HashKey toDBMembershipHashKey (UUID user_id, UUID group_id) {
+    static public HashKey toCoreMembershipHashKey(UUID user_id, Long group_id) {
         return HashKey.createHashKey(Tuples.of(user_id,group_id));
     }
-    static public HashKey toDBMembershipHashKey (AzureGroupMembership membership) {
+    static public HashKey toCoreMembershipHashKey(AzureGroupMembership membership) {
         return HashKey.createHashKey(Tuples.of(membership.getUser_id(),membership.getGroup_id()));
     }
 }

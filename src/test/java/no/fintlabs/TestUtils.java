@@ -19,11 +19,11 @@ public class TestUtils {
 
     public static class TestGroupData {
         public final List<Group> groups;
-        public final List<Tuple2<HashKey,Tuple2<UUID, UUID>>> removedMemberships;
-        public final List<Tuple2<HashKey,Tuple2<UUID, UUID>>> createdMemberships;
+        public final List<Tuple2<HashKey,Tuple2<UUID, Long>>> removedMemberships;
+        public final List<Tuple2<HashKey,Tuple2<UUID, Long>>> createdMemberships;
         public final List<UUID> removedUsers;
         public final List<UUID> addedUsers;
-        public TestGroupData(List<Group> groups, List<Tuple2<HashKey,Tuple2<UUID, UUID>>> createdMemberships, List<Tuple2<HashKey,Tuple2<UUID, UUID>>> removedMemberships, List<UUID> addedUsers, List<UUID> removedUsers) {
+        public TestGroupData(List<Group> groups, List<Tuple2<HashKey,Tuple2<UUID, Long>>> createdMemberships, List<Tuple2<HashKey,Tuple2<UUID, Long>>> removedMemberships, List<UUID> addedUsers, List<UUID> removedUsers) {
             this.groups = groups;
             this.createdMemberships = createdMemberships;
             this.removedMemberships = removedMemberships;
@@ -52,14 +52,14 @@ public class TestUtils {
             }
             List<UUID> userList = getUsers().getHashMap().keySet().stream().toList();
             for (int i=0; i<nGroups; i++) {
-                CoreGroup newGroup = new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString()));
-                UUID newGroupID = UUID.randomUUID();
+                CoreGroup newGroup = new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString()), "testgroup-" + i);
+                Long newGroupID = rand.nextLong();
                 getGroups().put(newGroupID, newGroup);
                 for (int j=0; j < rand.nextInt((highMemberNumber - lowMemberNumber) + 1) + lowMemberNumber; j++) {
                     // Pick random user
                     UUID userId = userList.get(rand.nextInt(userList.size()));
                     getMemberships().put(
-                            CoreMembershipMapper.toDBMembershipHashKey(userId, newGroupID),
+                            CoreMembershipMapper.toCoreMembershipHashKey(userId, newGroupID),
                             new CoreMembership(
                                     HashKey.createHashKey(UUID.randomUUID()),
                                     getUsers().get(userId),

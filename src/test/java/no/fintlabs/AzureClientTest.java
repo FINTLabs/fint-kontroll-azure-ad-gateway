@@ -185,19 +185,19 @@ class AzureClientTest {
     }
 
     public TestUtils.TestGroupData toTestGroupData(List<Group> groups) {
-        List<Tuple2<HashKey,Tuple2<UUID, UUID>>> memberShipsAdded = new ArrayList<>();
-        List<Tuple2<HashKey,Tuple2<UUID, UUID>>> memberShipsRemoved = new ArrayList<>();
+        List<Tuple2<HashKey,Tuple2<UUID, Long>>> memberShipsAdded = new ArrayList<>();
+        List<Tuple2<HashKey,Tuple2<UUID, Long>>> memberShipsRemoved = new ArrayList<>();
         List<UUID> usersAdded = new ArrayList<>();
         List<UUID> usersRemoved = new ArrayList<>();
 
         for (Group g : groups) {
-            UUID groupId = UUID.fromString(g.getId());
+            Long groupId = Long.getLong(g.getId());
             UntypedArray members = (UntypedArray) g.getAdditionalData().get("members@delta");
 
             for (UntypedNode n : members.getValue()) {
                 UntypedObject uo = (UntypedObject) n;
                 UUID userId = UUID.fromString( uo.getValue().get("id").getValue().toString() );
-                HashKey membershipKey = CoreMembershipMapper.toDBMembershipHashKey(userId, groupId);
+                HashKey membershipKey = CoreMembershipMapper.toCoreMembershipHashKey(userId, groupId);
 
                 if (uo.getValue().containsKey("@removed")) {
                     memberShipsRemoved.add(Tuples.of(membershipKey, Tuples.of(userId, groupId)));
@@ -248,14 +248,14 @@ class AzureClientTest {
             return retGroupList;
         }
 
-        List<UUID> groupIds;
+        List<Long> groupIds;
 
         if (orchestrator != null) {
             groupIds = new ArrayList<>(orchestrator.getGroups().getHashMap().keySet());
             java.util.Collections.shuffle(groupIds);
         } else {
             groupIds = java.util.stream.IntStream.range(0, 5)
-                    .mapToObj(i -> UUID.randomUUID())
+                    .mapToObj(i -> new Random().nextLong() )
                     .collect(Collectors.toList());
         }
 
@@ -325,12 +325,9 @@ class AzureClientTest {
         // TEST OK
         ResourceGroup resourceGroup = ResourceGroup.builder()
                 .id("12")
-                .resourceId("123")
                 .displayName("testdisplayname")
                 .identityProviderGroupObjectId("testidpgroup")
                 .resourceName("testresourcename")
-                .resourceType("testresourcetype")
-                .resourceLimit("1000")
                 .build();
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
@@ -364,12 +361,10 @@ class AzureClientTest {
         // TEST OK
         ResourceGroup resourceGroup = ResourceGroup.builder()
                 .id("12")
-                .resourceId("123")
                 .displayName("testdisplayname")
                 .identityProviderGroupObjectId("testidpgroup")
                 .resourceName("testresourcename")
                 .resourceType("testresourcetype")
-                .resourceLimit("1000")
                 .build();
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
@@ -391,12 +386,10 @@ class AzureClientTest {
         // TEST OK
         ResourceGroup resourceGroup = ResourceGroup.builder()
                 .id("1254")
-                .resourceId("12354")
                 //.displayName("testdisplayname")
                 .identityProviderGroupObjectId("testidpgroup32")
                 .resourceName(null)
                 .resourceType(null)
-                .resourceLimit("1000")
                 .build();
 
         msGraphGroup.addGroupToAzureAsync(resourceGroup);
@@ -418,12 +411,10 @@ class AzureClientTest {
 
          ResourceGroup resourceGroup = ResourceGroup.builder()
                  .id("12")
-                 .resourceId("123")
                  .displayName("testdisplayname")
                  .identityProviderGroupObjectId("testidpgroup")
                  .resourceName("testresourcename")
                  .resourceType("testresourcetype")
-                 .resourceLimit("1000")
                  .build();
 
         ForkJoinPool testPool = new ForkJoinPool();
@@ -701,7 +692,7 @@ class AzureClientTest {
 
         // Add testgroups to testdata
         for (Group group : testGroups) {
-            testdata.getGroups().put(UUID.fromString(group.getId()), new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString())));
+            testdata.getGroups().put(Long.getLong(group.getId()), new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString()), "TestGroup-" + group.getId()));
             write("  Adding group IDs : " + group.getId());
         }
         // Add testusers to testdata
@@ -711,7 +702,7 @@ class AzureClientTest {
         }
 
         // Add memberships to testdata
-        for (Tuple2<HashKey,Tuple2<UUID, UUID>> membership : testGroupData.removedMemberships) {
+        for (Tuple2<HashKey,Tuple2<UUID, Long>> membership : testGroupData.removedMemberships) {
             testdata.getMemberships().put(
                     membership.getT1(),
                     new CoreMembership(
@@ -1488,8 +1479,8 @@ class AzureClientTest {
         TestUtils.CoreObjectListOrchestratorTest orchestrator = new TestUtils.CoreObjectListOrchestratorTest();
         for (int i = 0; i < groups; i++) {
             orchestrator.getGroups().put(
-                    UUID.randomUUID(),
-                    new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString()))
+                    (long) i,
+                    new CoreGroup(HashKey.createHashKey(UUID.randomUUID().toString()), "testgroup-" + i)
             );
         }
         orchestrator.generateNRandomUsers(groups * membersPrGroups);

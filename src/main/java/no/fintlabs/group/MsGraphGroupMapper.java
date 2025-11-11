@@ -7,15 +7,19 @@ import no.fintlabs.kafka.ResourceGroup;
 
 public class MsGraphGroupMapper {
 
-    public Group toMsGraphGroup(ResourceGroup resourceGroup, ConfigGroup configGroup, Config config) {
+    public static String getDisplayname(ResourceGroup resourceGroup, ConfigGroup configGroup) {
+        return configGroup.getPrefix().toLowerCase() +
+                resourceGroup.getResourceType().substring(0, 3) +
+                "-" +
+                resourceGroup.getResourceName().replace("\s", ".") +
+                configGroup.getSuffix().toLowerCase();
+    }
+
+    public static Group toMsGraphGroup(ResourceGroup resourceGroup, ConfigGroup configGroup, Config config) {
         Group group = new Group();
         int groupMailEnabledMaxLen = 64;
 
-        group.setDisplayName(configGroup.getPrefix().toLowerCase() +
-                             resourceGroup.getResourceType().substring(0, 3) +
-                             "-" +
-                             resourceGroup.getResourceName().replace("\s", ".") +
-                             configGroup.getSuffix().toLowerCase());
+        group.setDisplayName(getDisplayname(resourceGroup, configGroup));
 
         group.setMailEnabled(false);
         group.setSecurityEnabled(true);

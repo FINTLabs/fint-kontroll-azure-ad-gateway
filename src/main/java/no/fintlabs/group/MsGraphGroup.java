@@ -217,7 +217,7 @@ public class MsGraphGroup {
 
                 HashKey key;
                 try {
-                    key = CoreMembershipMapper.toDBMembershipHashKey(UUID.fromString(memberId), UUID.fromString(group.getId()));
+                    key = CoreMembershipMapper.toCoreMembershipHashKey(UUID.fromString(memberId), Long.getLong(group.getId()));
                 } catch (Exception e) {
                     log.error(e.getMessage());
                     continue;
@@ -238,7 +238,7 @@ public class MsGraphGroup {
                 }
 
                 // TODO: This should never happen. ID is updated with new object.
-                CoreMembership oldval = orchestrator.getMemberships().putIfAbsent(key, CoreMembershipMapper.toDBMembership(UUID.fromString(memberId), UUID.fromString(group.getId()), orchestrator.getUsers(), orchestrator.getGroups()));
+                CoreMembership oldval = orchestrator.getMemberships().putIfAbsent(key, CoreMembershipMapper.toCoreMembership(UUID.fromString(memberId), Long.getLong(group.getId()), orchestrator.getUsers(), orchestrator.getGroups()));
                 if (oldval == null) {
                     AzureGroupMembership m = new AzureGroupMembership(memberId, group.getId(), key.toString());
                     azureGroupMembershipProducerService.addMembership(m);
@@ -314,13 +314,13 @@ public class MsGraphGroup {
 
                     AzureGroup newGroup = new AzureGroup(group, configGroup);
                     if (orchestrator.getGroups() != null
-                            && orchestrator.getGroups().containsKey(UUID.fromString(newGroup.getId()))
-                            && newGroup.equals(orchestrator.getGroups().get(UUID.fromString(newGroup.getId())))) {
+                            && orchestrator.getGroups().containsKey(Long.getLong(newGroup.getId()))
+                            && newGroup.equals(orchestrator.getGroups().get(Long.getLong(newGroup.getId())))) {
                         log.info("{} groupID already published and in cache. Not republished to kafka", newGroup.getId());
                     } else {
                         groupCounter.incrementAndGet();
                         azureGroupProducerService.processGroup(newGroup);
-                        orchestrator.getGroups().put(UUID.fromString(newGroup.getId()), CoreGroupMapper.toDBGroup(newGroup));
+                        orchestrator.getGroups().put(Long.getLong(newGroup.getId()), CoreGroupMapper.toCoreGroup(newGroup));
                         allGroups.add(newGroup);
                     }
                     return true;
@@ -376,11 +376,11 @@ public class MsGraphGroup {
         page.getValue().forEach(member -> {
             AzureGroupMembership azureGroupMembership = new AzureGroupMembership(azureGroup.getId(), member);
             if (orchestrator.getMemberships() != null
-                    && orchestrator.getMemberships().containsKey(CoreMembershipMapper.toDBMembershipHashKey(azureGroupMembership))) {
+                    && orchestrator.getMemberships().containsKey(CoreMembershipMapper.toCoreMembershipHashKey(azureGroupMembership))) {
                 log.debug("Skipping message to Kafka, as userId: {} is already published as member of groupId: {}", member.getId(), azureGroup.getId());
             } else {
                 azureGroupMembershipProducerService.publishAddedMembership(azureGroupMembership);
-                orchestrator.getMemberships().put(CoreMembershipMapper.toDBMembershipHashKey(azureGroupMembership), CoreMembershipMapper.toDBMembership(azureGroupMembership, orchestrator.getUsers(), orchestrator.getGroups()));
+                orchestrator.getMemberships().put(CoreMembershipMapper.toCoreMembershipHashKey(azureGroupMembership), CoreMembershipMapper.toCoreMembership(azureGroupMembership, orchestrator.getUsers(), orchestrator.getGroups()));
                 membersCount.getAndIncrement();
                 numMembers.getAndIncrement();
                 log.debug("Produced message to Kafka where userId: {} is member of groupId: {}", member.getId(), azureGroup.getId());
@@ -654,7 +654,7 @@ public class MsGraphGroup {
         }
         String groupId = splitString[0];
         String userId = splitString[1];
-        HashKey membershipKey = CoreMembershipMapper.toDBMembershipHashKey(UUID.fromString(userId), UUID.fromString(groupId));
+        HashKey membershipKey = CoreMembershipMapper.toCoreMembershipHashKey(UUID.fromString(userId), Long.getLong(groupId));
 
         CompletableFuture.runAsync(() -> {
             try {

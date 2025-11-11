@@ -10,20 +10,12 @@ import java.io.Serializable;
 @Getter
 @Slf4j
 @Data
-public class ResourceGroup implements Serializable
+@AllArgsConstructor
+public class ResourceGroup
 {
-    @Serial
     private final String id;
-    @Serial
-    private final String resourceId;
-    @Serial
     private final String displayName;
-    @Serial
     private final String identityProviderGroupObjectId;
-    @Serial
     private final String resourceName;
-    @Serial
     private final String resourceType;
-    @Serial
-    private final String resourceLimit;
 }

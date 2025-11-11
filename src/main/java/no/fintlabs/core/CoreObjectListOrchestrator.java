@@ -15,7 +15,7 @@ public class CoreObjectListOrchestrator {
     private CoreObjectList<String, CoreDelta> delta = new CoreObjectList<>();
     private CoreObjectList<UUID, CoreUser> users = new CoreObjectList<>();
     private CoreObjectList<UUID, CoreUser> usersExternal = new CoreObjectList<>();
-    private CoreObjectList<UUID, CoreGroup> groups = new CoreObjectList<>();
+    private CoreObjectList<Long, CoreGroup> groups = new CoreObjectList<>();
     private CoreObjectList<HashKey, CoreMembership> memberships = new CoreObjectList<>();
 
     public void clear() {

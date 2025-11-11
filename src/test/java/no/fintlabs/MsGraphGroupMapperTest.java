@@ -25,10 +25,8 @@ public class MsGraphGroupMapperTest {
     public MsGraphGroupMapperTest() {
         resourceGroup = ResourceGroup.builder()
                 .id("123")
-                .resourceId("resource123")
                 .resourceType("licenseResource")
                 .resourceName("testResourceName")
-                .resourceLimit("1000")
                 .build();
     }
 

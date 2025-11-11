@@ -1,6 +1,7 @@
 package no.fintlabs.azure;
 
 import com.microsoft.graph.models.Group;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -12,13 +13,11 @@ import java.io.Serializable;
 @Setter
 @Getter
 @Slf4j
-public class AzureGroup implements Serializable {
+@AllArgsConstructor
+public class AzureGroup {
 
-    @Serial
     protected String id;
-    @Serial
     protected String displayName;
-    @Serial
     protected Long resourceGroupID;
 
     public AzureGroup(Group group, ConfigGroup configGroup) {

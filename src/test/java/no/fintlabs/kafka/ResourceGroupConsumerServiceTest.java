@@ -44,9 +44,7 @@ public class ResourceGroupConsumerServiceTest {
     ResourceGroup newResourceGroupFromResourceName(String inResourceName) {
         return ResourceGroup.builder()
                 .id(RandomStringUtils.random(4))
-                .resourceId(RandomStringUtils.randomAlphanumeric(12))
                 .displayName("TestDisplayName " + RandomStringUtils.random(6))
-                .resourceId(RandomStringUtils.random(12))
                 .resourceName(inResourceName)
                 .identityProviderGroupObjectId(RandomStringUtils.random(12))
                 .build();
@@ -55,7 +53,6 @@ public class ResourceGroupConsumerServiceTest {
     private static ResourceGroup newResourceGroupFromResourceNameStatic() {
         return ResourceGroup.builder()
                 .id("1234")
-                .resourceId("TestKafkaKeyID")
                 .displayName("TestDisplayName 12")
                 .resourceName("")
                 .identityProviderGroupObjectId("737e77a-8989-4444-9999-b999976c097b")
