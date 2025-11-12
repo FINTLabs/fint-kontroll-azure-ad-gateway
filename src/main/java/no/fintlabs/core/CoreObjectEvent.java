@@ -3,10 +3,6 @@ package no.fintlabs.core;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-enum CoreObjectEventType {
-    CREATED, UPDATED, DELETED
-}
-
 @Getter
 @RequiredArgsConstructor
 public class CoreObjectEvent<I, T> {
