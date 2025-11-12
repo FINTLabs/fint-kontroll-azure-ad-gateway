@@ -329,6 +329,7 @@ class AzureClientTest {
                 .displayName("testdisplayname")
                 .identityProviderGroupObjectId("testidpgroup")
                 .resourceName("testresourcename")
+                .resourceType("Application")
                 .build();
 
         when(graphServiceClient.groups()).thenReturn(groupsRequestBuilder);
@@ -342,9 +343,6 @@ class AzureClientTest {
 
         msGraphGroup.addGroupToAzureAsync(resourceGroup);
 
-        //assertTrue(ForkJoinPool.commonPool().awaitQuiescence(5, SECONDS));
-
-        // Assert
         await().atMost(5, SECONDS).untilAsserted(() -> {
                     verify(groupsRequestBuilder, times(1)).post(groupCaptor.capture());
                 });
