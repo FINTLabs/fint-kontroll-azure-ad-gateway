@@ -11,7 +11,11 @@ import reactor.core.publisher.Flux;
 @RequiredArgsConstructor
 public class CoreObjectListReactive<I, T extends CoreObject> extends CoreObjectList <I, T> {
 
-    private CoreSink<I, T> sink = new CoreSink<>();
+    private final CoreSink<I, T> sink;
+
+    CoreObjectListReactive() {
+         sink = new CoreSink<>();
+    }
 
     public Flux<CoreObjectEvent<I, T>> updates() {
         return sink.getSink().asFlux();

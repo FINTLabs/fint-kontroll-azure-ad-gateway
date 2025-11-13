@@ -7,11 +7,17 @@ import com.microsoft.kiota.authentication.AzureIdentityAuthenticationProvider;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.core.CoreObjectListOrchestrator;
+import no.fintlabs.core.persistence.CoreObjectListDBRepositoryImpl;
+import no.fintlabs.core.persistence.CoreObjectListPersistenceCoordinator;
+import no.fintlabs.core.persistence.MSGraphPersistenceService;
 import okhttp3.OkHttpClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -56,6 +62,32 @@ public class Config {
         private int maxretentiontime;
         //private boolean seekingOffsetResetOnAssignment;
 
+    }
+
+    // Initialize orchestrator
+    @Bean
+    CoreObjectListOrchestrator orchestrator() {
+        return new CoreObjectListOrchestrator();
+    }
+
+    @Bean
+    MSGraphPersistenceService msGraphPersistenceService() {
+        return new MSGraphPersistenceService();
+    }
+
+
+    // Initialize DB Interface
+    @Autowired
+    private CoreObjectListDBRepositoryImpl dbRepository;
+
+
+    @Bean
+    CoreObjectListPersistenceCoordinator persistenceCoordinator(
+            CoreObjectListDBRepositoryImpl dbRepository,
+            MSGraphPersistenceService msGraphPersistenceService,
+            CoreObjectListOrchestrator orchestrator
+    ) {
+        return new CoreObjectListPersistenceCoordinator(dbRepository, msGraphPersistenceService, orchestrator);
     }
 
     @Bean

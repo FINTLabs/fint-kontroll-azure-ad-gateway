@@ -10,43 +10,60 @@ import no.fintlabs.core.persistence.CoreObjectListPersistenceCoordinator;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Getter
-@RequiredArgsConstructor
 @Service
 @Slf4j
 public class CoreObjectListOrchestrator {
-    private final CoreObjectListReactive<String, CoreDelta> delta = new CoreObjectListReactive<>();
+
+    private final Map<String, CoreObjectListReactive<?,?>> reactiveLists = new HashMap<>();
+
+    public CoreObjectListOrchestrator() {
+        reactiveLists.put("users", new CoreObjectListReactive<UUID, CoreUser>());
+        reactiveLists.put("usersexternal", new CoreObjectListReactive<UUID, CoreUser>());
+        reactiveLists.put("groups", new CoreObjectListReactive<UUID, CoreUser>());
+        reactiveLists.put("memberships", new CoreObjectListReactive<UUID, CoreUser>());
+        reactiveLists.put("delta", new CoreObjectListReactive<UUID, CoreUser>());
+    }
+
+    public Map<String, CoreObjectListReactive<?,?>> getAllReactiveLists() {
+        return reactiveLists;
+    }
+
+    /*private final CoreObjectListReactive<String, CoreDelta> delta = new CoreObjectListReactive<>();
     private final CoreObjectListReactive<UUID, CoreUser> users = new CoreObjectListReactive<>();
     private final CoreObjectListReactive<UUID, CoreUser> usersExternal = new CoreObjectListReactive<>();
     private final CoreObjectListReactive<Long, CoreGroup> groups = new CoreObjectListReactive<>();
-    private final CoreObjectListReactive<HashKey, CoreMembership> memberships = new CoreObjectListReactive<>();
-    private CoreObjectListPersistenceCoordinator persistenceCoordinator;
+    private final CoreObjectListReactive<HashKey, CoreMembership> memberships = new CoreObjectListReactive<>();*/
 
     @PostConstruct
     public void init() {
-        users.updates()
-                .subscribe(userEvent -> log.debug(userEvent.getId().toString()));
+            for (Map.Entry<String, CoreObjectListReactive<?, ?>> entry : reactiveLists.entrySet()) {
+                entry.getValue().updates()
+                        .subscribe(userEvent -> log.debug(userEvent.getId().toString()));
+            }
     }
 
     public void clear() {
-        users.clear();
-        memberships.clear();
+        reactiveLists.get("users").clear();
+        reactiveLists.get("memberships").clear();
     }
 
     public void clearUsers() {
-        users.clear();
-        usersExternal.clear();
+        reactiveLists.get("users").clear();
+        reactiveLists.get("usersexternal").clear();
     }
 
-    public void process(Flux<List<CoreObjectEvent>> batches) {
+    /*public void process(Flux<List<CoreObjectEvent>> batches) {
         batches.flatMap(persistenceCoordinator::persistBatch)
                 .subscribe(
                         null,
                         error -> System.err.println("Error in orchestration: " + error),
                         () -> System.out.println("✅ All batches processed")
                 );
-    }
+    }*/
 }
