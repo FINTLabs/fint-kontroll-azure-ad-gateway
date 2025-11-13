@@ -45,11 +45,28 @@ public class ConfigUser {
     private Integer userpagingsize;
     @Getter
     private Boolean enableExternalUsers;
+    @Getter
+    private Boolean useSameIdNumAttribute;
+    @Getter
+    private String userIdNumAttribute;
+    @Getter
+    private String studentValidator;
+    @Getter
+    private String employeeValidator;
+    @Getter
+    private String validatorAttribute;
 
     public List<String> AllAttributes(){
         List<String> AllAttribs = new ArrayList<>();
-        AllAttribs.add(this.getStudentidattribute());
-        AllAttribs.add(this.getEmployeeidattribute());
+        if(!useSameIdNumAttribute)
+        {
+            AllAttribs.add(this.getStudentidattribute());
+            AllAttribs.add(this.getEmployeeidattribute());
+        }
+        else {
+            AllAttribs.add(this.getUserIdNumAttribute());
+            AllAttribs.add(this.getValidatorAttribute());
+        }
         AllAttribs.add(this.getMainorgunitidattribute());
         AllAttribs.add(this.getMainorgunitnameattribute());
         AllAttribs.add(this.getExternaluserattribute());

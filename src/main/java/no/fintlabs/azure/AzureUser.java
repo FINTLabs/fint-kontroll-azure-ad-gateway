@@ -32,15 +32,32 @@ public class AzureUser implements Serializable {
         private String idpUserObjectId;
         @Serial
         private Boolean accountEnabled;
+        @Serial
+        private String validatorAttribute;
 
         public AzureUser(User user, ConfigUser configUser) {
-                this.mail = user.getMail();
-                this.id = user.getId();
-                this.accountEnabled = user.getAccountEnabled();
-                this.userPrincipalName = user.getUserPrincipalName();
+            this.mail = user.getMail();
+            this.id = user.getId();
+            this.accountEnabled = user.getAccountEnabled();
+            this.userPrincipalName = user.getUserPrincipalName();
+            this.idpUserObjectId = user.getId();
+            if (!configUser.getUseSameIdNumAttribute()) {
                 this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
                 this.studentId = getAttributeValue(user, configUser.getStudentidattribute());
-                this.idpUserObjectId = user.getId();
+                return;
+            }
+
+            this.validatorAttribute = getAttributeValue(user, configUser.getValidatorAttribute());
+            if (validatorAttribute == null) return;
+
+            String userIdNumAttr = configUser.getUserIdNumAttribute();
+            String userIdNumValue = getAttributeValue(user, userIdNumAttr);
+
+            if (validatorAttribute.equals(configUser.getEmployeeValidator())) {
+                this.employeeId = userIdNumValue;
+            } else if (validatorAttribute.equals(configUser.getStudentValidator())) {
+                this.studentId = userIdNumValue;
+            }
         }
 
         public static String getAttributeValue(User user, String attributeName) {
