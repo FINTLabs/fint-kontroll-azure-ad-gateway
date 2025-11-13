@@ -33,27 +33,27 @@ public class ResourceGroupConsumerService {
     private final MsGraphGroup msGraphGroup;
     private final Config.KafkaConfig kafkaConfig;
     private final ConfigGroup configGroup;
-    private final ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = new ConcurrentHashMap<>();
-    private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
+    /*private final ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = new ConcurrentHashMap<>();
+    private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;*/
 
     @PostConstruct
     void init() {
-        if (resourceGroupSink == null) {
+        /*if (resourceGroupSink == null) {
             resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
         }
-        subscribeToSink();
+        subscribeToSink();*/
     }
 
     /** Allow tests to inject a mock sink; rewire the subscription. */
-    protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> sink) {
+    /*protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> sink) {
         this.resourceGroupSink = sink;
         subscribeToSink();
-    }
+    }*/
 
     private static final int CORES = Runtime.getRuntime().availableProcessors();
     private static final int CONCURRENCY = Math.min(CORES * 8, 256);
 
-    private void subscribeToSink() {
+    /*private void subscribeToSink() {
         resourceGroupSink.asFlux()
                 .flatMap(kv ->
                                 Mono.fromCallable(() -> {
@@ -66,7 +66,7 @@ public class ResourceGroupConsumerService {
                 )
                 .onErrorContinue((e, o) -> log.error("Failed to update Azure", e))
                 .subscribe();
-    }
+    }*/
 
 
     @Bean
@@ -94,13 +94,19 @@ public class ResourceGroupConsumerService {
                 .build();
 
         var factory = parameterizedListenerContainerFactoryService
-                .createBatchListenerContainerFactory(this::processEntityBatch, listenerConfiguration,
+                .createBatchListenerContainerFactory(this::processResourceGroupBatch, listenerConfiguration,
                         c -> c.setAutoStartup(true));
 
         return factory.createContainer(entityTopicNameParameters);
     }
 
-    public void processEntityBatch(List<ConsumerRecord<String, ResourceGroup>> records) {
+    public void processResourceGroupBatch(List<ConsumerRecord<String, ResourceGroup>> records) {
+        for (ConsumerRecord<String, ResourceGroup> record : records) {
+
+        }
+    }
+
+    /*public void processEntityBatch(List<ConsumerRecord<String, ResourceGroup>> records) {
         synchronized (resourceGroupCache) {
             for (ConsumerRecord<String, ResourceGroup> record : records) {
                 String kafkaKey = record.key();
@@ -124,9 +130,9 @@ public class ResourceGroupConsumerService {
                 resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(resourceGroup)));
             }
         }
-    }
+    }*/
 
-    void updateAzure(String kafkaKey, Optional<ResourceGroup> resourceGroupOptional) throws Exception {
+    /*void updateAzure(String kafkaKey, Optional<ResourceGroup> resourceGroupOptional) throws Exception {
         String randomUUID = UUID.randomUUID().toString();
         log.debug("Starting updateAzure function {}.", randomUUID);
         ResourceGroup resourceGroup;
@@ -157,5 +163,5 @@ public class ResourceGroupConsumerService {
             }
         }
         log.debug("Stopping updateAzure function {}.", randomUUID);
-    }
+    }*/
 }
