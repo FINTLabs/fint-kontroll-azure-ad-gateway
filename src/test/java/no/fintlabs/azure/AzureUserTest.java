@@ -1,5 +1,6 @@
 package no.fintlabs.azure;
 
+import com.microsoft.graph.models.OnPremisesExtensionAttributes;
 import com.microsoft.graph.models.User;
 import no.fintlabs.config.ConfigUser;
 import org.junit.jupiter.api.Test;
@@ -84,5 +85,109 @@ class AzureUserTest {
 
     }
 
+    @Test
+    public void makeSureUserAreHandledAsStudentWhenTheSameAttributeIsSetForBothStudentAndEmployee() {
 
+        when(configUser.getUseSameIdNumAttribute()).thenReturn(true);
+        when(configUser.getValidatorAttribute()).thenReturn("employeeType");
+        when(configUser.getUserIdNumAttribute()).thenReturn("employeeId");
+        lenient().when(configUser.getEmployeeValidator()).thenReturn("ansatt");
+        lenient().when(configUser.getStudentValidator()).thenReturn("elev");
+
+
+        User user = new User();
+        user.setId("123");
+        user.setMail("testuser@mail.com");
+        user.setUserPrincipalName("testuser@mail.com");
+        user.setAccountEnabled(true);
+        user.setEmployeeId("123");
+        user.setEmployeeType("elev");
+
+        AzureUser convertedUser = new AzureUser(user, configUser);
+
+        assert(convertedUser.getIdpUserObjectId().equals(user.getId()));
+        assert(convertedUser.getUserPrincipalName().equals(user.getUserPrincipalName()));
+        assert(convertedUser.getAccountEnabled() == true);
+        assert(convertedUser.getStudentId().equals(user.getEmployeeId()));
+        assert(convertedUser.getEmployeeId() == null);
+
+    }
+
+    @Test
+    public void makeSureUserAreHandledAsEmployeeWhenTheSameAttributeIsSetForBothStudentAndEmployee() {
+
+        when(configUser.getUseSameIdNumAttribute()).thenReturn(true);
+        when(configUser.getValidatorAttribute()).thenReturn("employeeType");
+        when(configUser.getUserIdNumAttribute()).thenReturn("employeeId");
+        lenient().when(configUser.getEmployeeValidator()).thenReturn("ansatt");
+        lenient().when(configUser.getStudentValidator()).thenReturn("elev");
+
+
+        User user = new User();
+        user.setId("123");
+        user.setMail("testuser@mail.com");
+        user.setUserPrincipalName("testuser@mail.com");
+        user.setAccountEnabled(true);
+        user.setEmployeeId("123");
+        user.setEmployeeType("ansatt");
+
+        AzureUser convertedUser = new AzureUser(user, configUser);
+
+        assert(convertedUser.getIdpUserObjectId().equals(user.getId()));
+        assert(convertedUser.getUserPrincipalName().equals(user.getUserPrincipalName()));
+        assert(convertedUser.getAccountEnabled() == true);
+        assert(convertedUser.getStudentId() == null);
+        assert(convertedUser.getEmployeeId().equals(user.getEmployeeId()));
+
+    }
+
+    @Test
+    public void makeSureUserAreHandledAsEmployeeWhenTheSameAttributeIsNOTSet() {
+
+        when(configUser.getUseSameIdNumAttribute()).thenReturn(false);
+        when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
+        when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
+
+        User user = new User();
+        user.setId("123");
+        user.setMail("testuser@mail.com");
+        user.setUserPrincipalName("testuser@mail.com");
+        user.setAccountEnabled(true);
+        user.setOnPremisesExtensionAttributes(new OnPremisesExtensionAttributes());
+        user.getOnPremisesExtensionAttributes().setExtensionAttribute10("432");
+
+        AzureUser convertedUser = new AzureUser(user, configUser);
+
+        assert(convertedUser.getIdpUserObjectId().equals(user.getId()));
+        assert(convertedUser.getUserPrincipalName().equals(user.getUserPrincipalName()));
+        assert(convertedUser.getAccountEnabled() == true);
+        assert(convertedUser.getStudentId() == null);
+        assert(convertedUser.getEmployeeId().equals(user.getOnPremisesExtensionAttributes().getExtensionAttribute10()));
+
+    }
+
+    @Test
+    public void makeSureUserAreHandledAsStudentWhenTheSameAttributeIsNOTSet() {
+
+        when(configUser.getUseSameIdNumAttribute()).thenReturn(false);
+        when(configUser.getEmployeeidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute10");
+        when(configUser.getStudentidattribute()).thenReturn("onPremisesExtensionAttributes.extensionAttribute9");
+
+        User user = new User();
+        user.setMail("testuser@mail.com");
+        user.setUserPrincipalName("testuser@mail.com");
+        user.setAccountEnabled(true);
+        user.setOnPremisesExtensionAttributes(new OnPremisesExtensionAttributes());
+        user.getOnPremisesExtensionAttributes().setExtensionAttribute9("123");
+
+
+        AzureUser convertedUser = new AzureUser(user, configUser);
+
+        assert(convertedUser.getIdpUserObjectId().equals(user.getId()));
+        assert(convertedUser.getUserPrincipalName().equals(user.getUserPrincipalName()));
+        assert(convertedUser.getAccountEnabled() == true);
+        assert(convertedUser.getStudentId().equals(user.getOnPremisesExtensionAttributes().getExtensionAttribute9()));
+        assert(convertedUser.getEmployeeId() == null);
+
+    }
 }
