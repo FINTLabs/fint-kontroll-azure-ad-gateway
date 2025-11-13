@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -31,10 +32,13 @@ class AzureUserTest {
 
         AzureUser convertedUser = new AzureUser(user, configUser);
 
-        assert(convertedUser.getId() == user.id );
-        assert(convertedUser.getIdpUserObjectId() == user.id);
-        assert(convertedUser.getUserPrincipalName() == user.userPrincipalName);
-        assert(convertedUser.getAccountEnabled() == true);
+        assertAll(
+                () -> assertEquals(user.id, convertedUser.getIdpUserObjectId()),
+                () -> assertEquals(user.userPrincipalName, convertedUser.getUserPrincipalName()),
+                () -> assertEquals(convertedUser.getIdpUserObjectId(), user.id),
+                () -> assertTrue(convertedUser.getAccountEnabled())
+        );
+
 
     }
 
@@ -50,10 +54,11 @@ class AzureUserTest {
 
         AzureUserExternal convertedUser = new AzureUserExternal(user, configUser);
 
-        assert(convertedUser.getIdpUserObjectId() == user.id);
-        assert(convertedUser.getUserPrincipalName() == user.userPrincipalName);
-        assert(convertedUser.getAccountEnabled() == true);
-
+        assertAll(
+                () -> assertEquals(user.id, convertedUser.getIdpUserObjectId()),
+                () -> assertEquals(user.userPrincipalName, convertedUser.getUserPrincipalName()),
+                () -> assertTrue(convertedUser.getAccountEnabled())
+        );
     }
 
 
@@ -95,16 +100,46 @@ class AzureUserTest {
         user.userPrincipalName = "testuser@mail.com";
         user.accountEnabled = true;
         user.employeeId = "123";
-        user.employeeType = "elev";
+        user.employeeType = "vgs_elev";
 
         AzureUser convertedUser = new AzureUser(user, configUser);
 
-        assert(convertedUser.getIdpUserObjectId().equals(user.id));
-        assert(convertedUser.getUserPrincipalName().equals(user.userPrincipalName));
-        assert(convertedUser.getAccountEnabled() == true);
-        assert(convertedUser.getStudentId().equals(user.employeeId));
-        assert(convertedUser.getEmployeeId() == null);
+        assertAll(
+                () -> assertEquals(user.id, convertedUser.getIdpUserObjectId()),
+                () -> assertEquals(user.userPrincipalName, convertedUser.getUserPrincipalName()),
+                () -> assertTrue(convertedUser.getAccountEnabled()),
+                () -> assertTrue(convertedUser.getStudentId().contains(user.employeeId)),
+                () -> assertNull(convertedUser.getEmployeeId())
+        );
+    }
 
+    @Test
+    public void makeSureUserAreNotHandledWhenTheSameAttributeHasWrongValue() {
+
+        when(configUser.getUseSameIdNumAttribute()).thenReturn(true);
+        when(configUser.getValidatorAttribute()).thenReturn("employeeType");
+        when(configUser.getUserIdNumAttribute()).thenReturn("employeeId");
+        lenient().when(configUser.getEmployeeValidator()).thenReturn("ansatt");
+        lenient().when(configUser.getStudentValidator()).thenReturn("elev");
+
+
+        User user = new User();
+        user.id = "123";
+        user.mail = "testuser@mail.com";
+        user.userPrincipalName = "testuser@mail.com";
+        user.accountEnabled = true;
+        user.employeeId = "123";
+        user.employeeType = "wrong_value";
+
+        AzureUser convertedUser = new AzureUser(user, configUser);
+
+        assertAll(
+                () -> assertEquals(user.id, convertedUser.getIdpUserObjectId()),
+                () -> assertEquals(user.userPrincipalName, convertedUser.getUserPrincipalName()),
+                () -> assertTrue(convertedUser.getAccountEnabled()),
+                () -> assertNull(convertedUser.getEmployeeId()),
+                () -> assertNull(convertedUser.getStudentId())
+        );
     }
 
     @Test
@@ -123,16 +158,17 @@ class AzureUserTest {
         user.userPrincipalName = "testuser@mail.com";
         user.accountEnabled = true;
         user.employeeId = "123";
-        user.employeeType = "ansatt";
+        user.employeeType = "sen_ansatt";
 
         AzureUser convertedUser = new AzureUser(user, configUser);
 
-        assert(convertedUser.getIdpUserObjectId().equals(user.id));
-        assert(convertedUser.getUserPrincipalName().equals(user.userPrincipalName));
-        assert(convertedUser.getAccountEnabled() == true);
-        assert(convertedUser.getStudentId() == null);
-        assert(convertedUser.getEmployeeId().equals(user.employeeId));
-
+        assertAll(
+                () -> assertEquals(user.id, convertedUser.getIdpUserObjectId()),
+                () -> assertEquals(user.userPrincipalName, convertedUser.getUserPrincipalName()),
+                () -> assertTrue(convertedUser.getAccountEnabled()),
+                () -> assertNull(convertedUser.getStudentId()),
+                () -> assertTrue(convertedUser.getEmployeeId().contains(user.employeeId))
+        );
     }
 
     @Test
@@ -153,12 +189,13 @@ class AzureUserTest {
 
         AzureUser convertedUser = new AzureUser(user, configUser);
 
-        assert(convertedUser.getIdpUserObjectId().equals(user.id));
-        assert(convertedUser.getUserPrincipalName().equals(user.userPrincipalName));
-        assert(convertedUser.getAccountEnabled() == true);
-        assert(convertedUser.getStudentId() == null);
-        assert(convertedUser.getEmployeeId().equals(user.onPremisesExtensionAttributes.extensionAttribute10));
-
+        assertAll(
+                () -> assertEquals(user.id, convertedUser.getIdpUserObjectId()),
+                () -> assertEquals(user.userPrincipalName, convertedUser.getUserPrincipalName()),
+                () -> assertTrue(convertedUser.getAccountEnabled()),
+                () -> assertNull(convertedUser.getStudentId()),
+                () -> assertTrue(convertedUser.getEmployeeId().contains(user.onPremisesExtensionAttributes.extensionAttribute10))
+        );
     }
 
     @Test
@@ -179,12 +216,12 @@ class AzureUserTest {
 
         AzureUser convertedUser = new AzureUser(user, configUser);
 
-        assert(convertedUser.getIdpUserObjectId().equals(user.id));
-        assert(convertedUser.getUserPrincipalName().equals(user.userPrincipalName));
-        assert(convertedUser.getAccountEnabled() == true);
-        assert(convertedUser.getStudentId().equals(user.onPremisesExtensionAttributes.extensionAttribute9));
-        assert(convertedUser.getEmployeeId() == null);
-
+        assertAll(
+                () -> assertEquals(user.id, convertedUser.getIdpUserObjectId()),
+                () -> assertEquals(user.userPrincipalName, convertedUser.getUserPrincipalName()),
+                () -> assertTrue(convertedUser.getAccountEnabled()),
+                () -> assertTrue(convertedUser.getStudentId().contains(user.onPremisesExtensionAttributes.extensionAttribute9)),
+                () -> assertNull(convertedUser.getEmployeeId())
+        );
     }
-
 }
