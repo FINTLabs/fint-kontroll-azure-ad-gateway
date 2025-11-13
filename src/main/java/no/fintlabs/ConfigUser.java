@@ -23,8 +23,8 @@ public class ConfigUser {
             "mobilePhone",
             "onPremisesExtensionAttributes",
             "userPrincipalName",
-            "displayname",
-            "givenname",
+            "displayName",
+            "givenName",
             "surname",
             "onPremisesUserPrincipalName",
             "onPremisesSamAccountName"
@@ -37,10 +37,23 @@ public class ConfigUser {
     private String externaluserattribute;
     private String externaluservalue;
     private Boolean enableExternalUsers;
+    private Boolean useSameIdNumAttribute;
+    private String userIdNumAttribute;
+    private String studentValidator;
+    private String employeeValidator;
+    private String validatorAttribute;
+
     public List<String> AllAttributes(){
         List<String> AllAttribs = new ArrayList<>();
-        AllAttribs.add(this.getStudentidattribute());
-        AllAttribs.add(this.getEmployeeidattribute());
+        if(!useSameIdNumAttribute)
+        {
+            AllAttribs.add(this.getStudentidattribute());
+            AllAttribs.add(this.getEmployeeidattribute());
+        }
+        else {
+            AllAttribs.add(this.getUserIdNumAttribute());
+            AllAttribs.add(this.getValidatorAttribute());
+        }
         AllAttribs.add(this.getMainorgunitidattribute());
         AllAttribs.add(this.getMainorgunitnameattribute());
         AllAttribs.add(this.getExternaluserattribute());

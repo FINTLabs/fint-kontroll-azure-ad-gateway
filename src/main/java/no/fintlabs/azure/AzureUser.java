@@ -22,15 +22,32 @@ public class AzureUser {
         private String studentId;
         private String idpUserObjectId;
         private Boolean accountEnabled;
+        private String validatorAttribute;
 
         public AzureUser(User user, ConfigUser configUser) {
-                this.mail = user.mail;
-                this.id = user.id;
-                this.accountEnabled = user.accountEnabled;
-                this.userPrincipalName = user.userPrincipalName;
+            this.mail = user.mail;
+            this.id = user.id;
+            this.accountEnabled = user.accountEnabled;
+            this.userPrincipalName = user.userPrincipalName;
+            this.idpUserObjectId = user.id;
+
+            if (!configUser.getUseSameIdNumAttribute()) {
                 this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
-                this.studentId = getAttributeValue(user, configUser.getStudentidattribute());
-                this.idpUserObjectId = user.id;
+                this.studentId  = getAttributeValue(user, configUser.getStudentidattribute());
+                return;
+            }
+
+            this.validatorAttribute = getAttributeValue(user, configUser.getValidatorAttribute());
+            if (validatorAttribute == null) return;
+
+            String userIdNumAttr = configUser.getUserIdNumAttribute();
+            String userIdNumValue  = getAttributeValue(user, userIdNumAttr);
+
+            if (validatorAttribute.equals(configUser.getEmployeeValidator())) {
+                this.employeeId = userIdNumValue;
+            } else if (validatorAttribute.equals(configUser.getStudentValidator())) {
+                this.studentId = userIdNumValue;
+            }
         }
 
         public static String getAttributeValue(User user, String attributeName) {
