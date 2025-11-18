@@ -47,17 +47,18 @@ public class AzureUser implements Serializable {
                 return;
             }
 
-            this.validatorAttribute = getAttributeValue(user, configUser.getValidatorAttribute());
-            if (validatorAttribute == null) return;
+            String valAttrValue = getAttributeValue(user, configUser.getValidatorAttribute());
+            if (valAttrValue == null) return;
 
             String userIdNumAttr = configUser.getUserIdNumAttribute();
-            String userIdNumValue = getAttributeValue(user, userIdNumAttr);
+            String userIdNumValue  = getAttributeValue(user, userIdNumAttr);
 
-            if (validatorAttribute.contains(configUser.getEmployeeValidator())) {
+            if (valAttrValue.contains(configUser.getEmployeeValidator())) {
                 this.employeeId = userIdNumValue;
-            } else if (validatorAttribute.contains(configUser.getStudentValidator())) {
+            } else if (valAttrValue.contains(configUser.getStudentValidator())) {
                 this.studentId = userIdNumValue;
             }
+
         }
 
         public static String getAttributeValue(User user, String attributeName) {

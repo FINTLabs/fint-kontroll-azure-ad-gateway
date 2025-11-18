@@ -200,4 +200,32 @@ class AzureUserTest {
                 () -> assertNull(convertedUser.getEmployeeId())
         );
     }
+    @Test
+    public void makeSureUserAreNotEmployeeOrStudentWhenTheSameAttributeIsSetButIsEmptyValue() {
+
+        when(configUser.getUseSameIdNumAttribute()).thenReturn(true);
+        when(configUser.getValidatorAttribute()).thenReturn("employeeType");
+        when(configUser.getUserIdNumAttribute()).thenReturn("employeeId");
+        lenient().when(configUser.getEmployeeValidator()).thenReturn("ansatt");
+        lenient().when(configUser.getStudentValidator()).thenReturn("elev");
+
+
+        User user = new User();
+        user.setId("123");
+        user.setMail("testuser@mail.com");
+        user.setUserPrincipalName("testuser@mail.com");
+        user.setAccountEnabled(true);
+        user.setEmployeeId("123");
+        user.setEmployeeType("vgs");
+
+        AzureUser convertedUser = new AzureUser(user, configUser);
+
+        assertAll(
+                () -> assertEquals(user.getId(), convertedUser.getIdpUserObjectId()),
+                () -> assertEquals(user.getUserPrincipalName(), convertedUser.getUserPrincipalName()),
+                () -> assertTrue(convertedUser.getAccountEnabled()),
+                () -> assertNull(convertedUser.getStudentId()),
+                () -> assertNull(convertedUser.getEmployeeId())
+        );
+    }
 }

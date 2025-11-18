@@ -67,9 +67,12 @@ public class ConfigUser {
             AllAttribs.add(this.getUserIdNumAttribute());
             AllAttribs.add(this.getValidatorAttribute());
         }
-        AllAttribs.add(this.getMainorgunitidattribute());
-        AllAttribs.add(this.getMainorgunitnameattribute());
-        AllAttribs.add(this.getExternaluserattribute());
+        if(!this.getMainorgunitidattribute().isEmpty())
+            AllAttribs.add(this.getMainorgunitidattribute());
+        if(!this.getMainorgunitnameattribute().isEmpty())
+            AllAttribs.add(this.getMainorgunitnameattribute());
+        if(!this.getExternaluserattribute().isEmpty())
+            AllAttribs.add(this.getExternaluserattribute());
         AllAttribs.addAll(userAttributes);
         return AllAttribs;
     }
