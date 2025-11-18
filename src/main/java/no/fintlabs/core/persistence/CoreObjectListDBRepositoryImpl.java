@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
 
 @AllArgsConstructor
 @Repository
-public class CoreObjectListDBRepositoryImpl implements CoreObjectRepository<CoreObjectList> {
+public class CoreObjectListDBRepositoryImpl implements CoreObjectRepository {
     private final CoreObjectListDBRepository delegate;
 
     @Override

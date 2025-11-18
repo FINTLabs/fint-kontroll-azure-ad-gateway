@@ -6,7 +6,7 @@ import java.util.*;
 
 public class CoreObjectRepositoryRegistry {
 
-    private final Map<Class<?>, CoreObjectRepository<?>> repositories = new HashMap<>();
+    private final Map<Class<?>, CoreObjectRepository> repositories = new HashMap<>();
     private final Map<Class<?>, List<Class<?>>> dependencies = new HashMap<>();
 
     public <T extends CoreObject> void register(Class<T> type, CoreObjectRepository<T> repository) {

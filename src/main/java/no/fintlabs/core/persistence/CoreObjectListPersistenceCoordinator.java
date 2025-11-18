@@ -52,6 +52,6 @@ public class CoreObjectListPersistenceCoordinator {
                             .toList();
 
                     return Mono.when(mainSave, Mono.when(dependentSaves));
-                })
+                });
     }
 }
