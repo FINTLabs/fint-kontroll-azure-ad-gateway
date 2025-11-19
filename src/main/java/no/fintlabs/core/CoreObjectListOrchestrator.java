@@ -25,9 +25,10 @@ public class CoreObjectListOrchestrator {
     public CoreObjectListOrchestrator() {
         reactiveLists.put("users", new CoreObjectListReactive<UUID, CoreUser>());
         reactiveLists.put("usersexternal", new CoreObjectListReactive<UUID, CoreUser>());
-        reactiveLists.put("groups", new CoreObjectListReactive<UUID, CoreUser>());
-        reactiveLists.put("memberships", new CoreObjectListReactive<UUID, CoreUser>());
-        reactiveLists.put("delta", new CoreObjectListReactive<UUID, CoreUser>());
+        reactiveLists.put("device", new CoreObjectListReactive<UUID, CoreDevice>());
+        reactiveLists.put("groups", new CoreObjectListReactive<UUID, CoreGroup>());
+        reactiveLists.put("memberships", new CoreObjectListReactive<UUID, CoreMembership>());
+        reactiveLists.put("delta", new CoreObjectListReactive<UUID, CoreDelta>());
     }
 
     public Map<String, CoreObjectListReactive<?,?>> getAllReactiveLists() {
