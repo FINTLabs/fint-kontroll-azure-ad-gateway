@@ -58,7 +58,6 @@ public class CoreObjectListOrchestrator {
     private final CoreObjectListReactive<HashKey, CoreMembership> memberships = new CoreObjectListReactive<>();
     private final CoreObjectListReactive<String, CoreDelta> delta = new CoreObjectListReactive<>();
 
-
     @PostConstruct
     public void init() {
             for (Map.Entry<String, CoreObjectListReactive<?, ?>> entry : reactiveLists.entrySet()) {

@@ -1,6 +1,7 @@
 package no.fintlabs.core;
 
 import no.fintlabs.azure.HashKey;
+import no.fintlabs.core.entity.CoreDevice;
 import no.fintlabs.core.entity.CoreUser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +47,16 @@ class CoreObjectListReactiveTest {
         }
     }
 
+    private CoreDevice getRandomDevice() {
+        return new CoreDevice(HashKey.createRandomHashKey());
+    }
+
+    private void addNRandomDevicesToList(CoreObjectListReactive<UUID, CoreDevice> deviceList, int nDevices) {
+        for (int i = 0; i < nDevices; i++) {
+            deviceList.put(UUID.randomUUID(), getRandomDevice());
+        }
+    }
+
     Map<UUID, CoreUser> pickNRandomUsers(CoreObjectList<UUID, CoreUser> userList, int nUsers) {
 
         if (nUsers >= userList.getHashMap().size()) {
@@ -65,17 +76,50 @@ class CoreObjectListReactiveTest {
         return entries.stream()
                 .limit(nUsers)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
     }
+
+    Map<UUID, CoreDevice> pickNRandomDevices(CoreObjectList<UUID, CoreDevice> deviceList, int nDevices) {
+
+        if (nDevices >= deviceList.getHashMap().size()) {
+            throw new IllegalArgumentException("nUsers must be less than userList.getHashMap().size. "
+                    + nDevices + " / " + deviceList.getHashMap().size());
+        }
+        // Convert entries to a list for random access
+        List<Map.Entry<UUID, CoreDevice>> entries = new ArrayList<>(deviceList.getHashMap().entrySet());
+
+        if (entries.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // Shuffle the list
+        Collections.shuffle(entries);
+
+        // Limit to n or size of list and collect back to a Map
+        return entries.stream()
+                .limit(nDevices)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+
 
     void removeNRandomUsersFromList(CoreObjectListReactive<UUID, CoreUser> userList, int nUsers) {
         Map<UUID, CoreUser> randomUsers = pickNRandomUsers(userList, nUsers);
         randomUsers.forEach((uuid, user) -> userList.remove(uuid));
     }
 
+    void removeNRandomDevicesFromList(CoreObjectListReactive<UUID, CoreDevice> deviceList, int nDevices) {
+        Map<UUID, CoreDevice> randomDevices = pickNRandomDevices(deviceList, nDevices);
+        randomDevices.forEach((uuid, device) -> deviceList.remove(uuid));
+    }
+
     void updateNRandomUsersInLIst(CoreObjectListReactive<UUID, CoreUser> userList, int nUsers) {
         Map<UUID, CoreUser> randomUsers = pickNRandomUsers(userList, nUsers);
         randomUsers.forEach((uuid, user) -> userList.put(uuid, getRandomUser()));
+    }
+
+    void updateNRandomDevicesInLIst(CoreObjectListReactive<UUID, CoreDevice> deviceList, int nDevices) {
+        Map<UUID, CoreDevice> randomDevices = pickNRandomDevices(deviceList, nDevices);
+        randomDevices.forEach((uuid, device) -> deviceList.put(uuid, getRandomDevice()));
     }
 
 
@@ -367,4 +411,71 @@ class CoreObjectListReactiveTest {
             verify(counter, times(101)).recordItem(CoreObjectEventType.DELETED);
         });
     }
+
+    @Test
+    void makeSure10Removed10New10UpdatedDevicesResultsInSOMETINGSOMETHING() {
+        int waitForPageInSeconds = 10;
+        Outputter outputter = Mockito.spy(new Outputter());
+        @SuppressWarnings("unused")
+        class Counter {
+            void record(CoreObjectEventType type) {
+            }
+
+            void recordItem(CoreObjectEventType type) {
+            }
+        }
+        Counter counter = Mockito.spy(new Counter());
+
+        CoreObjectListReactive<UUID, CoreDevice> deviceList = new CoreObjectListReactive<>();
+
+        deviceList.updates()
+                .doOnNext(u -> outputter.write("Received: " + u))
+                .doOnComplete(() -> outputter.write("Upstream completed"))
+                .groupBy(CoreObjectEvent::getType)
+                .flatMap(groupedFlux ->
+                        groupedFlux
+                                .windowTimeout(100, Duration.ofSeconds(waitForPageInSeconds))
+                                .doOnNext(w -> outputter.write("New window created"))
+                                .flatMapSequential(window ->
+                                                window.collectList()
+                                                        .filter(batch -> !batch.isEmpty())
+                                                        .flatMap(batch -> {
+                                                            outputter.write("Processing batch with size " + batch.size());
+                                                            counter.record(groupedFlux.key());
+                                                            batch.forEach(item -> {
+                                                                outputter.write("  -> processed " + item);
+                                                                counter.recordItem(groupedFlux.key());
+                                                            });
+                                                            return Mono.empty();
+                                                        }),
+                                        CONCURRENCY,
+                                        1024
+                                )
+                )
+                .onErrorContinue((e, o) -> outputter.writeError("Failed to update Azure. " + e))
+                .doOnComplete(() -> outputter.write("✅ All batches processed"))
+                .subscribe();
+
+        deviceList.getSink().setEnabled(new AtomicBoolean(false));
+        addNRandomDevicesToList(deviceList, 100);
+        deviceList.getSink().setEnabled(new AtomicBoolean(true));
+
+        addNRandomDevicesToList(deviceList, 10);
+        removeNRandomDevicesFromList(deviceList, 10);
+        updateNRandomDevicesInLIst(deviceList, 10);
+
+        // Signal that the Sink is "finished"
+        deviceList.getSink().flush();
+
+        await().atMost(3, SECONDS).untilAsserted(() -> {
+            verify(counter, times(3)).record(any(CoreObjectEventType.class));
+            verify(counter, times(1)).record(CoreObjectEventType.CREATED);
+            verify(counter, times(1)).record(CoreObjectEventType.UPDATED);
+            verify(counter, times(1)).record(CoreObjectEventType.DELETED);
+            verify(counter, times(10)).recordItem(CoreObjectEventType.CREATED);
+            verify(counter, times(10)).recordItem(CoreObjectEventType.UPDATED);
+            verify(counter, times(10)).recordItem(CoreObjectEventType.DELETED);
+        });
+    }
+
 }
