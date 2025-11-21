@@ -50,8 +50,8 @@ public class CoreObjectListOrchestrator {
     }
 
     public void clear() {
-        reactiveLists.get("users").clear();
         reactiveLists.get("memberships").clear();
+        reactiveLists.get("users").clear();
     }
 
     public void clearUsers() {

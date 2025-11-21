@@ -43,10 +43,10 @@ public class CoreObjectListPersistenceCoordinator {
                 .bufferTimeout(50, Duration.ofSeconds(5))
                 .flatMap(batch -> {
                     Class<T> type = batch.get(0).getClass(); // assuming homogeneous batch
-                    CoreObjectRepository<T> repo = registry.getRepository(type);
+                    CoreObjectListRepository<T> repo = registry.getRepository(type);
                     Mono<Void> mainSave = repo.saveBatch(Flux.fromIterable(batch));
 
-                    List<CoreObjectRepository<?>> dependents = registry.getDependentRepositories(type);
+                    List<CoreObjectListRepository<?>> dependents = registry.getDependentRepositories(type);
                     List<Mono<Void>> dependentSaves = dependents.stream()
                             .map(depRepo -> depRepo.saveBatch(Flux.fromIterable(batch)))
                             .toList();

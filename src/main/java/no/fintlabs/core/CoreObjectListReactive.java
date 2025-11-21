@@ -3,12 +3,14 @@ package no.fintlabs.core;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.core.entity.CoreObject;
 import reactor.core.publisher.Flux;
 
 @Setter
 @Getter
 @RequiredArgsConstructor
+@Slf4j
 public class CoreObjectListReactive<I, T extends CoreObject> extends CoreObjectList <I, T> {
 
     private final CoreSink<I, T> sink;
@@ -45,6 +47,9 @@ public class CoreObjectListReactive<I, T extends CoreObject> extends CoreObjectL
             persist(key, ret, CoreObjectEventType.DELETED);
         }
         return ret;
+    }
+    private void testfunc(I key, T obj,int type) {
+        log.info("test123");
     }
 
     private void persist(I key, T obj, CoreObjectEventType type) {
