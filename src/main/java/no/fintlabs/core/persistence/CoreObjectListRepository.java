@@ -1,11 +1,12 @@
 package no.fintlabs.core.persistence;
 
 import no.fintlabs.core.CoreObjectList;
+import no.fintlabs.core.entity.CoreObject;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Mono;
 
-public interface CoreObjectListRepository<I, T> extends ReactiveCrudRepository<CoreObjectList<I, T>, I> {
-    Mono<Void> saveBatch(CoreObjectList<I, T> objects);
+public interface CoreObjectListRepository<I, T extends CoreObject> extends ReactiveCrudRepository<CoreObjectList<I, T>, I> {
+    //Mono<Void> saveBatch(CoreObjectList<I, T> objects);
 };
 
 /*

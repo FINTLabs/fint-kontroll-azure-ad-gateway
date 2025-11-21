@@ -11,6 +11,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -233,9 +234,9 @@ class CoreObjectListReactiveTest {
                         error -> outputter.writeError("Failed to update Azure. " + error.toString())
                 );
 
-        userList.getSink().setEnabled(false);
+        userList.getSink().setEnabled(new AtomicBoolean(false));
         addNRandomUsersToList(userList, 101);
-        userList.getSink().setEnabled(true);
+        userList.getSink().setEnabled(new AtomicBoolean(true));
 
         removeNRandomUsersFromList(userList, 20);
 
@@ -289,9 +290,9 @@ class CoreObjectListReactiveTest {
                 .doOnComplete(() -> outputter.write("✅ All batches processed"))
                 .subscribe();
 
-        userList.getSink().setEnabled(false);
+        userList.getSink().setEnabled(new AtomicBoolean(false));
         addNRandomUsersToList(userList, 100);
-        userList.getSink().setEnabled(true);
+        userList.getSink().setEnabled(new AtomicBoolean(true));
 
         addNRandomUsersToList(userList, 10);
         removeNRandomUsersFromList(userList, 10);
@@ -352,9 +353,9 @@ class CoreObjectListReactiveTest {
                         error -> outputter.writeError("Failed to update Azure. " + error.toString())
                 );
 
-        userList.getSink().setEnabled(false);
+        userList.getSink().setEnabled(new AtomicBoolean(false));
         addNRandomUsersToList(userList, 200);
-        userList.getSink().setEnabled(true);
+        userList.getSink().setEnabled(new AtomicBoolean(true));
 
         removeNRandomUsersFromList(userList, 101);
 

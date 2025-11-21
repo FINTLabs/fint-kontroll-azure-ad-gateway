@@ -15,7 +15,7 @@ public class CoreObjectListReactive<I, T extends CoreObject> extends CoreObjectL
 
     private final CoreSink<I, T> sink;
 
-    CoreObjectListReactive() {
+    public CoreObjectListReactive() {
          sink = new CoreSink<>();
     }
 

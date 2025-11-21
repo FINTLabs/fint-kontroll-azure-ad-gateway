@@ -7,11 +7,12 @@ import reactor.core.publisher.Mono;
 
 @AllArgsConstructor
 @Repository
-public class CoreObjectListDBRepositoryImpl implements CoreObjectListRepository {
+public abstract class CoreObjectListDBRepositoryImpl implements CoreObjectListRepository {
+
     private final CoreObjectListDBRepository delegate;
 
-    @Override
-    public Mono<Void> saveBatch(Flux<CoreObjectList> objects) {
+    /*@Override
+    pulic Mono<Void> saveBatch(Flux<CoreObjectList> objects) {
         return delegate.saveAll(objects).then();
-    }
+    }*/
 }

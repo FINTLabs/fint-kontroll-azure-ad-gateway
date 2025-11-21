@@ -27,9 +27,11 @@ public class CoreObjectListPersistenceCoordinator {
             CoreObjectListDBRepositoryImpl dbRepository,
             MSGraphPersistenceService graphPersistenceService,
             CoreObjectListOrchestrator orchestrator) {
-        orchestrator.getAllReactiveLists().forEach((key, reactiveList) -> {
+
+        /*orchestrator.getAllReactiveLists().forEach((key, reactiveList) -> {
             subscribeToList(key, reactiveList, dbRepository);
-        });
+        });*/
+
     }
 
     @SuppressWarnings("unchecked")
@@ -38,7 +40,7 @@ public class CoreObjectListPersistenceCoordinator {
             CoreObjectListReactive<I, T> reactiveList,
             CoreObjectListDBRepositoryImpl repository
     ) {
-        reactiveList.updates()
+        /*reactiveList.updates()
                 .map(event -> event.getObject()) // CoreObject<T>
                 .bufferTimeout(50, Duration.ofSeconds(5))
                 .flatMap(batch -> {
@@ -52,6 +54,6 @@ public class CoreObjectListPersistenceCoordinator {
                             .toList();
 
                     return Mono.when(mainSave, Mono.when(dependentSaves));
-                });
+                });*/
     }
 }

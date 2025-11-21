@@ -29,3 +29,12 @@ services:
       #JVM_OPTS: "-Xms16M -Xmx48M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication"
     depends_on:
       - "broker"
+  postgresql:
+    image: postgres:14.19
+    container_name: novari-postgres-db
+    environment:
+      POSTGRES_DB: fint-kontroll
+      POSTGRES_USER: fint-kontroll
+      POSTGRES_PASSWORD:
+    ports:
+      - "5432:5432"
