@@ -635,61 +635,77 @@ public class AzureClient {
                 });
     }
 
-    public void addGroupMembership(ResourceGroupMembership resourceGroupMembership, String resourceGroupMembershipKey) {
-        if(resourceGroupMembership.getAzureUserRef() != null && resourceGroupMembership.getAzureGroupRef() != null)
-        {
+    public void addGroupMembership(ResourceGroupMembership m, String key) {
+        String userRef  = m.getAzureUserRef();
+        String groupRef = m.getAzureGroupRef();
 
-            DirectoryObject directoryObject = new DirectoryObject();
-            directoryObject.id = resourceGroupMembership.getAzureUserRef();
+        if (userRef == null || groupRef == null) {
+            log.warn("Skipping addGroupMembership: userRef={} groupRef={}", userRef, groupRef);
+            return;
+        }
 
-            try {
-                DirectoryObjectCollectionReferenceRequestBuilder references = graphService.groups(resourceGroupMembership.getAzureGroupRef()).members().references();
+        log.info("Adding membership for user {} to group {}", userRef, groupRef);
 
-                if (references == null) {
-                    log.error("Member references is null for group {}", resourceGroupMembership.getAzureGroupRef());
-                    return;
-                }
+        DirectoryObject dirObj = new DirectoryObject();
+        dirObj.id = userRef;
 
-                if (azureGroupMembershipCache.containsKey(resourceGroupMembershipKey)) {
-                    log.info("Membership already in EntraID {}", resourceGroupMembershipKey);
-                    azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-                    log.info("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-                    return;
-                }
-
-                references.buildRequest()
-                        .postAsync(directoryObject)
-                        .thenAccept(acceptedMember -> {
-                            log.info("UserId: {} added to GroupId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-                            azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-                            log.info("Produced message to kafka on added UserId {} to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-                            azureGroupMembershipCache.put(resourceGroupMembershipKey, new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-                        });
-            } catch (GraphServiceException e) {
-                if (e.getResponseCode() == 400) {
-                    if(e.getError().error.message.contains("object references already exist")) {
-                        azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
-                        log.info("Republished to Kafka, UserId {} already added to GroupId {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-                        return;
-                    }
-                    if(e.getError().error.message.contains("does not exist")){
-                        log.warn("Unknown user ObjectId: {} or group ObjectId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-                        return;
-                    }
-
-                    log.warn("Bad request:  user ObjectId: {}, group ObjectId: {}", resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
-                    log.warn(e.getError().error.message);
-                }
-                if (e.getResponseCode() == 429) {
-                    log.warn("Throttling limit. Error: {}", e.getError().error.message);
-                }
-                else {
-                    // Handle other HTTP errors
-                    log.error("HTTP Error while updating groupID: {}. Error: {} \r", resourceGroupMembership.getAzureGroupRef(), e.getError().error.message);
-                }
-            } catch (Exception e) {
-                log.error("Failed to process addGroupMembership for resourceGroupId {}: {}", resourceGroupMembership.getAzureGroupRef(), e);
+        try {
+            var references = graphService.groups(groupRef).members().references();
+            log.debug("References builder: {}", references);
+            if (references == null) {
+                log.error("Member references is null for group {}", groupRef);
+                return;
             }
+
+            if (azureGroupMembershipCache.containsKey(key)) {
+                log.info("Membership already in Entra ID {}", key);
+                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(groupRef, dirObj));
+                return;
+            }
+
+            references.buildRequest()
+                    .postAsync(dirObj)
+                    .whenComplete((accepted, ex) -> {
+                        if (ex != null) {
+                            if (ex instanceof GraphServiceException gse) {
+                                Integer code = gse.getResponseCode();
+                                String msg = (gse.getError() != null && gse.getError().error != null) ? gse.getError().error.message : String.valueOf(gse);
+                                if (Integer.valueOf(400).equals(code) && msg.contains("object references already exist")) {
+                                    log.info("Already a member; republishing to Kafka. user={} group={}", userRef, groupRef);
+                                    azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(groupRef, dirObj));
+                                } else if (Integer.valueOf(400).equals(code) && msg.contains("does not exist")) {
+                                    log.warn("Unknown user or group. user={} group={}", userRef, groupRef);
+                                } else if (Integer.valueOf(429).equals(code)) {
+                                    log.warn("Throttled by Graph (429): {}", msg);
+                                } else {
+                                    log.error("GraphServiceException (code={}): {}", code, msg);
+                                }
+                            } else {
+                                log.error("Async error adding user {} to group {}: {}", userRef, groupRef, ex.toString());
+                            }
+                            return;
+                        }
+
+                        log.info("User {} added to group {}", userRef, groupRef);
+                        azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(groupRef, dirObj));
+                        azureGroupMembershipCache.put(key, new AzureGroupMembership(groupRef, dirObj));
+                    });
+
+        } catch (GraphServiceException e) {
+            Integer code = e.getResponseCode();
+            String msg = (e.getError() != null && e.getError().error != null) ? e.getError().error.message : String.valueOf(e);
+            if (Integer.valueOf(400).equals(code) && msg.contains("object references already exist")) {
+                log.info("Already a member; republishing to Kafka. user={} group={}", userRef, groupRef);
+                azureGroupMembershipProducerService.publishAddedMembership(new AzureGroupMembership(groupRef, dirObj));
+            } else if (Integer.valueOf(400).equals(code) && msg.contains("does not exist")) {
+                log.warn("Unknown user or group. user={} group={}", userRef, groupRef);
+            } else if (Integer.valueOf(429).equals(code)) {
+                log.warn("Throttling limit. {}", msg);
+            } else {
+                log.error("HTTP error updating group {}: {}", groupRef, msg);
+            }
+        } catch (Exception e) {
+            log.error("Failed to process addGroupMembership for group {}: {}", groupRef, e.toString());
         }
     }
 
