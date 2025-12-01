@@ -47,8 +47,10 @@ public class ConfigUser {
         List<String> AllAttribs = new ArrayList<>();
         if(!useSameIdNumAttribute)
         {
-            AllAttribs.add(this.getStudentidattribute());
-            AllAttribs.add(this.getEmployeeidattribute());
+            if(!this.getStudentidattribute().isEmpty())
+                AllAttribs.add(this.getStudentidattribute());
+            if(!this.getEmployeeidattribute().isEmpty())
+                AllAttribs.add(this.getEmployeeidattribute());
         }
         else {
             AllAttribs.add(this.getUserIdNumAttribute());

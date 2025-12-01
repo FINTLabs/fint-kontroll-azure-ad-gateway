@@ -2,55 +2,41 @@ package no.fintlabs.kafka;
 
 
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
 import no.fintlabs.Config;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import reactor.core.scheduler.Schedulers;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import java.util.Optional;
-import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
-
+@RequiredArgsConstructor
 public class ResourceGroupMembershipConsumerService {
-    @Autowired
     private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final Config config;
-    private final FintCache<String, Optional> resourceGroupMembershipCache;
+    private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 
-    public ResourceGroupMembershipConsumerService(
-            AzureClient azureClient,
-            EntityConsumerFactoryService entityConsumerFactoryService,
-            Config config,
-            FintCache<String, Optional> resourceGroupMembershipCache) {
-        this.azureClient = azureClient;
-        this.entityConsumerFactoryService = entityConsumerFactoryService;
-        this.config = config;
-        this.resourceGroupMembershipCache = resourceGroupMembershipCache;
-        //this.resourceGroupMembersCache = resourceGroupMembersCache;
-        this.resourceGroupMembershipSink = Sinks.many().unicast().onBackpressureBuffer();
+    protected void setResourceGroupMembershipSink(Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink) {
+        this.resourceGroupMembershipSink = resourceGroupMembershipSink;
         this.resourceGroupMembershipSink.asFlux()
                 .parallel(20) // Parallelism with up to 20 threads
                 .runOn(Schedulers.boundedElastic())
                 .subscribe
                         (keyAndResourceGroupMembership ->
                                 updateAzureWithMembership(keyAndResourceGroupMembership.getT1(), keyAndResourceGroupMembership.getT2())
-                );
-    }
-
-    protected void setResourceGroupMembershipSink(Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink) {
-        this.resourceGroupMembershipSink = resourceGroupMembershipSink;
+                        );
     }
 
     @PostConstruct
@@ -67,7 +53,7 @@ public class ResourceGroupMembershipConsumerService {
     }
 
     void updateAzureWithMembership(String kafkaKey, Optional<ResourceGroupMembership> membershipOpt) {
-        log.info("Starting updateAzureWithMembership key={}.", kafkaKey);
+        log.debug("Starting updateAzureWithMembership key={}.", kafkaKey);
         try {
             if (membershipOpt.isEmpty()) {
                 azureClient.deleteGroupMembership(kafkaKey);
