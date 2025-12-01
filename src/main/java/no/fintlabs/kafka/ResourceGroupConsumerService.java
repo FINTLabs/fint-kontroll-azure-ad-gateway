@@ -1,9 +1,9 @@
 package no.fintlabs.kafka;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.AzureClient;
 import no.fintlabs.ConfigGroup;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import org.springframework.stereotype.Service;
@@ -15,38 +15,27 @@ import reactor.util.function.Tuples;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
-
+@RequiredArgsConstructor
 public class ResourceGroupConsumerService {
     private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
     private final ConfigGroup configGroup;
-    private final FintCache<String, Optional> resourceGroupCache;
+    private final ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
 
-    public ResourceGroupConsumerService(
-            AzureClient azureClient,
-            EntityConsumerFactoryService entityConsumerFactoryService,
-            ConfigGroup configGroup,
-            FintCache<String, Optional> resourceGroupCache) {
-        this.azureClient = azureClient;
-        this.entityConsumerFactoryService = entityConsumerFactoryService;
-        this.configGroup = configGroup;
-        this.resourceGroupCache = resourceGroupCache;
-
-        resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
-        resourceGroupSink.asFlux()
+    protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink) {
+        this.resourceGroupSink = resourceGroupSink;
+        this.resourceGroupSink.asFlux()
                 .parallel(20) // Parallelism with up to 20 threads
                 .runOn(Schedulers.boundedElastic())
                 .subscribe
                         (keyAndResourceGroup ->
                                 updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
-                );
-    }
-    protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink) {
-        this.resourceGroupSink = resourceGroupSink;
+                        );
     }
 
     @PostConstruct
