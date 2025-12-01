@@ -218,7 +218,7 @@ public class AzureClient {
                     if(azureGroupCache != null
                             && azureGroupCache.containsKey(newGroup.getId())
                             && newGroup.equals(azureGroupCache.get(newGroup.getId()))) {
-                        log.debug("{} groupID allready published and in cache. Not republishing to kafka", newGroup.getId());
+                        log.debug("{} groupID already published and in cache. Not republishing to kafka", newGroup.getId());
                     }
                     else
                     {
