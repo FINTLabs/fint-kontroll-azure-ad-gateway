@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
+
 public class ResourceGroupConsumerService {
     private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
@@ -27,15 +27,27 @@ public class ResourceGroupConsumerService {
     private final ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
 
-    protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink) {
-        this.resourceGroupSink = resourceGroupSink;
-        this.resourceGroupSink.asFlux()
+    public ResourceGroupConsumerService(
+            AzureClient azureClient,
+            EntityConsumerFactoryService entityConsumerFactoryService,
+            ConfigGroup configGroup,
+            ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache) {
+        this.azureClient = azureClient;
+        this.entityConsumerFactoryService = entityConsumerFactoryService;
+        this.configGroup = configGroup;
+        this.resourceGroupCache = resourceGroupCache;
+
+        resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
+        resourceGroupSink.asFlux()
                 .parallel(20) // Parallelism with up to 20 threads
                 .runOn(Schedulers.boundedElastic())
                 .subscribe
                         (keyAndResourceGroup ->
                                 updateAzure(keyAndResourceGroup.getT1(), keyAndResourceGroup.getT2())
                         );
+    }
+    protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink) {
+        this.resourceGroupSink = resourceGroupSink;
     }
 
     @PostConstruct
