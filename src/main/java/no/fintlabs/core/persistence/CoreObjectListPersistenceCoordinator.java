@@ -1,14 +1,13 @@
 package no.fintlabs.core.persistence;
 
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.core.CoreObjectEvent;
 import no.fintlabs.core.CoreObjectListOrchestrator;
 import no.fintlabs.core.CoreObjectListReactive;
 import no.fintlabs.core.entity.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.List;
 
 /** Accept batches or events from orchestrator.
  *  Persist to DB first.
@@ -28,10 +27,48 @@ public class CoreObjectListPersistenceCoordinator {
             MSGraphPersistenceService graphPersistenceService,
             CoreObjectListOrchestrator orchestrator) {
 
-        /*orchestrator.getAllReactiveLists().forEach((key, reactiveList) -> {
-            subscribeToList(key, reactiveList, dbRepository);
-        });*/
+        final int CORES = Runtime.getRuntime().availableProcessors();
+        final int CONCURRENCY = Math.min(CORES * 8, 256);
+        int waitForPageInSeconds = 10;
 
+        orchestrator.getUsers().updates()
+                .flatMap(event ->
+                        dbRepository.save(event.getObject()) // Save to DB
+                                .then(graphPersistenceService.update(event.getEntity())) // When DB succeeds, update MS Graph
+                )
+                .subscribe(
+                        success -> System.out.println("Update processed successfully"),
+                        error -> System.err.println("Error processing update: " + error)
+                );
+
+
+        // Initialize USER persistence
+        orchestrator.getUsers().updates()
+                .doOnNext(u -> log.debug("Received: " + u))
+                .doOnComplete(() -> log.debug("Upstream completed"))
+                .groupBy(CoreObjectEvent::getType)
+                .flatMap(groupedFlux ->
+                        groupedFlux
+                                .windowTimeout(100, Duration.ofSeconds(waitForPageInSeconds))
+                                .doOnNext(w -> log.info("New window created"))
+                                .flatMapSequential(window ->
+                                                window.collectList()
+                                                        .filter(batch -> !batch.isEmpty())
+                                                        .flatMap(batch -> {
+                                                            log.info("Processing batch with size " + batch.size());
+                                                            dbRepository.processAll(groupedFlux.key(), batch);
+                                                            /*batch.forEach(item -> {
+                                                                log.info("  -> processed " + item);
+                                                            });*/
+                                                            return Mono.empty();
+                                                        }),
+                                        CONCURRENCY,
+                                        1024
+                                )
+                )
+                .onErrorContinue((e, o) -> log.info("Failed to update Azure. " + e))
+                .doOnComplete(() -> log.info("✅ All batches processed"))
+                .subscribe();
     }
 
     @SuppressWarnings("unchecked")
