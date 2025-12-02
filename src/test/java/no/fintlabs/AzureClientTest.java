@@ -27,6 +27,8 @@ import java.io.InterruptedIOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
  @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
@@ -608,61 +610,55 @@ class AzureClientTest {
         verify(mockCollPage2, times(1)).getNextPage();*/
     }
 
-    @Test
-     public void republishAlreadyExistingMembershipToKafka()
-         {
-             DirectoryObject directoryObject = new DirectoryObject();
-             directoryObject.id = "exampleGroupRefNumberID";
+     @Test
+     public void republishAlreadyExistingMembershipToKafka() throws Exception {
+         GraphErrorResponse errorResponse = new GraphErrorResponse();
+         errorResponse.error = new GraphError();
+         errorResponse.error.code = "Request_BadRequest";
+         errorResponse.error.message = "object references already exist";
 
+         GraphServiceException graphServiceException = GraphServiceException.createFromResponse(
+                 "ExampleMSGraphURL",
+                 "POST",
+                 List.of("exampleRequestHeaders"),
+                 "exampleRequestBody",
+                 Map.of("exampleHeader", "exampleHeaderValue"),
+                 "exampleResponseMessage",
+                 400,
+                 errorResponse,
+                 true
+         );
 
-             GraphErrorResponse errorResponse = new GraphErrorResponse();
-             errorResponse.error = new GraphError();
-             errorResponse.error.code = "Request_BadRequest";
-             errorResponse.error.message = "object references already exist";
+         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+         when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
+         when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
+         when(directoryObjectCollectionReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
 
-             GraphServiceException graphServiceException = GraphServiceException.createFromResponse(
-                     "ExampleMSGraphURL",
-                     "POST",
-                     Arrays.asList("exampleRequestHeaders"),
-                     "exampleRequestBody",
-                     Map.of("exampleHeader", "exampleHeaderValue"),
-                     "exampleResponseMessage",
-                     400,
-                     errorResponse,
-                     true
-             );
+         CompletableFuture<DirectoryObject> failed = new CompletableFuture<>();
+         failed.completeExceptionally(graphServiceException);
+         when(directoryObjectCollectionReferenceRequest.postAsync(any(DirectoryObject.class))).thenReturn(failed);
 
-             // Set up mocks
-             when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
-             when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
-             when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
-             when(directoryObjectCollectionWithReferencesRequestBuilder.references().buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
+         String kafkaKey = "somekey";
+         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
+                 .id("testid")
+                 .azureGroupRef("exampleGroupRef")
+                 .azureUserRef("someUserRef")
+                 .roleRef("exampleRoleRef")
+                 .build();
 
-             //when(directoryObjectCollectionReferenceRequest.post(any(DirectoryObject.class))).thenReturn(directoryObject);
-             when(directoryObjectCollectionReferenceRequest.postAsync(any(DirectoryObject.class))).thenThrow(graphServiceException);
-             //when(azureGroupMembershipProducerService).publishAddedMembership();
+         // Latch for å vente på whenComplete
+         CountDownLatch latch = new CountDownLatch(1);
+         doAnswer(inv -> { latch.countDown(); return null; })
+                 .when(azureGroupMembershipProducerService).publishAddedMembership(any(AzureGroupMembership.class));
 
-             String kafkaKey = "somekey";
-             ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
-                     .id("testid")
-                     .azureGroupRef("exampleGroupRef")
-                     .azureUserRef("someUserRef")
-                     .roleRef("exampleRoleRef")
-                     .build();
+         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
 
-             // Call the method under test
-             //try {
-             azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
-             //} catch (GraphServiceException e) {
-                 // Handle exception as needed or rethrow it
-             //    System.out.println("Caught GraphServiceException: " + e.getMessage());
-             //}
+         assertTrue(latch.await(2, TimeUnit.SECONDS), "Kafka publish was not called");
 
-             // Verify that the post method was called once and threw the exception
-             verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
-             verify(azureGroupMembershipProducerService, times(1)).publishAddedMembership(any(AzureGroupMembership.class));
+         verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
+         verify(azureGroupMembershipProducerService, times(1)).publishAddedMembership(any(AzureGroupMembership.class));
+     }
 
-         }
 
      @Test
      public void detectBadAzureResourceRefAndLogWarning()
