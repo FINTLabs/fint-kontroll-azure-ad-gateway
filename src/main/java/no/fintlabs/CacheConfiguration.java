@@ -5,8 +5,6 @@ import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureUser;
 import no.fintlabs.azure.AzureUserExternal;
 import no.fintlabs.kafka.ResourceGroup;
-import no.fintlabs.cache.FintCache;
-import no.fintlabs.cache.FintCacheManager;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

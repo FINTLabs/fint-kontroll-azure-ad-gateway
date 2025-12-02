@@ -14,7 +14,6 @@ import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.*;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import okhttp3.Request;
