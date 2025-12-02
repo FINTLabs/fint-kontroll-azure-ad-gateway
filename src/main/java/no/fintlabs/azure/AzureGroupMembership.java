@@ -3,13 +3,13 @@ package no.fintlabs.azure;
 import com.microsoft.graph.models.DirectoryObject;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
 
 @Getter
 @Setter
-@Log4j2
+@Slf4j
 public class AzureGroupMembership {
     private String user_id;
     private String group_id;

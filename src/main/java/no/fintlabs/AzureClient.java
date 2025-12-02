@@ -10,10 +10,9 @@ import com.microsoft.graph.models.User;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import com.microsoft.graph.requests.*;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.*;
 import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
@@ -26,7 +25,7 @@ import java.util.*;
 import java.util.concurrent.CompletionException;
 
 @Component
-@Log4j2
+@Slf4j
 @RequiredArgsConstructor
 public class AzureClient {
     protected final Config config;
@@ -39,7 +38,6 @@ public class AzureClient {
     private final AzureGroupMembershipProducerService azureGroupMembershipProducerService;
     private final ConcurrentHashMap<String, AzureUser> entraIdUserCache;
     private final ConcurrentHashMap<String, AzureUserExternal> entraIdExternalUserCache;
-    //private final FintCache<String, Optional> resourceGroupMembershipCache;
     private final ConcurrentHashMap<String, AzureGroup> azureGroupCache;
     private final ConcurrentHashMap<String, AzureGroupMembership> azureGroupMembershipCache;
     AtomicInteger publishedMembers;

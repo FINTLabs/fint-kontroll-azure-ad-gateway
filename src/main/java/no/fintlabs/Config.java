@@ -2,38 +2,24 @@ package no.fintlabs;
 
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
-import com.microsoft.graph.authentication.IAuthenticationProvider;
 import com.microsoft.graph.authentication.TokenCredentialAuthProvider;
-import com.microsoft.graph.http.CoreHttpProvider;
 import com.microsoft.graph.http.IHttpProvider;
-import com.microsoft.graph.logger.DefaultLogger;
-import com.microsoft.graph.logger.ILogger;
 import com.microsoft.graph.requests.GraphServiceClient;
-import com.microsoft.graph.serializer.DefaultSerializer;
-import com.microsoft.graph.serializer.ISerializer;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
-import okhttp3.Authenticator;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.Route;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-//import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PostConstruct;
-
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 
-@Log4j2
+
+@Slf4j
 @Getter
 @Setter
 @EnableAutoConfiguration
