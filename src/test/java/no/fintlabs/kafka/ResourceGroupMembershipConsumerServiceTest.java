@@ -1,7 +1,6 @@
 package no.fintlabs.kafka;
 
 import no.fintlabs.AzureClient;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -11,16 +10,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
-
-import javax.swing.text.html.Option;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @ExtendWith(MockitoExtension.class)
@@ -29,7 +27,7 @@ class ResourceGroupMembershipConsumerServiceTest {
     @Mock
     private AzureClient azureClient;
     @Mock
-    private FintCache<String, Optional> resourceGroupMembershipCache;
+    private ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     @Mock
     private Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
 

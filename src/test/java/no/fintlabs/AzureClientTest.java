@@ -11,7 +11,6 @@ import com.microsoft.graph.models.Group;
 import com.microsoft.graph.requests.*;
 import no.fintlabs.azure.AzureGroupMembership;
 import no.fintlabs.azure.AzureGroupMembershipProducerService;
-import no.fintlabs.cache.FintCache;
 import no.fintlabs.kafka.ResourceGroup;
 import no.fintlabs.kafka.ResourceGroupMembership;
 import okhttp3.Request;
@@ -27,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.InterruptedIOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
  @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
@@ -43,7 +43,7 @@ class AzureClientTest {
     private GroupCollectionRequestBuilder groupCollectionRequestBuilder;
 
     @Mock
-    private FintCache<String, AzureGroupMembership> azureGroupMembershipCache;
+    private ConcurrentHashMap<String, AzureGroupMembership> azureGroupMembershipCache;
 
     @Mock
     private ConfigGroup configGroup;

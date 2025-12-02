@@ -2,8 +2,6 @@ package no.fintlabs.kafka;
 
 import no.fintlabs.AzureClient;
 import no.fintlabs.ConfigGroup;
-import no.fintlabs.cache.FintCache;
-//import no.fintlabs.kafka.entity.EntityConsumerFactoryService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,6 +12,7 @@ import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
 
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
@@ -32,7 +31,7 @@ public class ResourceGroupConsumerServiceTest {
     private ConfigGroup configGroup;
 
     @Mock
-    private FintCache<String, Optional> resourceGroupCache;
+    private ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache;
 
     @Mock
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
