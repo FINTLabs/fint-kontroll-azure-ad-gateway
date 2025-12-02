@@ -663,6 +663,41 @@ public class AzureClient {
                     .postAsync(directoryObject)
                     .whenComplete((acceptedMember, throwable) -> {
                         if (throwable != null) {
+                            Throwable cause = (throwable instanceof CompletionException && throwable.getCause() != null)
+                                    ? throwable.getCause()
+                                    : throwable;
+
+                            if (cause instanceof GraphServiceException gse && gse.getResponseCode() == 400) {
+                                String msg = (gse.getError() != null && gse.getError().error != null)
+                                        ? gse.getError().error.message
+                                        : null;
+
+                                if (msg != null && msg.contains("object references already exist")) {
+                                    log.info("UserId {} already member of GroupId {} in EntraID. Publishing to Kafka.",
+                                            resourceGroupMembership.getAzureUserRef(),
+                                            resourceGroupMembership.getAzureGroupRef());
+                                    try {
+                                        azureGroupMembershipProducerService.publishAddedMembership(
+                                                new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject)
+                                        );
+                                        log.info("Produced message to kafka on added UserId {} to GroupId {} (already exists)",
+                                                resourceGroupMembership.getAzureUserRef(),
+                                                resourceGroupMembership.getAzureGroupRef());
+
+                                        azureGroupMembershipCache.put(
+                                                resourceGroupMembershipKey,
+                                                new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject)
+                                        );
+                                    } catch (Exception kafkaEx) {
+                                        log.error("Membership already exists in EntraID, but failed to publish to Kafka. userId={}, groupId={}",
+                                                resourceGroupMembership.getAzureUserRef(),
+                                                resourceGroupMembership.getAzureGroupRef(),
+                                                kafkaEx);
+                                    }
+                                    return;
+                                }
+                            }
+
                             handleGraphApiError(throwable);
                             return;
                         }
@@ -756,7 +791,6 @@ public class AzureClient {
                             azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
                             log.info("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
                         } catch (Exception kafkaEx) {
-                            // EntraID OK, men Kafka feiler → logg inkonsistens
                             log.error("User removed from EntraID, but failed to publish delete to Kafka. userId={}, groupId={}",
                                     user, group, kafkaEx);
                         }
