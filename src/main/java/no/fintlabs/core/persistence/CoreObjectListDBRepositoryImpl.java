@@ -20,12 +20,12 @@ import java.util.UUID;
 @Slf4j
 public abstract class CoreObjectListDBRepositoryImpl implements CoreObjectListRepository {
 
-    public Flux<CoreObject> processAll(CoreObjectEventType eventType, List<CoreObjectEvent<UUID, CoreUser>> batch) {
+    /*public Flux<CoreObject> processAll(CoreObjectEventType eventType, List<CoreObjectEvent<UUID, CoreUser>> batch) {
         switch(eventType) {
             case CREATED,UPDATED -> { return saveAll(batch);}
             case DELETED -> {return deleteAll(batch);}
         }
-    }
+    }*/
 
     @Override
     public Mono<CoreObject> save(Object entity) {

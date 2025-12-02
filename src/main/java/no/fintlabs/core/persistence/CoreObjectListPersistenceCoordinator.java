@@ -2,6 +2,7 @@ package no.fintlabs.core.persistence;
 
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.core.CoreObjectEvent;
+import no.fintlabs.core.CoreObjectEventType;
 import no.fintlabs.core.CoreObjectListOrchestrator;
 import no.fintlabs.core.CoreObjectListReactive;
 import no.fintlabs.core.entity.*;
@@ -31,7 +32,7 @@ public class CoreObjectListPersistenceCoordinator {
         final int CONCURRENCY = Math.min(CORES * 8, 256);
         int waitForPageInSeconds = 10;
 
-        orchestrator.getUsers().updates()
+/*        orchestrator.getUsers().updates()
                 .flatMap(event ->
                         dbRepository.save(event.getObject()) // Save to DB
                                 .then(graphPersistenceService.update(event.getEntity())) // When DB succeeds, update MS Graph
@@ -39,7 +40,7 @@ public class CoreObjectListPersistenceCoordinator {
                 .subscribe(
                         success -> System.out.println("Update processed successfully"),
                         error -> System.err.println("Error processing update: " + error)
-                );
+                );*/
 
 
         // Initialize USER persistence
@@ -47,25 +48,32 @@ public class CoreObjectListPersistenceCoordinator {
                 .doOnNext(u -> log.debug("Received: " + u))
                 .doOnComplete(() -> log.debug("Upstream completed"))
                 .groupBy(CoreObjectEvent::getType)
-                .flatMap(groupedFlux ->
-                        groupedFlux
+                .flatMapSequential(groupedFlux -> {
+                    if (groupedFlux.key() == CoreObjectEventType.DELETED) {
+                        // Special handling for DELETE events
+                        return groupedFlux
+                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
+                                .flatMap(event -> dbRepository.delete(event), CONCURRENCY);
+                    } else {
+                        return groupedFlux
                                 .windowTimeout(100, Duration.ofSeconds(waitForPageInSeconds))
                                 .doOnNext(w -> log.info("New window created"))
                                 .flatMapSequential(window ->
                                                 window.collectList()
                                                         .filter(batch -> !batch.isEmpty())
-                                                        .flatMap(batch -> {
+                                                        .flatMapMany(batch -> {
                                                             log.info("Processing batch with size " + batch.size());
-                                                            dbRepository.processAll(groupedFlux.key(), batch);
+                                                            return dbRepository.saveAll(batch);
                                                             /*batch.forEach(item -> {
                                                                 log.info("  -> processed " + item);
                                                             });*/
-                                                            return Mono.empty();
+                                                            //return Mono.empty();
                                                         }),
                                         CONCURRENCY,
                                         1024
-                                )
-                )
+                                );
+                    }
+                })
                 .onErrorContinue((e, o) -> log.info("Failed to update Azure. " + e))
                 .doOnComplete(() -> log.info("✅ All batches processed"))
                 .subscribe();
