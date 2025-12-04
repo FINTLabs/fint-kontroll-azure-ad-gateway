@@ -113,31 +113,37 @@ public class ResourceGroupConsumerService {
     }
 
     public void processEntity(ResourceGroup resourceGroup, String kafkaKey) {
-        if (kafkaKey == null) {
-            log.error("Error when processing entity. Kafka key is null. Unsupported!");
-            return;
-        }
+        synchronized (resourceGroupCache) {
+            if (resourceGroupCache.containsKey(kafkaKey)) {
+                Optional<ResourceGroup> fromCache = resourceGroupCache.get(kafkaKey);
 
-        Optional<ResourceGroup> next = Optional.ofNullable(resourceGroup);
+                if (fromCache.isEmpty() && resourceGroup == null) {
+                    log.debug("Duplicate delete for key={}, will STILL process/emit", kafkaKey);
+                }
 
-        resourceGroupCache.compute(kafkaKey, (k, prev) -> {
-            Optional<ResourceGroup> prevOpt = (prev == null) ? Optional.empty() : prev;
-
-            if (prevOpt.isEmpty() && next.isEmpty()) {
-                log.debug("Duplicate tombstone for ResourceGroup key={} (will still emit)", k);
+                if (resourceGroup != null && fromCache.isPresent() && resourceGroup.equals(fromCache.get())) {
+                    log.debug("Unchanged group for key={} ({}), will STILL process/emit",
+                            kafkaKey, resourceGroup.getResourceName());
+                }
             }
 
-            var r = resourceGroupSink.tryEmitNext(Tuples.of(k, next));
-            if (r.isFailure()) {
-                log.error("Emit failed key={} result={}", k, r);
-                return prevOpt;
+            Optional<ResourceGroup> next = Optional.ofNullable(resourceGroup);
+            if (!resourceGroupCache.containsKey(kafkaKey)) {
+                resourceGroupCache.put(kafkaKey, next);
             } else {
-                log.debug("Emit OK key={} (delete={})", k, next.isEmpty());
+                Optional<ResourceGroup> prev = resourceGroupCache.get(kafkaKey);
+                if (!next.equals(prev)) {
+                    resourceGroupCache.put(kafkaKey, next);
+                }
             }
 
-            return next;
-        });
+            var r = resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, next));
+            if (r.isFailure()) {
+                log.error("Emit failed key={} result={}", kafkaKey, r);
+            }
+        }
     }
+
 
 
 }

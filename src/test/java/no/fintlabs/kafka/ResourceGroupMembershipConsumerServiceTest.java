@@ -1,6 +1,7 @@
 package no.fintlabs.kafka;
 
 import no.fintlabs.AzureClient;
+import no.fintlabs.azure.AzureGroupMembershipProducerService;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -26,6 +27,9 @@ class ResourceGroupMembershipConsumerServiceTest {
 
     @Mock
     private AzureClient azureClient;
+    @Mock
+    private AzureGroupMembershipProducerService azureGroupMembershipProducerService;
+
     @Mock
     private ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     @Mock
@@ -105,7 +109,7 @@ class ResourceGroupMembershipConsumerServiceTest {
 
         resourceGroupMembershipConsumerService.processEntity(copyOfExampleMembership, kafkaKey);
 
-        verify(resourceGroupMembershipCache, times(0)).put(anyString(), any(Optional.class));
+        verify(resourceGroupMembershipCache, times(0)).put(anyString(), any());
     }
 
     @Test
@@ -186,6 +190,7 @@ class ResourceGroupMembershipConsumerServiceTest {
     @Test
     void processEntityIsNewAndCacheIsUpdated() {
         resourceGroupMembershipConsumerService.setResourceGroupMembershipSink(this.resourceGroupMembershipSink);
+        when(resourceGroupMembershipSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, exampleKafkaKey);
 
@@ -193,30 +198,33 @@ class ResourceGroupMembershipConsumerServiceTest {
         verify(resourceGroupMembershipSink, times(1)).tryEmitNext(any());
     }
     @Test
-    void processEntity_Membership_AlreadyInCacheGeneratesNothing() {
+    void processEntity_Membership_AlreadyInCacheStillProcesses() {
         resourceGroupMembershipConsumerService.setResourceGroupMembershipSink(this.resourceGroupMembershipSink);
+        when(resourceGroupMembershipSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         when(resourceGroupMembershipCache.containsKey(anyString())).thenReturn(true);
         when(resourceGroupMembershipCache.get(anyString())).thenReturn(Optional.of(exampleGroupMembership));
 
         resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, exampleKafkaKey);
 
-        verify(resourceGroupMembershipCache, times(0)).put(anyString(),any());
-        verify(resourceGroupMembershipSink, times(0)).tryEmitNext(any());
+        verify(resourceGroupMembershipCache, times(0)).put(anyString(), any());
+        verify(resourceGroupMembershipSink, times(1)).tryEmitNext(any());
     }
 
     @Test
-    void processEntity_Membership_SkipDeletionIfAlreadyDeleted() {
+    void processEntity_Membership_DuplicateDeleteStillProcesses() {
         resourceGroupMembershipConsumerService.setResourceGroupMembershipSink(this.resourceGroupMembershipSink);
+        when(resourceGroupMembershipSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         when(resourceGroupMembershipCache.containsKey(anyString())).thenReturn(true);
         when(resourceGroupMembershipCache.get(anyString())).thenReturn(Optional.empty());
 
         resourceGroupMembershipConsumerService.processEntity(null, exampleKafkaKey);
 
-        verify(resourceGroupMembershipCache, times(0)).put(anyString(),any());
-        verify(resourceGroupMembershipSink, times(0)).tryEmitNext(any());
+        verify(resourceGroupMembershipCache, times(0)).put(anyString(), any());
+        verify(resourceGroupMembershipSink, times(1)).tryEmitNext(any());
     }
+
 
     @Test
     void updateAzureWithMembership_NewMembershipCallsAzureAddGroupMembership() {

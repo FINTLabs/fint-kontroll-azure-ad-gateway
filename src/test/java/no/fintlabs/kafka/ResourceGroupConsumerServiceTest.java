@@ -1,7 +1,10 @@
 package no.fintlabs.kafka;
 
+import com.microsoft.graph.models.Group;
 import no.fintlabs.AzureClient;
 import no.fintlabs.ConfigGroup;
+import no.fintlabs.azure.AzureGroup;
+import no.fintlabs.azure.AzureGroupProducerService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -10,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.apache.commons.lang3.RandomStringUtils;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,6 +27,12 @@ import static org.mockito.Mockito.when;
 public class ResourceGroupConsumerServiceTest {
     @Mock
     private AzureClient azureClient;
+
+    @Mock
+    private Group group;
+
+    @Mock
+    private AzureGroupProducerService azureGroupProducerService;
 
     /*@Mock
     private EntityConsumerFactoryService entityConsumerFactoryService;*/
@@ -82,43 +92,77 @@ public class ResourceGroupConsumerServiceTest {
         String kafkaKeyID = "TestKafkaKeyID";
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
-
+        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+
 
         verify(resourceGroupCache, times(1)).put(anyString(),any());
         verify(resourceGroupSink, times(1)).tryEmitNext(any());
     }
-    @Test
-    void processEntityEntryAlreadyInCacheGeneratesNothing() {
-        String kafkaKeyID = "TestKafkaKeyID";
 
+    @Test
+    void processEntityEntryAlreadyInCacheStillProcesses() {
+        String kafkaKeyID = "TestKafkaKeyID";
         ResourceGroup resourceGroup = newResourceGroupFromResourceNameStatic();
+
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
 
+        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
         when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
         when(resourceGroupCache.get(anyString())).thenReturn(Optional.ofNullable(resourceGroup));
 
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
-        verify(resourceGroupCache, times(0)).put(anyString(),any());
-        verify(resourceGroupSink, times(0)).tryEmitNext(any());
+        verify(resourceGroupCache, times(0)).put(anyString(), any());
+        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+    }
+
+    @Test
+    void processEntity_That_Is_Empty_And_Already_In_Cache_Still_Processes() {
+        String kafkaKeyID = "TestKafkaKeyID";
+        ResourceGroup resourceGroup = null;
+
+        resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
+
+        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+
+        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+
+        verify(resourceGroupCache, times(1)).put(eq(kafkaKeyID), any());
+        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+
+    }
+
+    @Test
+    void processEntityEntryAlreadyInCacheGeneratesNewKafkaMessage() {
+        String kafkaKeyID = "TestKafkaKeyID";
+        ResourceGroup resourceGroup = newResourceGroupFromResourceNameStatic();
+
+
+        resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
+        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+
+        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+
+        verify(resourceGroupCache, times(1)).put(eq(kafkaKeyID), any());
+        verify(resourceGroupSink, times(1)).tryEmitNext(any());
     }
 
     @Test
     void processEntity_That_Is_Empty_And_Already_In_Cache_Generates_Nothing() {
         String kafkaKeyID = "TestKafkaKeyID";
 
-        ResourceGroup resourceGroup = null;
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
-
+        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
         when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
-        when(resourceGroupCache.get(anyString())).thenReturn(Optional.ofNullable(resourceGroup));
+        when(resourceGroupCache.get(anyString())).thenReturn(Optional.empty());
 
-        resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
+        resourceGroupConsumerService.processEntity(null, kafkaKeyID);
 
         verify(resourceGroupCache, times(0)).put(anyString(),any());
-        verify(resourceGroupSink, times(0)).tryEmitNext(any());
+        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+
     }
 
     @Test
@@ -126,6 +170,7 @@ public class ResourceGroupConsumerServiceTest {
         String kafkaKeyID = "TestKafkaKeyID";
 
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
+        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         when(resourceGroupCache.containsKey(anyString())).thenReturn(false);
 

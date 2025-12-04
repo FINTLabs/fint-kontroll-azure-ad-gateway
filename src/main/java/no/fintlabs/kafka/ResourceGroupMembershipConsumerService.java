@@ -23,10 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @Slf4j
 public class ResourceGroupMembershipConsumerService {
-    @Autowired
     private final AzureClient azureClient;
     private final EntityConsumerFactoryService entityConsumerFactoryService;
-    private final Config config;
     private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink;
     private final ConcurrentHashMap<String, AzureGroupMembership> azureGroupMembershipCache;
@@ -34,12 +32,10 @@ public class ResourceGroupMembershipConsumerService {
     public ResourceGroupMembershipConsumerService(
             AzureClient azureClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
-            Config config,
             ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache,
             ConcurrentHashMap<String, AzureGroupMembership> azureGroupMembershipCache, ConcurrentHashMap<String, AzureGroupMembership> azureGroupMembershipCache1) {
         this.azureClient = azureClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
-        this.config = config;
         this.resourceGroupMembershipCache = resourceGroupMembershipCache;
         this.azureGroupMembershipCache = azureGroupMembershipCache;
         this.resourceGroupMembershipSink = Sinks.many().multicast().onBackpressureBuffer();
@@ -95,35 +91,50 @@ public class ResourceGroupMembershipConsumerService {
     }
 
     public void processEntity(ResourceGroupMembership resourceGroupMembership, String kafkaKey) {
-        if (kafkaKey == null) {
-            log.error("Kafka key is null. Unsupported!");
+        if (kafkaKey == null || (resourceGroupMembership != null
+                && (resourceGroupMembership.getAzureGroupRef() == null || resourceGroupMembership.getAzureUserRef() == null))) {
+            log.error("Error when processing entity. Kafka key or values is null. Unsupported!. ResourceGroupMembership object: {}",
+                    (resourceGroupMembership != null ? resourceGroupMembership : "null"));
             return;
         }
 
-        Optional<ResourceGroupMembership> next = Optional.ofNullable(resourceGroupMembership);
+        synchronized (resourceGroupMembershipCache) {
+            log.debug("Processing entity with key: {}", kafkaKey);
 
-        if (next.isPresent() && (next.get().getAzureGroupRef() == null || next.get().getAzureUserRef() == null)) {
-            log.error("Ref values are null. Unsupported! key={} object={}", kafkaKey, next.get());
-            return;
-        }
+            if (resourceGroupMembershipCache.containsKey(kafkaKey)) {
+                Optional<ResourceGroupMembership> fromCache = resourceGroupMembershipCache.get(kafkaKey);
 
-        resourceGroupMembershipCache.compute(kafkaKey, (k, prev) -> {
-            Optional<ResourceGroupMembership> prevOpt = (prev == null) ? Optional.empty() : prev;
-            if (prevOpt.isEmpty() && next.isEmpty()) {
-                log.debug("Duplicate tombstone for key={} (will still emit)", k);
+                if (fromCache.isEmpty() && resourceGroupMembership == null) {
+                    log.debug("Duplicate delete (tombstone) for membership key={}, will STILL process/emit", kafkaKey);
+                }
+
+                if (resourceGroupMembership != null && fromCache.isPresent() && resourceGroupMembership.equals(fromCache.get())) {
+                    log.debug("Unchanged membership userID={} groupID={} key={} - will STILL process/emit",
+                            resourceGroupMembership.getAzureUserRef(),
+                            resourceGroupMembership.getAzureGroupRef(),
+                            kafkaKey);
+                }
             }
 
-            var r = resourceGroupMembershipSink.tryEmitNext(Tuples.of(k, next));
-            if (r.isFailure()) {
-                log.error("Emit failed key={} result={}", k, r);
-                return prevOpt;
+            Optional<ResourceGroupMembership> next = Optional.ofNullable(resourceGroupMembership);
+            if (!resourceGroupMembershipCache.containsKey(kafkaKey)) {
+                resourceGroupMembershipCache.put(kafkaKey, next);
             } else {
-                log.debug("Emit OK key={} (delete={})", k, next.isEmpty());
+                Optional<ResourceGroupMembership> prev = resourceGroupMembershipCache.get(kafkaKey);
+                if (!next.equals(prev)) {
+                    resourceGroupMembershipCache.put(kafkaKey, next);
+                }
             }
 
-            return next;
-        });
+            var r = resourceGroupMembershipSink.tryEmitNext(Tuples.of(kafkaKey, next));
+            if (r.isFailure()) {
+                log.error("Emit failed key={} result={}", kafkaKey, r);
+            } else {
+                log.debug("Emit OK key={} (delete={})", kafkaKey, next.isEmpty());
+            }
+        }
     }
+
 
 
 
