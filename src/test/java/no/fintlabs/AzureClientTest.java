@@ -25,10 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.InterruptedIOException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
  @ExtendWith(MockitoExtension.class)
 class AzureClientTest {
@@ -635,7 +632,7 @@ class AzureClientTest {
          when(directoryObjectCollectionReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
 
          CompletableFuture<DirectoryObject> failed = new CompletableFuture<>();
-         failed.completeExceptionally(graphServiceException);
+         failed.completeExceptionally(new CompletionException(graphServiceException));
          when(directoryObjectCollectionReferenceRequest.postAsync(any(DirectoryObject.class))).thenReturn(failed);
 
          String kafkaKey = "somekey";
@@ -657,6 +654,105 @@ class AzureClientTest {
 
          verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
          verify(azureGroupMembershipProducerService, times(1)).publishAddedMembership(any(AzureGroupMembership.class));
+     }
+
+     @Test
+     public void MembershipNotFoundInGraph() throws Exception {
+         GraphErrorResponse errorResponse = new GraphErrorResponse();
+         errorResponse.error = new GraphError();
+         errorResponse.error.code = "Request_ResourceNotFound";
+         errorResponse.error.message = "Resource 'something123' does not exist or one of its queried reference-property objects are not present";
+
+         GraphServiceException graphServiceException = GraphServiceException.createFromResponse(
+                 "ExampleMSGraphURL",
+                 "POST",
+                 List.of("exampleRequestHeaders"),
+                 "exampleRequestBody",
+                 Map.of("exampleHeader", "exampleHeaderValue"),
+                 "exampleError404ResponseMessage",
+                 404,
+                 errorResponse,
+                 true
+         );
+
+         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+         when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
+         when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
+         when(directoryObjectCollectionReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
+
+         CompletableFuture<DirectoryObject> failed = new CompletableFuture<>();
+         failed.completeExceptionally(new CompletionException(graphServiceException));
+         when(directoryObjectCollectionReferenceRequest.postAsync(any(DirectoryObject.class))).thenReturn(failed);
+
+         String kafkaKey = "somekey";
+         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
+                 .id("testid")
+                 .azureGroupRef("exampleGroupRef")
+                 .azureUserRef("someUserRef")
+                 .roleRef("exampleRoleRef")
+                 .build();
+
+//         // Latch for å vente på whenComplete
+//         CountDownLatch latch = new CountDownLatch(1);
+//         doAnswer(inv -> { latch.countDown(); return null; })
+//                 .when(azureGroupMembershipProducerService).publishAddedMembership(any(AzureGroupMembership.class));
+
+         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+
+         //assertFalse(latch.await(2, TimeUnit.SECONDS), "Kafka publish was not called");
+
+         verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
+         verify(azureGroupMembershipProducerService, times(0)).publishAddedMembership(any(AzureGroupMembership.class));
+     }
+
+     @Test
+     public void GraphThottelingLimit() throws Exception {
+         GraphErrorResponse errorResponse = new GraphErrorResponse();
+         errorResponse.error = new GraphError();
+         errorResponse.error.code = "TooManyRequests";
+         errorResponse.error.message = "Rate limit is exceeded. Try again in 9 seconds.";
+
+         GraphServiceException graphServiceException = GraphServiceException.createFromResponse(
+                 "ExampleMSGraphURL",
+                 "POST",
+                 List.of("exampleRequestHeaders"),
+                 "exampleRequestBody",
+                 Map.of("exampleHeader", "exampleHeaderValue"),
+                 "exampleError404ResponseMessage",
+                 429,
+                 errorResponse,
+                 true
+         );
+
+
+         when(graphServiceClient.groups(anyString())).thenReturn(groupRequestBuilder);
+         when(groupRequestBuilder.members()).thenReturn(directoryObjectCollectionWithReferencesRequestBuilder);
+         when(directoryObjectCollectionWithReferencesRequestBuilder.references()).thenReturn(directoryObjectCollectionReferenceRequestBuilder);
+         when(directoryObjectCollectionReferenceRequestBuilder.buildRequest()).thenReturn(directoryObjectCollectionReferenceRequest);
+
+         CompletableFuture<DirectoryObject> failed = new CompletableFuture<>();
+         failed.completeExceptionally(new CompletionException(graphServiceException));
+         when(directoryObjectCollectionReferenceRequest.postAsync(any(DirectoryObject.class))).thenReturn(failed);
+
+         String kafkaKey = "somekey";
+         ResourceGroupMembership resourceGroupMembership = ResourceGroupMembership.builder()
+                 .id("testid")
+                 .azureGroupRef("exampleGroupRef")
+                 .azureUserRef("someUserRef")
+                 .roleRef("exampleRoleRef")
+                 .build();
+
+//         // Latch for å vente på whenComplete
+//         CountDownLatch latch = new CountDownLatch(1);
+//         doAnswer(inv -> { latch.countDown(); return null; })
+//                 .when(azureGroupMembershipProducerService).publishAddedMembership(any(AzureGroupMembership.class));
+
+         azureClient.addGroupMembership(resourceGroupMembership, kafkaKey);
+
+         //assertFalse(latch.await(2, TimeUnit.SECONDS), "Kafka publish was not called");
+
+         verify(directoryObjectCollectionReferenceRequest, times(1)).postAsync(any(DirectoryObject.class));
+         verify(azureGroupMembershipProducerService, times(0)).publishAddedMembership(any(AzureGroupMembership.class));
      }
 
 

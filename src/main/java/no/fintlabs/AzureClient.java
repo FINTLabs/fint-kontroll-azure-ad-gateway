@@ -670,26 +670,17 @@ public class AzureClient {
                                         : null;
 
                                 if (msg != null && msg.contains("object references already exist")) {
-                                    log.info("UserId {} already member of GroupId {} in EntraID. Publishing to Kafka.",
-                                            resourceGroupMembership.getAzureUserRef(),
-                                            resourceGroupMembership.getAzureGroupRef());
                                     try {
                                         azureGroupMembershipProducerService.publishAddedMembership(
                                                 new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject)
                                         );
-                                        log.info("Produced message to kafka on added UserId {} to GroupId {} (already exists)",
-                                                resourceGroupMembership.getAzureUserRef(),
-                                                resourceGroupMembership.getAzureGroupRef());
-
-                                        azureGroupMembershipCache.put(
-                                                resourceGroupMembershipKey,
-                                                new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject)
-                                        );
+                                        azureGroupMembershipCache.put(resourceGroupMembershipKey,
+                                                new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                                        log.info("Already member in EntraID. Published Added to Kafka. userId={}, groupId={}",
+                                                resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                                     } catch (Exception kafkaEx) {
-                                        log.error("Membership already exists in EntraID, but failed to publish to Kafka. userId={}, groupId={}",
-                                                resourceGroupMembership.getAzureUserRef(),
-                                                resourceGroupMembership.getAzureGroupRef(),
-                                                kafkaEx);
+                                        log.error("Failed to publish Added to Kafka (already exists case). key={}",
+                                                resourceGroupMembershipKey, kafkaEx);
                                     }
                                     return;
                                 }
@@ -698,28 +689,17 @@ public class AzureClient {
                             handleGraphApiError(throwable);
                             return;
                         }
-
-                        log.info("UserId: {} added to GroupId: {}",
-                                resourceGroupMembership.getAzureUserRef(),
-                                resourceGroupMembership.getAzureGroupRef());
-
                         try {
                             azureGroupMembershipProducerService.publishAddedMembership(
                                     new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject)
                             );
-                            log.info("Produced message to kafka on added UserId {} to GroupId {}",
-                                    resourceGroupMembership.getAzureUserRef(),
-                                    resourceGroupMembership.getAzureGroupRef());
-
-                            azureGroupMembershipCache.put(
-                                    resourceGroupMembershipKey,
-                                    new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject)
-                            );
+                            azureGroupMembershipCache.put(resourceGroupMembershipKey,
+                                    new AzureGroupMembership(resourceGroupMembership.getAzureGroupRef(), directoryObject));
+                            log.info("Added in EntraID. Published Added to Kafka. userId={}, groupId={}",
+                                    resourceGroupMembership.getAzureUserRef(), resourceGroupMembership.getAzureGroupRef());
                         } catch (Exception kafkaEx) {
-                            log.error("User added to EntraID, but failed to publish to Kafka. userId={}, groupId={}",
-                                    resourceGroupMembership.getAzureUserRef(),
-                                    resourceGroupMembership.getAzureGroupRef(),
-                                    kafkaEx);
+                            log.error("User added to EntraID, but failed to publish Added to Kafka. key={}",
+                                    resourceGroupMembershipKey, kafkaEx);
                         }
                     });
 
@@ -761,13 +741,13 @@ public class AzureClient {
                                     : throwable;
 
                             if (cause instanceof GraphServiceException gse && gse.getResponseCode() == 404) {
-                                log.warn("User {} not found in group {} in Entra when trying to delete membership", user, group);
+                                log.warn("User {} not found in group {} in Entra when trying to delete membership. Publishing delete to Kafka", user, group);
                                 if (azureGroupMembershipCache.containsKey(resourceGroupMembershipKey)) {
                                     azureGroupMembershipCache.remove(resourceGroupMembershipKey);
                                 }
                                 try {
                                     azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
-                                    log.info("Produced message to kafka on deleted UserId: {} from GroupId: {}",
+                                    log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}",
                                             user, group);
                                 } catch (Exception kafkaEx) {
                                     log.error("Failed to publish deleted membership (404 case) {} to Kafka",
@@ -779,14 +759,14 @@ public class AzureClient {
                             return;
                         }
 
-                        log.info("UserId: {} removed from GroupId: {}", user, group);
+                        log.info("UserId: {} removed from GroupId: {}. Publishing delete to kafka", user, group);
 
                         try {
                             if (azureGroupMembershipCache.containsKey(resourceGroupMembershipKey)) {
                                 azureGroupMembershipCache.remove(resourceGroupMembershipKey);
                             }
                             azureGroupMembershipProducerService.publishDeletedMembership(resourceGroupMembershipKey);
-                            log.info("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
+                            log.debug("Produced message to kafka on deleted UserId: {} from GroupId: {}", user, group);
                         } catch (Exception kafkaEx) {
                             log.error("User removed from EntraID, but failed to publish delete to Kafka. userId={}, groupId={}",
                                     user, group, kafkaEx);
@@ -822,12 +802,15 @@ public class AzureClient {
             Throwable cause = ex.getCause();
             if (cause instanceof GraphServiceException gse) {
                 int statusCode = gse.getResponseCode();
+                String errorMessage = (gse.getError() != null && gse.getError().error != null)
+                        ? gse.getError().error.message
+                        : "No error message";
                 switch (statusCode) {
 //                    case 204:
 //                        log.info("No content response received.");
 //                        break;
                     case 400:
-                        log.debug("Group not created or updated. Failed with error 400");
+                        log.debug("Group not created or updated. Failed with error code {}. {}", statusCode, errorMessage);
                         break;
                     case 401:
                         log.error("Unauthorized. Check your authentication credentials");
@@ -836,10 +819,10 @@ public class AzureClient {
                         log.error("Forbidden. You do not have permission to perform this action");
                         break;
                     case 404:
-                        log.debug("Not found on updating group. The resource does not exist. Creating group as it is missing");
+                        log.error("Error code: {}. {}",statusCode, errorMessage);
                         break;
                     case 429:
-                        log.warn("Throttling limit. Error: {}", gse.getMessage());
+                        log.warn("Throttling limit. Error: {}", errorMessage);
                         break;
                     case 500:
                         log.error("Internal server error. Try again later");
