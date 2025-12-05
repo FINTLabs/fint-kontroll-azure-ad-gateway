@@ -12,14 +12,24 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @ExtendWith(MockitoExtension.class)
@@ -190,17 +200,17 @@ class ResourceGroupMembershipConsumerServiceTest {
     @Test
     void processEntityIsNewAndCacheIsUpdated() {
         resourceGroupMembershipConsumerService.setResourceGroupMembershipSink(this.resourceGroupMembershipSink);
-        when(resourceGroupMembershipSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+        //when(resourceGroupMembershipSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, exampleKafkaKey);
 
         verify(resourceGroupMembershipCache, times(1)).put(anyString(),any());
-        verify(resourceGroupMembershipSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupMembershipSink, times(1)).emitNext(any(),any());
     }
     @Test
     void processEntity_Membership_AlreadyInCacheStillProcesses() {
         resourceGroupMembershipConsumerService.setResourceGroupMembershipSink(this.resourceGroupMembershipSink);
-        when(resourceGroupMembershipSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+        //when(resourceGroupMembershipSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         when(resourceGroupMembershipCache.containsKey(anyString())).thenReturn(true);
         when(resourceGroupMembershipCache.get(anyString())).thenReturn(Optional.of(exampleGroupMembership));
@@ -208,13 +218,13 @@ class ResourceGroupMembershipConsumerServiceTest {
         resourceGroupMembershipConsumerService.processEntity(exampleGroupMembership, exampleKafkaKey);
 
         verify(resourceGroupMembershipCache, times(0)).put(anyString(), any());
-        verify(resourceGroupMembershipSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupMembershipSink, times(1)).emitNext(any(),any());
     }
 
     @Test
     void processEntity_Membership_DuplicateDeleteStillProcesses() {
         resourceGroupMembershipConsumerService.setResourceGroupMembershipSink(this.resourceGroupMembershipSink);
-        when(resourceGroupMembershipSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+        //when(resourceGroupMembershipSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         when(resourceGroupMembershipCache.containsKey(anyString())).thenReturn(true);
         when(resourceGroupMembershipCache.get(anyString())).thenReturn(Optional.empty());
@@ -222,7 +232,7 @@ class ResourceGroupMembershipConsumerServiceTest {
         resourceGroupMembershipConsumerService.processEntity(null, exampleKafkaKey);
 
         verify(resourceGroupMembershipCache, times(0)).put(anyString(), any());
-        verify(resourceGroupMembershipSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupMembershipSink, times(1)).emitNext(any(),any());
     }
 
 
@@ -240,6 +250,40 @@ class ResourceGroupMembershipConsumerServiceTest {
 
         verify(azureClient, times(0)).addGroupMembership(any(),anyString());
         verify(azureClient, times(1)).deleteGroupMembership(anyString());
+    }
+
+    @Test
+    void emitNextRetriesOnOverflowAndEventuallyDelivers() throws Exception {
+        Sinks.Many<Tuple2<String, Optional<String>>> sink =
+                Sinks.many().multicast().onBackpressureBuffer(8);
+
+        int total = 200;
+        CountDownLatch latch = new CountDownLatch(total);
+        AtomicInteger received = new AtomicInteger();
+
+        sink.asFlux()
+                .flatMap(t ->
+                                Mono.delay(Duration.ofMillis(10))
+                                        .doOnNext(ignored -> {
+                                            received.incrementAndGet();
+                                            latch.countDown();
+                                        }),
+                        1
+                )
+                .subscribeOn(Schedulers.boundedElastic())
+                .subscribe();
+
+        for (int i = 0; i < total; i++) {
+            sink.emitNext(
+                    Tuples.of("k" + i, Optional.of("v" + i)),
+                    (st, er) -> er == Sinks.EmitResult.FAIL_OVERFLOW
+                            || er == Sinks.EmitResult.FAIL_NON_SERIALIZED
+            );
+        }
+
+        boolean allReceived = latch.await(5, TimeUnit.SECONDS);
+
+        assertTrue(allReceived, "Did not receive all items. Received=" + received.get());
     }
 }
 

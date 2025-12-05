@@ -33,7 +33,7 @@ public class ResourceGroupMembershipConsumerService {
             AzureClient azureClient,
             EntityConsumerFactoryService entityConsumerFactoryService,
             ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache,
-            ConcurrentHashMap<String, AzureGroupMembership> azureGroupMembershipCache, ConcurrentHashMap<String, AzureGroupMembership> azureGroupMembershipCache1) {
+            ConcurrentHashMap<String, AzureGroupMembership> azureGroupMembershipCache) {
         this.azureClient = azureClient;
         this.entityConsumerFactoryService = entityConsumerFactoryService;
         this.resourceGroupMembershipCache = resourceGroupMembershipCache;
@@ -126,16 +126,14 @@ public class ResourceGroupMembershipConsumerService {
                 }
             }
 
-            var r = resourceGroupMembershipSink.tryEmitNext(Tuples.of(kafkaKey, next));
-            if (r.isFailure()) {
-                log.error("Emit failed key={} result={}", kafkaKey, r);
-            } else {
-                log.debug("Emit OK key={} (delete={})", kafkaKey, next.isEmpty());
-            }
+            resourceGroupMembershipSink.emitNext(
+                    Tuples.of(kafkaKey, next),
+                    (st, er) -> er == Sinks.EmitResult.FAIL_OVERFLOW
+                            || er == Sinks.EmitResult.FAIL_NON_SERIALIZED
+            );
+
+            log.debug("Emit OK key={} (delete={})", kafkaKey, next.isEmpty());
+
         }
     }
-
-
-
-
 }
