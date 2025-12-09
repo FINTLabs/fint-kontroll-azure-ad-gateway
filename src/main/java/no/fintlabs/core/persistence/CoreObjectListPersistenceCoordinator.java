@@ -43,17 +43,39 @@ public class CoreObjectListPersistenceCoordinator {
                 );*/
 
 
-        // Initialize USER persistence
+            // Initialize USER persistence
+            /*orchestrator.getUsers().updates()
+                    .doOnNext(u -> log.debug("Received: " + u))
+                    .doOnComplete(() -> log.debug("Upstream completed"))
+                    .groupBy(CoreObjectEvent::getType)
+                    .flatMap(groupedFlux -> {
+                        groupedFlux
+                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
+                                .flatMap(event -> dbRepository.delete(event), CONCURRENCY)
+                                .onErrorResume(ex -> {
+                                    log.info("Testlog", ex);
+                                    return reactor.core.publisher.Mono.empty();
+                                });*/
+                        /*return groupedFlux
+                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
+                                .flatMap(event -> dbRepository.delete(event), CONCURRENCY);*/
+                   /* })
+
+                    .doOnComplete(() -> log.info("✅ All batches processed"))
+                    .subscribe();*/
+
         orchestrator.getUsers().updates()
                 .doOnNext(u -> log.debug("Received: " + u))
                 .doOnComplete(() -> log.debug("Upstream completed"))
                 .groupBy(CoreObjectEvent::getType)
-                .flatMapSequential(groupedFlux -> {
+                .flatMap(groupedFlux -> {
                     if (groupedFlux.key() == CoreObjectEventType.DELETED) {
                         // Special handling for DELETE events
                         return groupedFlux
                                 .doOnNext(event -> log.info("Handling DELETE event: {}", event))
-                                .flatMap(event -> dbRepository.delete(event), CONCURRENCY);
+                                .flatMapSequential(event ->dbRepository.delete(event),
+                                        CONCURRENCY,
+                                        1024);
                     } else {
                         return groupedFlux
                                 .windowTimeout(100, Duration.ofSeconds(waitForPageInSeconds))
@@ -64,19 +86,15 @@ public class CoreObjectListPersistenceCoordinator {
                                                         .flatMapMany(batch -> {
                                                             log.info("Processing batch with size " + batch.size());
                                                             return dbRepository.saveAll(batch);
-                                                            /*batch.forEach(item -> {
-                                                                log.info("  -> processed " + item);
-                                                            });*/
-                                                            //return Mono.empty();
                                                         }),
                                         CONCURRENCY,
                                         1024
                                 );
                     }
                 })
-                .onErrorContinue((e, o) -> log.info("Failed to update Azure. " + e))
-                .doOnComplete(() -> log.info("✅ All batches processed"))
+                .doOnComplete(() -> log.debug("✅ All batches processed"))
                 .subscribe();
+
     }
 
     @SuppressWarnings("unchecked")

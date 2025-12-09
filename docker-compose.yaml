@@ -35,6 +35,6 @@ services:
     environment:
       POSTGRES_DB: fint-kontroll
       POSTGRES_USER: fint-kontroll
-      POSTGRES_PASSWORD:
+      POSTGRES_PASSWORD: somef4kepassword
     ports:
       - "5432:5432"

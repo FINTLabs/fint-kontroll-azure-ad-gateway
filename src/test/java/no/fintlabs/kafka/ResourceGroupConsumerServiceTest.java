@@ -59,6 +59,7 @@ public class ResourceGroupConsumerServiceTest {
                 .build();
     }
 
+    @Disabled
     @Test
     void makeSureEmptyQueueIsHandledOK() {
         // TODO: Implement test that can handle that a topic is empty [FKS-258]

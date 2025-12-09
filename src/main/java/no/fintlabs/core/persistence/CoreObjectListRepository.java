@@ -5,7 +5,8 @@ import no.fintlabs.core.entity.CoreObject;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Mono;
 
-public interface CoreObjectListRepository<I, T extends CoreObject> extends ReactiveCrudRepository<CoreObjectList<I, T>, I> {
+public abstract interface CoreObjectListRepository<I, T extends CoreObject> extends ReactiveCrudRepository<CoreObjectList<I, T>, I> {
+    Mono<T> save(T entity);
     //Mono<Void> saveBatch(CoreObjectList<I, T> objects);
 };
 
