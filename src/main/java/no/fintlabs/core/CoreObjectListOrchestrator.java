@@ -22,35 +22,6 @@ public class CoreObjectListOrchestrator {
 
     private final Map<String, CoreObjectListReactive<?,?>> reactiveLists = new HashMap<>();
 
-    /*public CoreObjectListOrchestrator() {
-        reactiveLists.put("users", new CoreObjectListReactive<UUID, CoreUser>());
-        reactiveLists.put("usersexternal", new CoreObjectListReactive<UUID, CoreUser>());
-        reactiveLists.put("device", new CoreObjectListReactive<UUID, CoreDevice>());
-        reactiveLists.put("groups", new CoreObjectListReactive<Long, CoreGroup>());
-        reactiveLists.put("memberships", new CoreObjectListReactive<HashKey, CoreMembership>());
-        reactiveLists.put("delta", new CoreObjectListReactive<String, CoreDelta>());
-    }
-
-    public CoreObjectListReactive<?,?> getUsers() {
-        return reactiveLists.get("users");
-    }
-
-    public CoreObjectListReactive<?,?> getGroups() {
-        return reactiveLists.get("groups");
-    }
-
-    public CoreObjectListReactive<?,?> getMemberships() {
-        return reactiveLists.get("memberships");
-    }
-
-    public CoreObjectListReactive<?,?> getListByKey(String key) {
-        return reactiveLists.get(key);
-    }
-
-    public Map<String, CoreObjectListReactive<?,?>> getAllReactiveLists() {
-        return reactiveLists;
-    }*/
-
     private final CoreObjectListReactive<UUID, CoreUser> users = new CoreObjectListReactive<>();
     private final CoreObjectListReactive<UUID, CoreUser> usersExternal = new CoreObjectListReactive<>();
     private final CoreObjectListReactive<UUID, CoreDevice> devices = new CoreObjectListReactive<>();
@@ -76,12 +47,4 @@ public class CoreObjectListOrchestrator {
         reactiveLists.get("usersexternal").clear();
     }
 
-    /*public void process(Flux<List<CoreObjectEvent>> batches) {
-        batches.flatMap(persistenceCoordinator::persistBatch)
-                .subscribe(
-                        null,
-                        error -> System.err.println("Error in orchestration: " + error),
-                        () -> System.out.println("✅ All batches processed")
-                );
-    }*/
 }
