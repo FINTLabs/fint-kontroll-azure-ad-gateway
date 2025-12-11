@@ -63,6 +63,7 @@ fint:
         fintkontrollidattribute:
         prefix:
         suffix:
+        filtermode: SUFFIX
         allowgroupupdate: false
         allowgroupdelete: false
         uniquenameprefix:
@@ -77,7 +78,6 @@ fint:
           fixed-delay-ms: 500000
         refresh:
           interval-ms: 518400000
-
 #placeholders. Do not add creds
 azure:
   credentials:

@@ -117,9 +117,8 @@ class AzureClientTest {
                 .id("12")
                 .resourceId("123")
                 .displayName("testdisplayname")
-                .identityProviderGroupObjectId("testidpgroup")
                 .resourceName("testresourcename")
-                .resourceType("testresourcetype")
+                .resourceType("ApplicationResource")
                 .resourceLimit("1000")
                 .build();
 
@@ -216,7 +215,7 @@ class AzureClientTest {
          when(groupRequest.patchAsync(any(Group.class))).thenReturn(future);
 
          // Call the method under test
-         azureClient.updateGroup(resourceGroup);
+         azureClient.updateGroupAsync(resourceGroup);
 
          // Verify that patchAsync was called once with any Group object
          verify(groupRequest, times(1)).patchAsync(any(Group.class));
@@ -245,7 +244,7 @@ class AzureClientTest {
          when(groupRequest.patchAsync(any(Group.class))).thenReturn(future);
 
          // Call the method under test
-         azureClient.updateGroup(resourceGroup);
+         azureClient.updateGroupAsync(resourceGroup);
 
          // Verify that patchAsync is called exactly once with any Group object
          verify(groupRequest, times(1)).patchAsync(any(Group.class));

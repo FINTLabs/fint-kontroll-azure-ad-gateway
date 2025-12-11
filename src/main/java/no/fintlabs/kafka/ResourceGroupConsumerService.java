@@ -45,7 +45,9 @@ public class ResourceGroupConsumerService {
 
         this.resourceGroupSink.asFlux()
                 .flatMap(t ->
-                                Mono.fromRunnable(() -> updateAzure(t.getT1(), t.getT2()))
+                                Mono.fromRunnable(
+                                                () -> updateAzure(t.getT1(), t.getT2())
+                                        )
                                         .subscribeOn(Schedulers.boundedElastic())
                                         .onErrorResume(e -> {
                                             log.error("Graph update failed key={}", t.getT1(), e);
@@ -88,11 +90,11 @@ public class ResourceGroupConsumerService {
         if (resourceGroupOptional.isPresent()) {
             resourceGroup = resourceGroupOptional.get();
             if (resourceGroup.getResourceName() != null && !azureClient.doesGroupExist(resourceGroup.getId())) {
-                log.debug("Adding Group to Azure: {}", resourceGroup.getResourceName());
+                log.info("New Group detected: {}. Adding to Azure", resourceGroup.getResourceName());
                 azureClient.addGroupToAzure(resourceGroup);
             } else {
                 if (configGroup.getAllowgroupupdate() && resourceGroup.getIdentityProviderGroupObjectId() != null) {
-                    azureClient.updateGroup(resourceGroup);
+                    azureClient.updateGroupAsync(resourceGroup);
                     log.info("Updated group with ResourceGroupId {}", resourceGroup.getId());
                 } else if (!configGroup.getAllowgroupupdate()) {
                     log.warn("ResourceGroupId {} was NOT updated, as \"allowgroupupdate\" is set to false", resourceGroup.getId());
@@ -104,7 +106,7 @@ public class ResourceGroupConsumerService {
         } else {
             if (configGroup.getAllowgroupdelete()) {
                 log.debug("Deleting group from Azure with id '{}'", kafkaKey);
-                azureClient.deleteGroup(kafkaKey);
+                azureClient.deleteGroupAsync(kafkaKey);
             } else {
                 log.warn("ResourceGroupId {} is NOT deleted, as environment parameter allowgroupdelete is set to false", kafkaKey);
             }
@@ -137,10 +139,13 @@ public class ResourceGroupConsumerService {
                 }
             }
 
-            var r = resourceGroupSink.tryEmitNext(Tuples.of(kafkaKey, next));
-            if (r.isFailure()) {
-                log.error("Emit failed key={} result={}", kafkaKey, r);
-            }
+            resourceGroupSink.emitNext(
+                    Tuples.of(kafkaKey, next),
+                    (st, er) -> er == Sinks.EmitResult.FAIL_OVERFLOW
+                            || er == Sinks.EmitResult.FAIL_NON_SERIALIZED
+            );
+
+            log.debug("Emit OK key={} (delete={})", kafkaKey, next.isEmpty());
         }
     }
 

@@ -92,13 +92,13 @@ public class ResourceGroupConsumerServiceTest {
         String kafkaKeyID = "TestKafkaKeyID";
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
-        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+        //when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
 
         verify(resourceGroupCache, times(1)).put(anyString(),any());
-        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupSink, times(1)).emitNext(any(),any());
     }
 
     @Test
@@ -108,14 +108,14 @@ public class ResourceGroupConsumerServiceTest {
 
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
 
-        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+        //when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
         when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
         when(resourceGroupCache.get(anyString())).thenReturn(Optional.ofNullable(resourceGroup));
 
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
         verify(resourceGroupCache, times(0)).put(anyString(), any());
-        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupSink, times(1)).emitNext(any(),any());
     }
 
     @Test
@@ -125,12 +125,12 @@ public class ResourceGroupConsumerServiceTest {
 
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
 
-        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+        //when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
         verify(resourceGroupCache, times(1)).put(eq(kafkaKeyID), any());
-        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupSink, times(1)).emitNext(any(),any());
 
     }
 
@@ -141,12 +141,12 @@ public class ResourceGroupConsumerServiceTest {
 
 
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
-        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+        //when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         resourceGroupConsumerService.processEntity(resourceGroup, kafkaKeyID);
 
         verify(resourceGroupCache, times(1)).put(eq(kafkaKeyID), any());
-        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupSink, times(1)).emitNext(any(),any());
     }
 
     @Test
@@ -154,14 +154,14 @@ public class ResourceGroupConsumerServiceTest {
         String kafkaKeyID = "TestKafkaKeyID";
 
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
-        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+        //when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
         when(resourceGroupCache.containsKey(anyString())).thenReturn(true);
         when(resourceGroupCache.get(anyString())).thenReturn(Optional.empty());
 
         resourceGroupConsumerService.processEntity(null, kafkaKeyID);
 
         verify(resourceGroupCache, times(0)).put(anyString(),any());
-        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupSink, times(1)).emitNext(any(),any());
 
     }
 
@@ -170,14 +170,14 @@ public class ResourceGroupConsumerServiceTest {
         String kafkaKeyID = "TestKafkaKeyID";
 
         resourceGroupConsumerService.setResourceGroupSink(this.resourceGroupSink);
-        when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
+        //when(resourceGroupSink.tryEmitNext(any())).thenReturn(Sinks.EmitResult.OK);
 
         when(resourceGroupCache.containsKey(anyString())).thenReturn(false);
 
         resourceGroupConsumerService.processEntity(null, kafkaKeyID);
 
         verify(resourceGroupCache, times(1)).put(anyString(),any());
-        verify(resourceGroupSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupSink, times(1)).emitNext(any(),any());
     }
 
     @Test
@@ -191,7 +191,7 @@ public class ResourceGroupConsumerServiceTest {
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
 
         verify(azureClient, times(1)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
+        verify(azureClient, times(0)).updateGroupAsync(any());
         verify(azureClient, times(0)).deleteGroup(any());
     }
     @Test
@@ -205,7 +205,7 @@ public class ResourceGroupConsumerServiceTest {
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
 
         verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(1)).updateGroup(any());
+        verify(azureClient, times(1)).updateGroupAsync(any());
         verify(azureClient, times(0)).deleteGroup(any());
     }
 
@@ -220,7 +220,7 @@ public class ResourceGroupConsumerServiceTest {
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
 
         verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
+        verify(azureClient, times(0)).updateGroupAsync(any());
         verify(azureClient, times(0)).deleteGroup(any());
     }
 
@@ -232,8 +232,8 @@ public class ResourceGroupConsumerServiceTest {
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.empty());
 
         verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
-        verify(azureClient, times(1)).deleteGroup(any());
+        verify(azureClient, times(0)).updateGroupAsync(any());
+        verify(azureClient, times(1)).deleteGroupAsync(any());
     }
 
     @Test
@@ -244,7 +244,26 @@ public class ResourceGroupConsumerServiceTest {
         resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.empty());
 
         verify(azureClient, times(0)).addGroupToAzure(any());
-        verify(azureClient, times(0)).updateGroup(any());
+        verify(azureClient, times(0)).updateGroupAsync(any());
         verify(azureClient, times(0)).deleteGroup(any());
+    }
+
+    @Test
+    void kafkaMessage_newGroup_shouldCallAddGroupToAzure() {
+        // given
+        String key = "k1";
+        ResourceGroup rg = ResourceGroup.builder()
+                .id("1")
+                .resourceName("Test-thomas-fintkontroll-09.12.25-2")
+                .identityProviderGroupObjectId(null)
+                .build();
+
+        when(azureClient.doesGroupExist("1")).thenReturn(false);
+
+        resourceGroupConsumerService.processEntity(rg, key);
+
+        verify(azureClient, timeout(500)).addGroupToAzure(rg);
+        verify(azureClient, never()).updateGroupAsync(any());
+        verify(azureClient, never()).deleteGroupAsync(any());
     }
 }

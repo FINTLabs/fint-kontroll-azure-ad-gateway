@@ -15,4 +15,9 @@ public class ConfigGroup {
     private String suffix;
     private Boolean allowgroupupdate;
     private Boolean allowgroupdelete;
+    private filterMode filterMode;
+
+    public enum filterMode {
+        PREFIX, SUFFIX, BOTH, NONE
+    }
 }
