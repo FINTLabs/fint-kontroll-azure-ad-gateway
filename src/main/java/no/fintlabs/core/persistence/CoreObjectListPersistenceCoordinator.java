@@ -32,6 +32,71 @@ public class CoreObjectListPersistenceCoordinator {
         final int CONCURRENCY = Math.min(CORES * 8, 256);
         int waitForPageInSeconds = 10;
 
+        orchestrator.getUsersExternal().updates()
+                .doOnNext(u -> log.debug("Received: " + u))
+                .doOnComplete(() -> log.debug("Upstream completed"))
+                .groupBy(CoreObjectEvent::getType)
+                .flatMap(groupedFlux -> {
+                    if (groupedFlux.key() == CoreObjectEventType.DELETED) {
+                        // Special handling for DELETE events
+                        return groupedFlux
+                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
+                                .flatMapSequential(event ->dbRepository.delete(event),
+                                        CONCURRENCY,
+                                        1024);
+                    } else {
+                        return groupedFlux
+                                .windowTimeout(100, Duration.ofSeconds(waitForPageInSeconds))
+                                .doOnNext(w -> log.info("New window created"))
+                                .flatMapSequential(window ->
+                                                window.collectList()
+                                                        .filter(batch -> !batch.isEmpty())
+                                                        .flatMapMany(batchEvents -> {
+                                                            List<T> batch = batchEvents.stream()
+                                                                    .map(CoreObjectEvent::getObject)
+                                                                    .toList();
+
+                                                            return dbRepository.saveAll(batch);
+                                                        }),
+                                        CONCURRENCY,
+                                        1024
+                                );
+                    }
+                })
+                .doOnComplete(() -> log.debug("✅ All batches processed"))
+                .subscribe();
+
+
+        orchestrator.getDevices().updates()
+                .doOnNext(u -> log.debug("Received: " + u))
+                .doOnComplete(() -> log.debug("Upstream completed"))
+                .groupBy(CoreObjectEvent::getType)
+                .flatMap(groupedFlux -> {
+                    if (groupedFlux.key() == CoreObjectEventType.DELETED) {
+                        // Special handling for DELETE events
+                        return groupedFlux
+                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
+                                .flatMapSequential(event ->dbRepository.delete(event),
+                                        CONCURRENCY,
+                                        1024);
+                    } else {
+                        return groupedFlux
+                                .windowTimeout(100, Duration.ofSeconds(waitForPageInSeconds))
+                                .doOnNext(w -> log.info("New window created"))
+                                .flatMapSequential(window ->
+                                                window.collectList()
+                                                        .filter(batch -> !batch.isEmpty())
+                                                        .flatMapMany(batch -> {
+                                                            log.info("Processing batch with size " + batch.size());
+                                                            return dbRepository.saveAll(batch);
+                                                        }),
+                                        CONCURRENCY,
+                                        1024
+                                );
+                    }
+                })
+                .doOnComplete(() -> log.debug("✅ All batches processed"))
+                .subscribe();
 /*        orchestrator.getUsers().updates()
                 .flatMap(event ->
                         dbRepository.save(event.getObject()) // Save to DB

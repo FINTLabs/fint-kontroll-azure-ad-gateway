@@ -7,6 +7,5 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface CoreObjectListDBRepository<I, T extends CoreObject>
-        extends ReactiveCrudRepository<CoreObjectList<I, T>, I> {
-
+        extends ReactiveCrudRepository<T, I> {
 }

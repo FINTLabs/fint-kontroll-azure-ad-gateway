@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Getter
 @Setter
-@EnableAutoConfiguration
 @Configuration
 @ConfigurationProperties(prefix = "azure")
 public class Config {
@@ -64,7 +63,6 @@ public class Config {
 
     }
 
-    // Initialize orchestrator
     @Bean
     CoreObjectListOrchestrator orchestrator() {
         return new CoreObjectListOrchestrator();
@@ -74,12 +72,6 @@ public class Config {
     MSGraphPersistenceService msGraphPersistenceService() {
         return new MSGraphPersistenceService();
     }
-
-
-    // Initialize DB Interface
-    @Autowired
-    private CoreObjectListDBRepositoryImpl dbRepository;
-
 
     @Bean
     CoreObjectListPersistenceCoordinator persistenceCoordinator(
