@@ -703,7 +703,7 @@ public class AzureClient {
 //                        log.info("No content response received.");
 //                        break;
                     case 400:
-                        log.debug("Group not created or updated. Failed with error code {}. {}", statusCode, errorMessage);
+                        log.error("Group not created or updated. Failed with error code {}. {}", statusCode, errorMessage);
                         break;
                     case 401:
                         log.error("Unauthorized. Check your authentication credentials");
