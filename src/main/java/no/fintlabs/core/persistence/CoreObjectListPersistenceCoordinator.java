@@ -1,14 +1,20 @@
 package no.fintlabs.core.persistence;
 
 import lombok.extern.slf4j.Slf4j;
+import no.fintlabs.azure.HashKey;
 import no.fintlabs.core.CoreObjectEvent;
 import no.fintlabs.core.CoreObjectEventType;
 import no.fintlabs.core.CoreObjectListOrchestrator;
 import no.fintlabs.core.CoreObjectListReactive;
 import no.fintlabs.core.entity.*;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
 
 /** Accept batches or events from orchestrator.
  *  Persist to DB first.
@@ -19,169 +25,125 @@ import java.time.Duration;
 @Slf4j
 public class CoreObjectListPersistenceCoordinator {
 
-    /*private final CoreObjectListDBRepository dbRepository;
-    private final MSGraphPersistenceService graphPersistenceService;
-    private final CoreObjectListOrchestrator orchestrator;*/
+    private final int concurrency;
+    private final int prefetch;
+    private final int batchSize;
+    private final Duration batchMaxWait;
+
+    private final Disposable usersSub;
+    private final Disposable usersExternalSub;
+    private final Disposable devicesSub;
+    private final Disposable groupsSub;
+    private final Disposable membershipsSub;
+    private final Disposable deltaSub;
 
     public CoreObjectListPersistenceCoordinator(
-            CoreObjectListDBRepositoryImpl dbRepository,
-            MSGraphPersistenceService graphPersistenceService,
-            CoreObjectListOrchestrator orchestrator) {
+            // reactive lists (kildene)
+            CoreObjectListReactive<UUID, CoreUser> users,
+            CoreObjectListReactive<UUID, CoreUser> usersExternal,
+            CoreObjectListReactive<UUID, CoreDevice> devices,
+            CoreObjectListReactive<Long, CoreGroup> groups,
+            CoreObjectListReactive<HashKey, CoreMembership> memberships,
+            CoreObjectListReactive<String, CoreDelta> delta,
 
-        final int CORES = Runtime.getRuntime().availableProcessors();
-        final int CONCURRENCY = Math.min(CORES * 8, 256);
-        int waitForPageInSeconds = 10;
+            // typed Spring Data repos (målene)
+            ReactiveCrudRepository<CoreUser, UUID> usersRepo,
+            ReactiveCrudRepository<CoreUser, UUID> usersExternalRepo,
+            ReactiveCrudRepository<CoreDevice, UUID> devicesRepo,
+            ReactiveCrudRepository<CoreGroup, Long> groupsRepo,
+            ReactiveCrudRepository<CoreMembership, HashKey> membershipsRepo,
+            ReactiveCrudRepository<CoreDelta, String> deltaRepo
+    ) {
+        int cores = Runtime.getRuntime().availableProcessors();
+        this.concurrency = Math.min(cores * 8, 256);
+        this.prefetch = 1024;
+        this.batchSize = 100;
+        this.batchMaxWait = Duration.ofSeconds(10);
 
-        orchestrator.getUsersExternal().updates()
-                .doOnNext(u -> log.debug("Received: " + u))
-                .doOnComplete(() -> log.debug("Upstream completed"))
-                .groupBy(CoreObjectEvent::getType)
-                .flatMap(groupedFlux -> {
-                    if (groupedFlux.key() == CoreObjectEventType.DELETED) {
-                        // Special handling for DELETE events
-                        return groupedFlux
-                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
-                                .flatMapSequential(event ->dbRepository.delete(event),
-                                        CONCURRENCY,
-                                        1024);
-                    } else {
-                        return groupedFlux
-                                .windowTimeout(100, Duration.ofSeconds(waitForPageInSeconds))
-                                .doOnNext(w -> log.info("New window created"))
-                                .flatMapSequential(window ->
-                                                window.collectList()
-                                                        .filter(batch -> !batch.isEmpty())
-                                                        .flatMapMany(batchEvents -> {
-                                                            List<T> batch = batchEvents.stream()
-                                                                    .map(CoreObjectEvent::getObject)
-                                                                    .toList();
-
-                                                            return dbRepository.saveAll(batch);
-                                                        }),
-                                        CONCURRENCY,
-                                        1024
-                                );
-                    }
-                })
-                .doOnComplete(() -> log.debug("✅ All batches processed"))
-                .subscribe();
-
-
-        orchestrator.getDevices().updates()
-                .doOnNext(u -> log.debug("Received: " + u))
-                .doOnComplete(() -> log.debug("Upstream completed"))
-                .groupBy(CoreObjectEvent::getType)
-                .flatMap(groupedFlux -> {
-                    if (groupedFlux.key() == CoreObjectEventType.DELETED) {
-                        // Special handling for DELETE events
-                        return groupedFlux
-                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
-                                .flatMapSequential(event ->dbRepository.delete(event),
-                                        CONCURRENCY,
-                                        1024);
-                    } else {
-                        return groupedFlux
-                                .windowTimeout(100, Duration.ofSeconds(waitForPageInSeconds))
-                                .doOnNext(w -> log.info("New window created"))
-                                .flatMapSequential(window ->
-                                                window.collectList()
-                                                        .filter(batch -> !batch.isEmpty())
-                                                        .flatMapMany(batch -> {
-                                                            log.info("Processing batch with size " + batch.size());
-                                                            return dbRepository.saveAll(batch);
-                                                        }),
-                                        CONCURRENCY,
-                                        1024
-                                );
-                    }
-                })
-                .doOnComplete(() -> log.debug("✅ All batches processed"))
-                .subscribe();
-/*        orchestrator.getUsers().updates()
-                .flatMap(event ->
-                        dbRepository.save(event.getObject()) // Save to DB
-                                .then(graphPersistenceService.update(event.getEntity())) // When DB succeeds, update MS Graph
-                )
-                .subscribe(
-                        success -> System.out.println("Update processed successfully"),
-                        error -> System.err.println("Error processing update: " + error)
-                );*/
-
-
-            // Initialize USER persistence
-            /*orchestrator.getUsers().updates()
-                    .doOnNext(u -> log.debug("Received: " + u))
-                    .doOnComplete(() -> log.debug("Upstream completed"))
-                    .groupBy(CoreObjectEvent::getType)
-                    .flatMap(groupedFlux -> {
-                        groupedFlux
-                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
-                                .flatMap(event -> dbRepository.delete(event), CONCURRENCY)
-                                .onErrorResume(ex -> {
-                                    log.info("Testlog", ex);
-                                    return reactor.core.publisher.Mono.empty();
-                                });*/
-                        /*return groupedFlux
-                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
-                                .flatMap(event -> dbRepository.delete(event), CONCURRENCY);*/
-                   /* })
-
-                    .doOnComplete(() -> log.info("✅ All batches processed"))
-                    .subscribe();*/
-
-        orchestrator.getUsers().updates()
-                .doOnNext(u -> log.debug("Received: " + u))
-                .doOnComplete(() -> log.debug("Upstream completed"))
-                .groupBy(CoreObjectEvent::getType)
-                .flatMap(groupedFlux -> {
-                    if (groupedFlux.key() == CoreObjectEventType.DELETED) {
-                        // Special handling for DELETE events
-                        return groupedFlux
-                                .doOnNext(event -> log.info("Handling DELETE event: {}", event))
-                                .flatMapSequential(event ->dbRepository.delete(event),
-                                        CONCURRENCY,
-                                        1024);
-                    } else {
-                        return groupedFlux
-                                .windowTimeout(100, Duration.ofSeconds(waitForPageInSeconds))
-                                .doOnNext(w -> log.info("New window created"))
-                                .flatMapSequential(window ->
-                                                window.collectList()
-                                                        .filter(batch -> !batch.isEmpty())
-                                                        .flatMapMany(batch -> {
-                                                            log.info("Processing batch with size " + batch.size());
-                                                            return dbRepository.saveAll(batch);
-                                                        }),
-                                        CONCURRENCY,
-                                        1024
-                                );
-                    }
-                })
-                .doOnComplete(() -> log.debug("✅ All batches processed"))
-                .subscribe();
-
+        this.usersSub = subscribe("users", users, usersRepo);
+        this.usersExternalSub = subscribe("usersExternal", usersExternal, usersExternalRepo);
+        this.devicesSub = subscribe("devices", devices, devicesRepo);
+        this.groupsSub = subscribe("groups", groups, groupsRepo);
+        this.membershipsSub = subscribe("memberships", memberships, membershipsRepo);
+        this.deltaSub = subscribe("delta", delta, deltaRepo);
     }
 
-    @SuppressWarnings("unchecked")
-    private <I, T extends CoreObject> void subscribeToList(
-            String key,
-            CoreObjectListReactive<I, T> reactiveList,
-            CoreObjectListDBRepositoryImpl repository
+    public void stop() {
+        usersSub.dispose();
+        usersExternalSub.dispose();
+        devicesSub.dispose();
+        groupsSub.dispose();
+        membershipsSub.dispose();
+        deltaSub.dispose();
+    }
+
+    private <I, T extends CoreObject> Disposable subscribe(
+            String name,
+            CoreObjectListReactive<I, T> list,
+            ReactiveCrudRepository<T, I> repo
     ) {
-        /*reactiveList.updates()
-                .map(event -> event.getObject()) // CoreObject<T>
-                .bufferTimeout(50, Duration.ofSeconds(5))
-                .flatMap(batch -> {
-                    Class<T> type = batch.get(0).getClass(); // assuming homogeneous batch
-                    CoreObjectListRepository<T> repo = registry.getRepository(type);
-                    Mono<Void> mainSave = repo.saveBatch(Flux.fromIterable(batch));
+        return list.updates()
+                .doOnSubscribe(s -> log.info("Starting {}", name))
+                .doOnNext(e -> log.debug("[{}] {}", name, e))
+                .doOnError(e -> log.error("{} crashed", name, e))
+                .doOnComplete(() -> log.info("{} completed", name))
 
-                    List<CoreObjectListRepository<?>> dependents = registry.getDependentRepositories(type);
-                    List<Mono<Void>> dependentSaves = dependents.stream()
-                            .map(depRepo -> depRepo.saveBatch(Flux.fromIterable(batch)))
-                            .toList();
+                .groupBy(CoreObjectEvent::getType)
+                .flatMap(group -> {
+                    if (group.key() == CoreObjectEventType.DELETED) {
+                        return handleDeletes(name, group, repo);
+                    } else {
+                        return handleUpserts(name, group, repo);
+                    }
+                })
 
-                    return Mono.when(mainSave, Mono.when(dependentSaves));
-                });*/
+                .subscribe();
+    }
+
+    private <I, T extends CoreObject> Flux<?> handleDeletes(
+            String name,
+            Flux<CoreObjectEvent<I, T>> deletes,
+            ReactiveCrudRepository<T, I> repo
+    ) {
+        return deletes.flatMapSequential(ev ->
+                        repo.deleteById(ev.getId())   // <-- viktig: deleteById, ikke delete(T)
+                                .onErrorResume(ex -> {
+                                    log.warn("[{}] Delete failed for {}", name, ev, ex);
+                                    return Mono.empty();
+                                }),
+                concurrency,
+                prefetch
+        );
+    }
+
+    private <I, T extends CoreObject> Flux<?> handleUpserts(
+            String name,
+            Flux<CoreObjectEvent<I, T>> upserts,
+            ReactiveCrudRepository<T, I> repo
+    ) {
+        return upserts
+                .map(CoreObjectEvent::getObject) // T
+                .windowTimeout(batchSize, batchMaxWait)
+                .flatMapSequential(window ->
+                                window.collectList()
+                                        .filter(list -> !list.isEmpty())
+                                        .flatMapMany(batch -> saveBatch(name, repo, batch)),
+                        concurrency,
+                        prefetch
+                );
+    }
+
+    private <I, T extends CoreObject> Flux<T> saveBatch(
+            String name,
+            ReactiveCrudRepository<T, I> repo,
+            List<T> batch
+    ) {
+        log.info("[{}] Saving batch size={}", name, batch.size());
+        return repo.saveAll(batch)
+                .onErrorResume(ex -> {
+                    log.warn("[{}] SaveAll failed batch size={}", name, batch.size(), ex);
+                    return Flux.empty();
+                });
+
     }
 }
