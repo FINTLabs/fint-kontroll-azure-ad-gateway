@@ -14,8 +14,9 @@ spring:
         spring.deserializer.key.delegate.class: 'org.apache.kafka.common.serialization.StringDeserializer'
         spring.deserializer.value.delegate.class: 'org.springframework.kafka.support.serializer.JsonDeserializer'
 
-
 logging:
+  pattern:
+    console: "%d{dd.MM.yyyy HH:mm:ss.SSSXXX} %highlight(%-5level) %class{0} - %msg%n"
   level:
     root: INFO
     no.fintlabs: INFO
