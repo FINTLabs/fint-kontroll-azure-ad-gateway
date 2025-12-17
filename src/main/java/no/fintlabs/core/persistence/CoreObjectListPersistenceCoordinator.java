@@ -33,57 +33,25 @@ public class CoreObjectListPersistenceCoordinator {
     private final int prefetch;
     private final int batchSize;
     private final Duration batchMaxWait;
-
-//    private final Disposable usersSub;
-//    private final Disposable usersExternalSub;
-//    private final Disposable devicesSub;
-//    private final Disposable groupsSub;
-//    private final Disposable membershipsSub;
-//    private final Disposable deltaSub;
+    private final CoreObjectListDbOperations<UUID, CoreObject> dbRepository;
+    private final MSGraphPersistenceService msGraphPersistenceService;
+    private final CoreObjectListOrchestrator orchestrator;
 
     public CoreObjectListPersistenceCoordinator(
-            // reactive lists (kildene)
-            CoreObjectListDBRepositoryImpl dbRepository,
+            CoreObjectListDbOperations<UUID, CoreObject> dbRepository,
             MSGraphPersistenceService msGraphPersistenceService,
             CoreObjectListOrchestrator orchestrator
-//            ,
-//            CoreObjectListReactive<UUID, CoreUser> users,
-//            CoreObjectListReactive<UUID, CoreUser> usersExternal,
-//            CoreObjectListReactive<UUID, CoreDevice> devices,
-//            CoreObjectListReactive<Long, CoreGroup> groups,
-//            CoreObjectListReactive<HashKey, CoreMembership> memberships,
-//            CoreObjectListReactive<String, CoreDelta> delta,
-
-            // typed Spring Data repos (målene)
-//            ReactiveCrudRepository<CoreUser, UUID> userRepo,
-//            ReactiveCrudRepository<CoreUser, UUID> usersExternalRepo,
-//            ReactiveCrudRepository<CoreDevice, UUID> devicesRepo,
-//            ReactiveCrudRepository<CoreGroup, Long> groupsRepo,
-//            ReactiveCrudRepository<CoreMembership, HashKey> membershipsRepo,
-//            ReactiveCrudRepository<CoreDelta, String> deltaRepo
     ) {
+        this.dbRepository = dbRepository;
+        this.msGraphPersistenceService = msGraphPersistenceService;
+        this.orchestrator = orchestrator;
+
         int cores = Runtime.getRuntime().availableProcessors();
         this.concurrency = Math.min(cores * 8, 256);
         this.prefetch = 1024;
         this.batchSize = 100;
         this.batchMaxWait = Duration.ofSeconds(10);
-
-//        this.usersSub = subscribe("users", users, usersRepo);
-//        this.usersExternalSub = subscribe("usersExternal", usersExternal, usersExternalRepo);
-//        this.devicesSub = subscribe("devices", devices, devicesRepo);
-//        this.groupsSub = subscribe("groups", groups, groupsRepo);
-//        this.membershipsSub = subscribe("memberships", memberships, membershipsRepo);
-//        this.deltaSub = subscribe("delta", delta, deltaRepo);
     }
-
-//    public void stop() {
-//        usersSub.dispose();
-//        usersExternalSub.dispose();
-//        devicesSub.dispose();
-//        groupsSub.dispose();
-//        membershipsSub.dispose();
-//        deltaSub.dispose();
-//    }
 
     private <I, T extends CoreObject> Disposable subscribe(
             String name,

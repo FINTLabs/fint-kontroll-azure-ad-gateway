@@ -6,19 +6,13 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@AllArgsConstructor
 @Slf4j
-public abstract class CoreObjectListDBRepositoryImpl<I, T extends CoreObject>
-        implements CoreObjectListRepository<I, T> {
-
-    /*@Override
-    public Flux<T> saveAll(Iterable<T> entities) {
-        return super.saveAll(entities);
-    }*/
+public class CoreObjectListDBRepositoryImpl<I, T extends CoreObject>
+        implements CoreObjectListDbOperations<I, T> {
 
     @Override
     public Mono<T> save(T entity) {
-        log.debug("Saving " + entity.getClass().getSimpleName());
-        return null;
+        log.debug("Saving {}", entity.getClass().getSimpleName());
+        return Mono.just(entity); // TODO: ekte lagring
     }
 }

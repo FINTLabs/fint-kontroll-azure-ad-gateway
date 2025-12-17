@@ -8,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.core.CoreObjectListOrchestrator;
+import no.fintlabs.core.entity.CoreObject;
 import no.fintlabs.core.persistence.CoreObjectListDBRepositoryImpl;
+import no.fintlabs.core.persistence.CoreObjectListDbOperations;
 import no.fintlabs.core.persistence.CoreObjectListPersistenceCoordinator;
 import no.fintlabs.core.persistence.MSGraphPersistenceService;
 import okhttp3.OkHttpClient;
@@ -18,6 +20,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -74,10 +77,14 @@ public class Config {
         return new MSGraphPersistenceService();
     }
 
+    @Bean
+    CoreObjectListDbOperations<UUID, CoreObject> dbRepository() {
+        return new CoreObjectListDBRepositoryImpl<>();
+    }
 
     @Bean
     CoreObjectListPersistenceCoordinator persistenceCoordinator(
-            CoreObjectListDBRepositoryImpl dbRepository,
+            CoreObjectListDbOperations<UUID, CoreObject> dbRepository,
             MSGraphPersistenceService msGraphPersistenceService,
             CoreObjectListOrchestrator orchestrator
     ) {
