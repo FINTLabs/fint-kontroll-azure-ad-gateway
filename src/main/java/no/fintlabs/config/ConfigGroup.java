@@ -13,6 +13,12 @@ import java.util.List;
 @NoArgsConstructor
 public class ConfigGroup {
 
+    private filterMode filterMode;
+
+    public enum filterMode {
+        PREFIX, SUFFIX, BOTH, NONE
+    }
+
     private static final List<String> groupAttributes = Arrays.asList (
             "id",
             "displayName"

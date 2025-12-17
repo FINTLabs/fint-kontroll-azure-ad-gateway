@@ -442,7 +442,7 @@ public class MsGraphGroup {
                 !resourceGroup.getResourceType().trim().isEmpty() &&
                 resourceGroup.getResourceType().length() > 3) {
 
-            Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
+            Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup);
             String owner = "https://graph.microsoft.com/v1.0/directoryObjects/" + config.getCredentials().getEntobjectid();
             HashMap<String, Object> additionalData = new HashMap<>();
             LinkedList<String> ownersOdataBind = new LinkedList<>();
@@ -569,7 +569,7 @@ public class MsGraphGroup {
     }
 
     public void updateGroup(ResourceGroup resourceGroup) {
-        Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup, config);
+        Group group = new MsGraphGroupMapper().toMsGraphGroup(resourceGroup, configGroup);
         //group.setOwners(null);
         //group.setAdditionalData(null);
 

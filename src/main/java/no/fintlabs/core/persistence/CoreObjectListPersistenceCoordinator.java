@@ -1,5 +1,7 @@
 package no.fintlabs.core.persistence;
 
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.azure.HashKey;
 import no.fintlabs.core.CoreObjectEvent;
@@ -23,6 +25,8 @@ import java.util.UUID;
  */
 //@AllArgsConstructor
 @Slf4j
+@Getter
+@Setter
 public class CoreObjectListPersistenceCoordinator {
 
     private final int concurrency;
@@ -30,29 +34,33 @@ public class CoreObjectListPersistenceCoordinator {
     private final int batchSize;
     private final Duration batchMaxWait;
 
-    private final Disposable usersSub;
-    private final Disposable usersExternalSub;
-    private final Disposable devicesSub;
-    private final Disposable groupsSub;
-    private final Disposable membershipsSub;
-    private final Disposable deltaSub;
+//    private final Disposable usersSub;
+//    private final Disposable usersExternalSub;
+//    private final Disposable devicesSub;
+//    private final Disposable groupsSub;
+//    private final Disposable membershipsSub;
+//    private final Disposable deltaSub;
 
     public CoreObjectListPersistenceCoordinator(
             // reactive lists (kildene)
-            CoreObjectListReactive<UUID, CoreUser> users,
-            CoreObjectListReactive<UUID, CoreUser> usersExternal,
-            CoreObjectListReactive<UUID, CoreDevice> devices,
-            CoreObjectListReactive<Long, CoreGroup> groups,
-            CoreObjectListReactive<HashKey, CoreMembership> memberships,
-            CoreObjectListReactive<String, CoreDelta> delta,
+            CoreObjectListDBRepositoryImpl dbRepository,
+            MSGraphPersistenceService msGraphPersistenceService,
+            CoreObjectListOrchestrator orchestrator
+//            ,
+//            CoreObjectListReactive<UUID, CoreUser> users,
+//            CoreObjectListReactive<UUID, CoreUser> usersExternal,
+//            CoreObjectListReactive<UUID, CoreDevice> devices,
+//            CoreObjectListReactive<Long, CoreGroup> groups,
+//            CoreObjectListReactive<HashKey, CoreMembership> memberships,
+//            CoreObjectListReactive<String, CoreDelta> delta,
 
             // typed Spring Data repos (målene)
-            ReactiveCrudRepository<CoreUser, UUID> usersRepo,
-            ReactiveCrudRepository<CoreUser, UUID> usersExternalRepo,
-            ReactiveCrudRepository<CoreDevice, UUID> devicesRepo,
-            ReactiveCrudRepository<CoreGroup, Long> groupsRepo,
-            ReactiveCrudRepository<CoreMembership, HashKey> membershipsRepo,
-            ReactiveCrudRepository<CoreDelta, String> deltaRepo
+//            ReactiveCrudRepository<CoreUser, UUID> userRepo,
+//            ReactiveCrudRepository<CoreUser, UUID> usersExternalRepo,
+//            ReactiveCrudRepository<CoreDevice, UUID> devicesRepo,
+//            ReactiveCrudRepository<CoreGroup, Long> groupsRepo,
+//            ReactiveCrudRepository<CoreMembership, HashKey> membershipsRepo,
+//            ReactiveCrudRepository<CoreDelta, String> deltaRepo
     ) {
         int cores = Runtime.getRuntime().availableProcessors();
         this.concurrency = Math.min(cores * 8, 256);
@@ -60,22 +68,22 @@ public class CoreObjectListPersistenceCoordinator {
         this.batchSize = 100;
         this.batchMaxWait = Duration.ofSeconds(10);
 
-        this.usersSub = subscribe("users", users, usersRepo);
-        this.usersExternalSub = subscribe("usersExternal", usersExternal, usersExternalRepo);
-        this.devicesSub = subscribe("devices", devices, devicesRepo);
-        this.groupsSub = subscribe("groups", groups, groupsRepo);
-        this.membershipsSub = subscribe("memberships", memberships, membershipsRepo);
-        this.deltaSub = subscribe("delta", delta, deltaRepo);
+//        this.usersSub = subscribe("users", users, usersRepo);
+//        this.usersExternalSub = subscribe("usersExternal", usersExternal, usersExternalRepo);
+//        this.devicesSub = subscribe("devices", devices, devicesRepo);
+//        this.groupsSub = subscribe("groups", groups, groupsRepo);
+//        this.membershipsSub = subscribe("memberships", memberships, membershipsRepo);
+//        this.deltaSub = subscribe("delta", delta, deltaRepo);
     }
 
-    public void stop() {
-        usersSub.dispose();
-        usersExternalSub.dispose();
-        devicesSub.dispose();
-        groupsSub.dispose();
-        membershipsSub.dispose();
-        deltaSub.dispose();
-    }
+//    public void stop() {
+//        usersSub.dispose();
+//        usersExternalSub.dispose();
+//        devicesSub.dispose();
+//        groupsSub.dispose();
+//        membershipsSub.dispose();
+//        deltaSub.dispose();
+//    }
 
     private <I, T extends CoreObject> Disposable subscribe(
             String name,

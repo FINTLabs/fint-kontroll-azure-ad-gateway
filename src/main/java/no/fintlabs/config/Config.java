@@ -29,6 +29,7 @@ public class Config {
 
     private int timeout;
 
+
     private Credentials credentials = new Credentials();
 
     @Getter
@@ -72,6 +73,7 @@ public class Config {
     MSGraphPersistenceService msGraphPersistenceService() {
         return new MSGraphPersistenceService();
     }
+
 
     @Bean
     CoreObjectListPersistenceCoordinator persistenceCoordinator(

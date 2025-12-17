@@ -33,7 +33,7 @@ public class CoreObjectListOrchestrator {
     public void init() {
             for (Map.Entry<String, CoreObjectListReactive<?, ?>> entry : reactiveLists.entrySet()) {
                 entry.getValue().updates()
-                        .subscribe(userEvent -> log.debug(userEvent.getId().toString()));
+                        .subscribe(event -> log.debug(event.getId().toString()));
             }
     }
 

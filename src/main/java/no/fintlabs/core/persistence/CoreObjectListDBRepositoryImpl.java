@@ -7,7 +7,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @AllArgsConstructor
-@Repository
 @Slf4j
 public abstract class CoreObjectListDBRepositoryImpl<I, T extends CoreObject>
         implements CoreObjectListRepository<I, T> {

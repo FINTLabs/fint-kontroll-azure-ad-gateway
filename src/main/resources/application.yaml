@@ -42,6 +42,7 @@ fint:
         fintkontrollidattribute: extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
         prefix: "-pre-"
         suffix: "-suff-"
+        filtermode: SUFFIX
         allowgroupupdate: false
         allowgroupdelete: false
         uniquenameprefix: ----

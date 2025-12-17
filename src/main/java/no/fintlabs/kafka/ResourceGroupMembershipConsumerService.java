@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.core.publisher.Sinks;
 import reactor.util.function.Tuple2;
@@ -34,14 +35,27 @@ public class ResourceGroupMembershipConsumerService {
     private final Config.KafkaConfig kafkaConfig;
     private final ConcurrentHashMap<String, Optional<ResourceGroupMembership>> resourceGroupMembershipCache;
     private final Sinks.Many<Tuple2<String, Optional<ResourceGroupMembership>>> resourceGroupMembershipSink =
-            Sinks.many().unicast().onBackpressureBuffer();
+            Sinks.many().multicast().onBackpressureBuffer();
+
+
 
     @PostConstruct
     void init() {
         resourceGroupMembershipSink.asFlux()
-                .parallel(20)
-                .runOn(Schedulers.boundedElastic())
-                .subscribe(t -> updateAzureWithMembership(t.getT1(), t.getT2()));
+                .flatMap(t ->
+                                Mono.fromRunnable(
+                                                () -> updateAzureWithMembership(t.getT1(), t.getT2())
+                                        )
+                                        .subscribeOn(Schedulers.boundedElastic())
+                                        .onErrorResume(e -> {
+                                            log.error("Graph update failed key={}", t.getT1(), e);
+                                            return Mono.empty();
+                                        }),
+                        20
+                )
+                .doOnSubscribe(s -> log.info("ResourceGroupMembership subscribed"))
+                .doFinally(sig -> log.error("ResourceGroupMembership terminated signal={}", sig))
+                .subscribe();
     }
 
     public void onMembershipUpdate(String key, Optional<ResourceGroupMembership> membership) {
@@ -79,39 +93,53 @@ public class ResourceGroupMembershipConsumerService {
     }
 
     public void processMembershipBatch(List<ConsumerRecord<String, ResourceGroupMembership>> records) {
+        // TODO: IS this synchronized necessary?
         synchronized (resourceGroupMembershipCache) {
             for (ConsumerRecord<String, ResourceGroupMembership> record : records) {
                 String kafkaKey = record.key();
                 ResourceGroupMembership membership = record.value();
 
-                if (kafkaKey == null
-                        || (membership != null
+                if (kafkaKey == null || (membership != null
                         && (membership.getAzureGroupRef() == null || membership.getAzureUserRef() == null))) {
                     log.error("Error when processing entity. Kafka key or values is null. Unsupported!. ResourceGroupMembership object: {}",
                             (membership != null ? membership : "null"));
-                    continue;
+                    return;
                 }
 
                 log.debug("Processing entity with key: {}", kafkaKey);
 
                 if (resourceGroupMembershipCache.containsKey(kafkaKey)) {
                     Optional<ResourceGroupMembership> fromCache = resourceGroupMembershipCache.get(kafkaKey);
-                    log.debug("From cache: {}", fromCache);
 
                     if (fromCache.isEmpty() && membership == null) {
-                        log.debug("Skipping processing of already cached delete group membership message: {}", kafkaKey);
-                        continue;
+                        log.debug("Duplicate delete (tombstone) for membership key={}, will STILL process/emit", kafkaKey);
                     }
 
                     if (membership != null && fromCache.isPresent() && membership.equals(fromCache.get())) {
-                        log.debug("Skipping processing of group membership, as it is unchanged from before: userID: {} groupID {}",
-                                membership.getAzureUserRef(), membership.getAzureGroupRef());
-                        continue;
+                        log.debug("Unchanged membership userID={} groupID={} key={} - will STILL process/emit",
+                                membership.getAzureUserRef(),
+                                membership.getAzureGroupRef(),
+                                kafkaKey);
                     }
                 }
 
-                resourceGroupMembershipCache.put(kafkaKey, Optional.ofNullable(membership));
-                resourceGroupMembershipSink.tryEmitNext(Tuples.of(kafkaKey, Optional.ofNullable(membership)));
+                Optional<ResourceGroupMembership> next = Optional.ofNullable(membership);
+                if (!resourceGroupMembershipCache.containsKey(kafkaKey)) {
+                    resourceGroupMembershipCache.put(kafkaKey, next);
+                } else {
+                    Optional<ResourceGroupMembership> prev = resourceGroupMembershipCache.get(kafkaKey);
+                    if (!next.equals(prev)) {
+                        resourceGroupMembershipCache.put(kafkaKey, next);
+                    }
+                }
+
+                resourceGroupMembershipSink.emitNext(
+                        Tuples.of(kafkaKey, next),
+                        (st, er) -> er == Sinks.EmitResult.FAIL_OVERFLOW
+                                || er == Sinks.EmitResult.FAIL_NON_SERIALIZED
+                );
+
+                log.debug("Emit OK key={} (delete={})", kafkaKey, next.isEmpty());
             }
         }
     }

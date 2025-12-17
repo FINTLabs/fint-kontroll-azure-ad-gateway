@@ -2,6 +2,7 @@ package no.fintlabs.kafka;
 
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
+import no.fintlabs.core.CoreObjectListOrchestrator;
 import no.fintlabs.group.MsGraphGroup;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Disabled;
@@ -33,10 +34,15 @@ public class ResourceGroupConsumerServiceTest {
     private ConfigGroup configGroup;
 
     @Mock
+    private CoreObjectListOrchestrator coreObjectListOrchestrator;
+
+    @Mock
     private ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache;
 
     @Mock
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;
+
+
 
     @InjectMocks
     private ResourceGroupConsumerService resourceGroupConsumerService;

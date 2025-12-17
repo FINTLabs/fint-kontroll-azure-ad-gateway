@@ -1,16 +1,20 @@
 package no.fintlabs.kafka;
 
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.config.Config;
 import no.fintlabs.config.ConfigGroup;
+import no.fintlabs.core.CoreObjectListOrchestrator;
 import no.fintlabs.group.MsGraphGroup;
 import no.fintlabs.kafka.consuming.ListenerConfiguration;
 import no.fintlabs.kafka.consuming.ParameterizedListenerContainerFactoryService;
 import no.fintlabs.kafka.topic.name.EntityTopicNameParameters;
 import no.fintlabs.kafka.topic.name.TopicNamePrefixParameters;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
@@ -20,6 +24,8 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
+
+import javax.swing.*;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
+@Getter
+@Setter
 @RequiredArgsConstructor
 public class ResourceGroupConsumerService {
     private final MsGraphGroup msGraphGroup;
@@ -36,22 +44,26 @@ public class ResourceGroupConsumerService {
     /*private final ConcurrentHashMap<String, Optional<ResourceGroup>> resourceGroupCache = new ConcurrentHashMap<>();
     private Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> resourceGroupSink;*/
 
-    @PostConstruct
-    void init() {
-        /*if (resourceGroupSink == null) {
-            resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
-        }
-        subscribeToSink();*/
-    }
 
-    /** Allow tests to inject a mock sink; rewire the subscription. */
+
+//
+//    @PostConstruct
+//    void init() {
+//        if (resourceGroupSink == null) {
+//            resourceGroupSink = Sinks.many().unicast().onBackpressureBuffer();
+//        }
+//        subscribeToSink();
+//    }
+
+    /* Allow tests to inject a mock sink; rewire the subscription. */
     /*protected void setResourceGroupSink(Sinks.Many<Tuple2<String, Optional<ResourceGroup>>> sink) {
         this.resourceGroupSink = sink;
         subscribeToSink();
-    }*/
+    }
 
     private static final int CORES = Runtime.getRuntime().availableProcessors();
     private static final int CONCURRENCY = Math.min(CORES * 8, 256);
+    */
 
     /*private void subscribeToSink() {
         resourceGroupSink.asFlux()
@@ -66,9 +78,9 @@ public class ResourceGroupConsumerService {
                 )
                 .onErrorContinue((e, o) -> log.error("Failed to update Azure", e))
                 .subscribe();
-    }*/
+    }
 
-
+*/
     @Bean
     public ConcurrentMessageListenerContainer<String, ResourceGroup> ResourceGroupConsumer(
             ParameterizedListenerContainerFactoryService parameterizedListenerContainerFactoryService

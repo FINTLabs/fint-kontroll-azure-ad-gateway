@@ -8,14 +8,21 @@ import no.fintlabs.kafka.ResourceGroup;
 public class MsGraphGroupMapper {
 
     public static String getDisplayname(ResourceGroup resourceGroup, ConfigGroup configGroup) {
-        return configGroup.getPrefix().toLowerCase() +
+        String prefix = configGroup.getPrefix();
+        String suffix = configGroup.getSuffix();
+
+        String core =
                 resourceGroup.getResourceType().substring(0, 3) +
-                "-" +
-                resourceGroup.getResourceName().replace("\s", ".") +
-                configGroup.getSuffix().toLowerCase();
+                        "-" +
+                        resourceGroup.getResourceName().replaceAll("\\s+", ".");
+
+        String p = (prefix == null || prefix.isBlank()) ? "" : prefix.trim();
+        String s = (suffix == null || suffix.isBlank()) ? "" : suffix.trim();
+
+        return (p + core + s).toLowerCase();
     }
 
-    public static Group toMsGraphGroup(ResourceGroup resourceGroup, ConfigGroup configGroup, Config config) {
+    public static Group toMsGraphGroup(ResourceGroup resourceGroup, ConfigGroup configGroup) {
         Group group = new Group();
         int groupMailEnabledMaxLen = 64;
 
