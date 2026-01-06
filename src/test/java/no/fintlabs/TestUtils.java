@@ -17,6 +17,10 @@ import java.util.UUID;
 
 public class TestUtils {
 
+    public static CoreUser getRandomUser() {
+        return new CoreUser(HashKey.createRandomHashKey());
+    }
+
     public static class TestGroupData {
         public final List<Group> groups;
         public final List<Tuple2<HashKey,Tuple2<UUID, Long>>> removedMemberships;
