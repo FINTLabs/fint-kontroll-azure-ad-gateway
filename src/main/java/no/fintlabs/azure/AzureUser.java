@@ -2,13 +2,10 @@ package no.fintlabs.azure;
 
 import com.microsoft.graph.models.*;
 import lombok.*;
-import lombok.extern.jackson.Jacksonized;
 import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.config.ConfigUser;
 
-import java.io.Serial;
 import java.io.Serializable;
-import java.util.Objects;
 
 @Getter
 @Builder
@@ -18,21 +15,13 @@ import java.util.Objects;
 @Slf4j
 @EqualsAndHashCode
 public class AzureUser implements Serializable {
-        @Serial
         private String mail;
-        @Serial
         private String id;
-        @Serial
         private String userPrincipalName;
-        @Serial
         private String employeeId;
-        @Serial
         private String studentId;
-        @Serial
         private String idpUserObjectId;
-        @Serial
         private Boolean accountEnabled;
-        @Serial
         private String validatorAttribute;
 
         public AzureUser(User user, ConfigUser configUser) {

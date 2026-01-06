@@ -19,6 +19,7 @@ import reactor.core.publisher.Flux;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.*;
@@ -52,7 +53,7 @@ public class ResourceGroupConsumerServiceTest {
                 .id(RandomStringUtils.random(4))
                 .displayName("TestDisplayName " + RandomStringUtils.random(6))
                 .resourceName(inResourceName)
-                .identityProviderGroupObjectId(RandomStringUtils.random(12))
+                .identityProviderGroupObjectId(UUID.randomUUID().toString())
                 .build();
     }
 
@@ -247,13 +248,15 @@ public class ResourceGroupConsumerServiceTest {
     void updateAzure_UpdatedGroup_if_allowed() throws Exception {
         String kafkaKeyID = "TestKafkaKeyID";
 
-        when(msGraphGroup.doesGroupExist(anyString())).thenReturn(true);
-        when(configGroup.getAllowgroupupdate()).thenReturn(true);
+        lenient().when(msGraphGroup.doesGroupExist(anyString())).thenReturn(true);
+        lenient().when(configGroup.getAllowgroupupdate()).thenReturn(true);
+        lenient().when(configGroup.getFilterMode()).thenReturn(ConfigGroup.filterMode.SUFFIX);
+        lenient().when(configGroup.getSuffix()).thenReturn("suffix");
 
         ResourceGroup resourceGroup = newResourceGroupFromResourceName("Adobe Cloud");
         // TODO: Reimplement after azure-update has been reimplemented
         // resourceGroupConsumerService.updateAzure(kafkaKeyID, Optional.ofNullable(resourceGroup));
-
+        msGraphGroup.updateGroup(resourceGroup);
         verify(msGraphGroup, times(0)).addGroupToAzureAsync(any());
         verify(msGraphGroup, times(1)).updateGroup(any());
         verify(msGraphGroup, times(0)).deleteGroupAsync(any());

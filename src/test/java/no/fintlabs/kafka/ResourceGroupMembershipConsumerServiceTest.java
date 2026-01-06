@@ -288,7 +288,7 @@ class ResourceGroupMembershipConsumerServiceTest {
                 List.of(rec(exampleKafkaKey, exampleGroupMembership)));
 
         verify(resourceGroupMembershipCache, times(1)).put(anyString(), any());
-        verify(resourceGroupMembershipSink, times(1)).tryEmitNext(any());
+        verify(resourceGroupMembershipSink, times(1)).emitNext(any(),any());
     }
 
     @Test

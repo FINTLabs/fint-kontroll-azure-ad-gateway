@@ -63,7 +63,8 @@ public class MsGraphGroup {
     @Scheduled(cron = "${fint.kontroll.azure-ad-gateway.group-scheduler.clear-cache}")
     public void clearCaches() {
         fullImport = true;
-        orchestrator.clear();
+        orchestrator.clearGroups();
+        orchestrator.clearMemberships();
         log.info("Delta caches for group has been reset to null due to scheduler. Next call will fetch all groups from Entra ID using delta call");
     }
 

@@ -15,12 +15,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@Getter
-@Service
+
 @Slf4j
+@Getter
 public class CoreObjectListOrchestrator {
 
-    private final Map<String, CoreObjectListReactive<?,?>> reactiveLists = new HashMap<>();
+    private final Map<String, CoreObjectListReactive<?, ?>> reactiveLists = new HashMap<>();
 
     private final CoreObjectListReactive<UUID, CoreUser> users = new CoreObjectListReactive<>();
     private final CoreObjectListReactive<UUID, CoreUser> usersExternal = new CoreObjectListReactive<>();
@@ -31,20 +31,57 @@ public class CoreObjectListOrchestrator {
 
     @PostConstruct
     public void init() {
-            for (Map.Entry<String, CoreObjectListReactive<?, ?>> entry : reactiveLists.entrySet()) {
-                entry.getValue().updates()
-                        .subscribe(event -> log.debug(event.getId().toString()));
+        reactiveLists.put("users", users);
+        reactiveLists.put("usersExternal", usersExternal);
+        reactiveLists.put("devices", devices);
+        reactiveLists.put("groups", groups);
+        reactiveLists.put("memberships", memberships);
+        reactiveLists.put("delta", delta);
+
+        log.info("Registered reactive lists: {}", reactiveLists.keySet());
+    }
+
+    public void clearAll() {
+        reactiveLists.forEach((name, list) -> {
+            try {
+                list.clear();
+                log.debug("Cleared {}", name);
+            } catch (Exception e) {
+                log.warn("Failed to clear {}", name, e);
             }
+        });
     }
 
-    public void clear() {
-        reactiveLists.get("memberships").clear();
-        reactiveLists.get("users").clear();
+    /** Tøm én liste (bruk de samme nøklene som i init()) */
+    public boolean clear(String key) {
+        CoreObjectListReactive<?, ?> list = reactiveLists.get(key);
+        if (list == null) {
+            log.warn("No reactive list registered for key='{}'", key);
+            return false;
+        }
+        list.clear();
+        return true;
     }
 
+    /** Behold “smarte” helpers om dere vil */
     public void clearUsers() {
-        reactiveLists.get("users").clear();
-        reactiveLists.get("usersexternal").clear();
+        users.clear();
+        usersExternal.clear();
     }
 
+    public void clearMemberships() {
+        memberships.clear();
+    }
+
+    public void clearGroups() {
+        groups.clear();
+    }
+
+    public void clearDevices() {
+        devices.clear();
+    }
+
+    public void clearDelta() {
+        delta.clear();
+    }
 }

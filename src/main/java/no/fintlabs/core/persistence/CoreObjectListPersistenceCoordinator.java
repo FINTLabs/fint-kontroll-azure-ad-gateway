@@ -64,9 +64,11 @@ public class CoreObjectListPersistenceCoordinator {
                 .doOnError(e -> log.error("{} crashed", name, e))
                 .doOnComplete(() -> log.info("{} completed", name))
 
-                .groupBy(CoreObjectEvent::getType)
+                // Gruppér i praksis på "delete vs upsert", ikke per event-type
+                .groupBy(ev -> ev.getType() == CoreObjectEventType.DELETED)
                 .flatMap(group -> {
-                    if (group.key() == CoreObjectEventType.DELETED) {
+                    boolean isDeleteGroup = group.key();
+                    if (isDeleteGroup) {
                         return handleDeletes(name, group, repo);
                     } else {
                         return handleUpserts(name, group, repo);
@@ -76,13 +78,14 @@ public class CoreObjectListPersistenceCoordinator {
                 .subscribe();
     }
 
+
     private <I, T extends CoreObject> Flux<?> handleDeletes(
             String name,
             Flux<CoreObjectEvent<I, T>> deletes,
             ReactiveCrudRepository<T, I> repo
     ) {
         return deletes.flatMapSequential(ev ->
-                        repo.deleteById(ev.getId())   // <-- viktig: deleteById, ikke delete(T)
+                        repo.deleteById(ev.getId())
                                 .onErrorResume(ex -> {
                                     log.warn("[{}] Delete failed for {}", name, ev, ex);
                                     return Mono.empty();
@@ -98,7 +101,7 @@ public class CoreObjectListPersistenceCoordinator {
             ReactiveCrudRepository<T, I> repo
     ) {
         return upserts
-                .map(CoreObjectEvent::getObject) // T
+                .map(CoreObjectEvent::getObject)
                 .windowTimeout(batchSize, batchMaxWait)
                 .flatMapSequential(window ->
                                 window.collectList()

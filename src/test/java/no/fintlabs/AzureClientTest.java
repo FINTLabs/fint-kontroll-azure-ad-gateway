@@ -177,7 +177,7 @@ class AzureClientTest {
                 apiException,
                 refRequestBuilder
         );
-        orchestrator.clear();
+        orchestrator.clearAll();
     }
 
     public void write(String out) {
