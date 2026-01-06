@@ -1,5 +1,7 @@
 package no.fintlabs.core;
 
+import com.microsoft.graph.models.Schedule;
+import lombok.SneakyThrows;
 import no.fintlabs.TestUtils;
 import no.fintlabs.azure.HashKey;
 import no.fintlabs.core.entity.CoreObject;
@@ -14,6 +16,8 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,6 +25,8 @@ class CoreSinkTest {
 
     @Test
     void MakeSureSinkWaitsIfFull() {
+
+
         CoreSink sink = new CoreSink();
         sink.setBlockingQueueSize(1);
         for (int i = 0; i < 100; i++) {

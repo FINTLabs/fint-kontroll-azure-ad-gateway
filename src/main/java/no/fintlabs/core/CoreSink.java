@@ -23,7 +23,8 @@ public class CoreSink<I, T extends CoreObject> {
 
     // Unicast sinks only allow one subscriber. If you ever need multiple consumers (e.g., for logging, metrics, or parallel processing), consider:
     // Sinks.Many<>.multicast().onBackpressureBuffer()
-    private final Sinks.Many<CoreObjectEvent<I, T>> sink = Sinks.many().unicast().onBackpressureBuffer();
+    //private final Sinks.Many<CoreObjectEvent<I, T>> sink = Sinks.many().multicast().onBackpressureBuffer(new ArrayBlockingQueue<>(1));
+    private final Sinks.Many<CoreObjectEvent<I, T>> sink = Sinks.many().unicast().onBackpressureBuffer(new ArrayBlockingQueue<>(1));
 
     public void persist(CoreObjectEvent<I, T> object) {
         if (enabled.get()) {

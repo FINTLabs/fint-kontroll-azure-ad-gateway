@@ -118,7 +118,7 @@ class CoreObjectListReactiveTest {
         for (int i = 0; i < 5; i++) {
             userList.put(UUID.randomUUID(), new CoreUser(HashKey.createRandomHashKey()));
         }
-        userList.getSink().flush();
+        userList.getSink().tryEmitComplete();
 
         await().atMost(2, SECONDS).untilAsserted(() -> {
             verify(counter, times(1)).record(any(CoreObjectEventType.class));
