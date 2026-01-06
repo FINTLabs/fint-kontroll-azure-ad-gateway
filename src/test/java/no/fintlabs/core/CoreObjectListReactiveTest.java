@@ -1,5 +1,6 @@
 package no.fintlabs.core;
 
+import no.fintlabs.TestUtils;
 import no.fintlabs.azure.HashKey;
 import no.fintlabs.core.entity.CoreDevice;
 import no.fintlabs.core.entity.CoreUser;
@@ -27,101 +28,25 @@ class CoreObjectListReactiveTest {
     private static final int CORES = Runtime.getRuntime().availableProcessors();
     private static final int CONCURRENCY = Math.min(CORES * 8, 256);
 
-    static class Outputter {
-        public void write(String out) {
-            System.out.println(out);
-        }
-
-        public void writeError(String out) {
-            System.out.println(out);
-        }
-    }
-
-    private CoreUser getRandomUser() {
-        return new CoreUser(HashKey.createRandomHashKey());
-    }
-
-    private void addNRandomUsersToList(CoreObjectListReactive<UUID, CoreUser> userList, int nUsers) {
-        for (int i = 0; i < nUsers; i++) {
-            userList.put(UUID.randomUUID(), getRandomUser());
-        }
-    }
-
-    private CoreDevice getRandomDevice() {
-        return new CoreDevice(HashKey.createRandomHashKey());
-    }
-
-    private void addNRandomDevicesToList(CoreObjectListReactive<UUID, CoreDevice> deviceList, int nDevices) {
-        for (int i = 0; i < nDevices; i++) {
-            deviceList.put(UUID.randomUUID(), getRandomDevice());
-        }
-    }
-
-    Map<UUID, CoreUser> pickNRandomUsers(CoreObjectList<UUID, CoreUser> userList, int nUsers) {
-
-        if (nUsers >= userList.getHashMap().size()) {
-            throw new IllegalArgumentException("nUsers must be less than userList.getHashMap().size. " + nUsers + " / " + userList.getHashMap().size());
-        }
-        // Convert entries to a list for random access
-        List<Map.Entry<UUID, CoreUser>> entries = new ArrayList<>(userList.getHashMap().entrySet());
-
-        if (entries.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        // Shuffle the list
-        Collections.shuffle(entries);
-
-        // Limit to n or size of list and collect back to a Map
-        return entries.stream()
-                .limit(nUsers)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    Map<UUID, CoreDevice> pickNRandomDevices(CoreObjectList<UUID, CoreDevice> deviceList, int nDevices) {
-
-        if (nDevices >= deviceList.getHashMap().size()) {
-            throw new IllegalArgumentException("nUsers must be less than userList.getHashMap().size. "
-                    + nDevices + " / " + deviceList.getHashMap().size());
-        }
-        // Convert entries to a list for random access
-        List<Map.Entry<UUID, CoreDevice>> entries = new ArrayList<>(deviceList.getHashMap().entrySet());
-
-        if (entries.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        // Shuffle the list
-        Collections.shuffle(entries);
-
-        // Limit to n or size of list and collect back to a Map
-        return entries.stream()
-                .limit(nDevices)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-
-
     void removeNRandomUsersFromList(CoreObjectListReactive<UUID, CoreUser> userList, int nUsers) {
-        Map<UUID, CoreUser> randomUsers = pickNRandomUsers(userList, nUsers);
+        Map<UUID, CoreUser> randomUsers = TestUtils.pickNRandomUsers(userList, nUsers);
         randomUsers.forEach((uuid, user) -> userList.remove(uuid));
     }
 
     void removeNRandomDevicesFromList(CoreObjectListReactive<UUID, CoreDevice> deviceList, int nDevices) {
-        Map<UUID, CoreDevice> randomDevices = pickNRandomDevices(deviceList, nDevices);
+        Map<UUID, CoreDevice> randomDevices = TestUtils.pickNRandomDevices(deviceList, nDevices);
         randomDevices.forEach((uuid, device) -> deviceList.remove(uuid));
     }
 
     void updateNRandomUsersInLIst(CoreObjectListReactive<UUID, CoreUser> userList, int nUsers) {
-        Map<UUID, CoreUser> randomUsers = pickNRandomUsers(userList, nUsers);
-        randomUsers.forEach((uuid, user) -> userList.put(uuid, getRandomUser()));
+        Map<UUID, CoreUser> randomUsers = TestUtils.pickNRandomUsers(userList, nUsers);
+        randomUsers.forEach((uuid, user) -> userList.put(uuid, TestUtils.getRandomUser()));
     }
 
     void updateNRandomDevicesInLIst(CoreObjectListReactive<UUID, CoreDevice> deviceList, int nDevices) {
-        Map<UUID, CoreDevice> randomDevices = pickNRandomDevices(deviceList, nDevices);
-        randomDevices.forEach((uuid, device) -> deviceList.put(uuid, getRandomDevice()));
+        Map<UUID, CoreDevice> randomDevices = TestUtils.pickNRandomDevices(deviceList, nDevices);
+        randomDevices.forEach((uuid, device) -> deviceList.put(uuid, TestUtils.getRandomDevice()));
     }
-
 
     @Test
     void makeSure5newUsersGetsProcessedAsync5Times() {
@@ -133,7 +58,7 @@ class CoreObjectListReactiveTest {
         Counter counter = Mockito.spy(new Counter());
 
         CoreObjectListReactive<UUID, CoreUser> userList = new CoreObjectListReactive<>();
-        Outputter outputter = Mockito.spy(new Outputter());
+        TestUtils.Outputter outputter = Mockito.spy(new TestUtils.Outputter());
 
         userList.updates().flatMap(
                         userEvent ->
@@ -170,7 +95,7 @@ class CoreObjectListReactiveTest {
         Counter counter = Mockito.spy(new Counter());
 
         CoreObjectListReactive<UUID, CoreUser> userList = new CoreObjectListReactive<>();
-        Outputter outputter = Mockito.spy(new Outputter());
+        TestUtils.Outputter outputter = Mockito.spy(new TestUtils.Outputter());
 
         userList.updates().flatMap(
                         userEvent ->
@@ -206,7 +131,7 @@ class CoreObjectListReactiveTest {
     @Test
     void makeSure101usersAnd100BatchResultsIn2Calls() {
 
-        Outputter outputter = Mockito.spy(new Outputter());
+        TestUtils.Outputter outputter = Mockito.spy(new TestUtils.Outputter());
         class Counter {
             void record() {
             }
@@ -237,9 +162,9 @@ class CoreObjectListReactiveTest {
                         error -> outputter.writeError("Failed to update Azure. " + error.toString())
                 );
 
-        addNRandomUsersToList(userList, 101);
+        TestUtils.addNRandomUsersToList(userList, 101);
         // Signal that the Sink is "finished"
-        userList.getSink().flush();
+        userList.getSink().tryEmitComplete();
 
         await().atMost(3, SECONDS).untilAsserted(() -> verify(counter, times(2)).record());
     }
@@ -247,7 +172,7 @@ class CoreObjectListReactiveTest {
     @Test
     void makeSure20RemovedUsersResultsIn1Page() {
 
-        Outputter outputter = Mockito.spy(new Outputter());
+        TestUtils.Outputter outputter = Mockito.spy(new TestUtils.Outputter());
         class Counter {
             void record() {
             }
@@ -279,13 +204,13 @@ class CoreObjectListReactiveTest {
                 );
 
         userList.getSink().setEnabled(new AtomicBoolean(false));
-        addNRandomUsersToList(userList, 101);
+        TestUtils.addNRandomUsersToList(userList, 101);
         userList.getSink().setEnabled(new AtomicBoolean(true));
 
         removeNRandomUsersFromList(userList, 20);
 
         // Signal that the Sink is "finished"
-        userList.getSink().flush();
+        userList.getSink().tryEmitComplete();
 
         await().atMost(3, SECONDS).untilAsserted(() -> verify(counter, times(1)).record());
     }
@@ -293,7 +218,7 @@ class CoreObjectListReactiveTest {
     @Test
     void makeSure10Removed10New10UpdatedUsersResultsIn3DifferentPages() {
         int waitForPageInSeconds = 10;
-        Outputter outputter = Mockito.spy(new Outputter());
+        TestUtils.Outputter outputter = Mockito.spy(new TestUtils.Outputter());
         @SuppressWarnings("unused")
         class Counter {
             void record(CoreObjectEventType type) {
@@ -335,15 +260,15 @@ class CoreObjectListReactiveTest {
                 .subscribe();
 
         userList.getSink().setEnabled(new AtomicBoolean(false));
-        addNRandomUsersToList(userList, 100);
+        TestUtils.addNRandomUsersToList(userList, 100);
         userList.getSink().setEnabled(new AtomicBoolean(true));
 
-        addNRandomUsersToList(userList, 10);
+        TestUtils.addNRandomUsersToList(userList, 10);
         removeNRandomUsersFromList(userList, 10);
         updateNRandomUsersInLIst(userList, 10);
 
         // Signal that the Sink is "finished"
-        userList.getSink().flush();
+        userList.getSink().tryEmitComplete();
 
         await().atMost(3, SECONDS).untilAsserted(() -> {
             verify(counter, times(3)).record(any(CoreObjectEventType.class));
@@ -360,7 +285,7 @@ class CoreObjectListReactiveTest {
     @Test
     void makeSure101RemovedUsersResultsIn2PagesAnd101Deletes() {
 
-        Outputter outputter = Mockito.spy(new Outputter());
+        TestUtils.Outputter outputter = Mockito.spy(new TestUtils.Outputter());
         @SuppressWarnings("unused")
         class Counter {
             void recordPage() {
@@ -398,13 +323,13 @@ class CoreObjectListReactiveTest {
                 );
 
         userList.getSink().setEnabled(new AtomicBoolean(false));
-        addNRandomUsersToList(userList, 200);
+        TestUtils.addNRandomUsersToList(userList, 200);
         userList.getSink().setEnabled(new AtomicBoolean(true));
 
         removeNRandomUsersFromList(userList, 101);
 
         // Signal that the Sink is "finished"
-        userList.getSink().flush();
+        userList.getSink().tryEmitComplete();
 
         await().atMost(3, SECONDS).untilAsserted(() -> {
             verify(counter, times(2)).recordPage();
@@ -415,7 +340,7 @@ class CoreObjectListReactiveTest {
     @Test
     void makeSure10Removed10New10UpdatedDevicesResultsInSOMETINGSOMETHING() {
         int waitForPageInSeconds = 10;
-        Outputter outputter = Mockito.spy(new Outputter());
+        TestUtils.Outputter outputter = Mockito.spy(new TestUtils.Outputter());
         @SuppressWarnings("unused")
         class Counter {
             void record(CoreObjectEventType type) {
@@ -457,15 +382,15 @@ class CoreObjectListReactiveTest {
                 .subscribe();
 
         deviceList.getSink().setEnabled(new AtomicBoolean(false));
-        addNRandomDevicesToList(deviceList, 100);
+        TestUtils.addNRandomDevicesToList(deviceList, 100);
         deviceList.getSink().setEnabled(new AtomicBoolean(true));
 
-        addNRandomDevicesToList(deviceList, 10);
+        TestUtils.addNRandomDevicesToList(deviceList, 10);
         removeNRandomDevicesFromList(deviceList, 10);
         updateNRandomDevicesInLIst(deviceList, 10);
 
         // Signal that the Sink is "finished"
-        deviceList.getSink().flush();
+        deviceList.getSink().tryEmitComplete();
 
         await().atMost(3, SECONDS).untilAsserted(() -> {
             verify(counter, times(3)).record(any(CoreObjectEventType.class));
