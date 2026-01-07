@@ -39,9 +39,9 @@ class CoreSinkTest {
         TestUtils.Outputter outputter = Mockito.spy(new TestUtils.Outputter());
         CoreSink sink = new CoreSink();
 
-        ReflectionTestUtils.setField(sink, "sink", Sinks.many().unicast().onBackpressureBuffer(new ArrayBlockingQueue<>(3)));
+        ReflectionTestUtils.setField(sink, "sink", Sinks.many().unicast().onBackpressureBuffer(new ArrayBlockingQueue<>(5)));
+        //ReflectionTestUtils.setField(sink, "sink", Sinks.many().unicast().onBackpressureBuffer());
         //ReflectionTestUtils.setField(sink, "sink", Sinks.many().multicast().onBackpressureBuffer(5));
-        AtomicBoolean received = new AtomicBoolean(false);
 
         // Subscriber som IKKE requester -> ingenting dreneres fra køen
 //        sink.getSink().asFlux().subscribe(new BaseSubscriber<>() {
@@ -51,15 +51,15 @@ class CoreSinkTest {
 //            }
 //        });
 
-//        for (int i = 0; i < 2; i++) {
-            //sink.persist("k1", TestUtils.getRandomUser(), CoreObjectEventType.UPDATED);
- //       }
-        /*assertDoesNotThrow(() -> {
-            sink.persist("k1", TestUtils.getRandomUser(), CoreObjectEventType.UPDATED);
-            sink.persist("k1", TestUtils.getRandomUser(), CoreObjectEventType.UPDATED);
-            sink.persist("k2", TestUtils.getRandomUser(), CoreObjectEventType.UPDATED);
-        });*/
 
+        sink.getSink().asFlux()
+                .flatMapSequential( u -> {
+                    System.out.println(u);
+                    System.out.flush();
+                    TestUtils.sleep(1000);
+                    return Mono.empty();
+                })
+                .subscribe();
 
         System.out.println("Persisting to queue...");
         UUID NewUUID;
@@ -71,17 +71,6 @@ class CoreSinkTest {
             System.out.flush();
         }
         System.out.println("... done!");
-        TestUtils.sleep(1000);
-
-        sink.getSink().asFlux()
-                //.flatMap( u -> {
-                .flatMapSequential( u -> {
-                    System.out.println(u);
-                    System.out.flush();
-                    TestUtils.sleep(1000);
-                    return Mono.empty();
-                })
-                .subscribe();
 
         TestUtils.sleep(2000);
 

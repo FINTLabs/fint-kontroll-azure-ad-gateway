@@ -29,9 +29,16 @@ public class CoreSink<I, T extends CoreObject> {
     public void persist(CoreObjectEvent<I, T> object) {
         if (enabled.get()) {
             Sinks.EmitResult res = sink.tryEmitNext(object);
-            if (res.isFailure()) {
-                System.out.println(object.toString());
+            while (res.isFailure()) {
+                log.error(res.toString() + object.toString());
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                res = sink.tryEmitNext(object);
             }
+
             /*sink.emitNext(
                     object,
                     (st, er) -> er == Sinks.EmitResult.FAIL_OVERFLOW
