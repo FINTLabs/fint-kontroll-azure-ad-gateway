@@ -13,12 +13,18 @@ public class MsGraphGroupMapper {
         int groupMailEnabledMaxLen = 64;
 
         //TODO: Change to new functions on Change of Graph to 6.*.* [FKS-883]
-        group.displayName = (configGroup.getPrefix() +
-                             resourceGroup.getResourceType().substring(0, 3) +
-                             "-" +
-                             resourceGroup.getResourceName().replace("\s", ".") +
-                             configGroup.getSuffix()).toLowerCase();
+        String prefix = configGroup.getPrefix();
+        String suffix = configGroup.getSuffix();
 
+        String core =
+                resourceGroup.getResourceType().substring(0, 3) +
+                        "-" +
+                        resourceGroup.getResourceName().replaceAll("\\s+", ".");
+
+        String p = (prefix == null || prefix.isBlank()) ? "" : prefix.trim();
+        String s = (suffix == null || suffix.isBlank()) ? "" : suffix.trim();
+
+        group.displayName = (p + core + s).toLowerCase();
         group.mailEnabled = false;
         group.securityEnabled = true;
 

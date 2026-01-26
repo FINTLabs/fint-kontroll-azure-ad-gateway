@@ -2,7 +2,7 @@ package no.fintlabs.azure;
 
 import com.microsoft.graph.models.*;
 import lombok.*;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import no.fintlabs.ConfigUser;
 
 import java.lang.reflect.Field;
@@ -13,7 +13,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @AllArgsConstructor
 
-@Log4j2
+@Slf4j
 public class AzureUser {
         private String mail;
         private String id;
@@ -24,13 +24,29 @@ public class AzureUser {
         private Boolean accountEnabled;
 
         public AzureUser(User user, ConfigUser configUser) {
-                this.mail = user.mail;
-                this.id = user.id;
-                this.accountEnabled = user.accountEnabled;
-                this.userPrincipalName = user.userPrincipalName;
+            this.mail = user.mail;
+            this.id = user.id;
+            this.accountEnabled = user.accountEnabled;
+            this.userPrincipalName = user.userPrincipalName;
+            this.idpUserObjectId = user.id;
+
+            if (!configUser.getUseSameIdNumAttribute()) {
                 this.employeeId = getAttributeValue(user, configUser.getEmployeeidattribute());
-                this.studentId = getAttributeValue(user, configUser.getStudentidattribute());
-                this.idpUserObjectId = user.id;
+                this.studentId  = getAttributeValue(user, configUser.getStudentidattribute());
+                return;
+            }
+
+            String valAttrValue = getAttributeValue(user, configUser.getValidatorAttribute());
+            if (valAttrValue == null) return;
+
+            String userIdNumAttr = configUser.getUserIdNumAttribute();
+            String userIdNumValue  = getAttributeValue(user, userIdNumAttr);
+
+            if (valAttrValue.contains(configUser.getEmployeeValidator())) {
+                this.employeeId = userIdNumValue;
+            } else if (valAttrValue.contains(configUser.getStudentValidator())) {
+                this.studentId = userIdNumValue;
+            }
         }
 
         public static String getAttributeValue(User user, String attributeName) {

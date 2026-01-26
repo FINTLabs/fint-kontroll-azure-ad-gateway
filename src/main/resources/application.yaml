@@ -14,8 +14,9 @@ spring:
         spring.deserializer.key.delegate.class: 'org.apache.kafka.common.serialization.StringDeserializer'
         spring.deserializer.value.delegate.class: 'org.springframework.kafka.support.serializer.JsonDeserializer'
 
-
 logging:
+  pattern:
+    console: "%d{dd.MM.yyyy HH:mm:ss.SSSXXX} %highlight(%-5level) %class{0} - %msg%n"
   level:
     root: INFO
     no.fintlabs: INFO
@@ -28,7 +29,7 @@ fint:
   cache:
     defaultCacheEntryTimeToLiveMillis: 518400000
     defaultCacheHeapSize: 20000000
-  org-id: fintlabs.no
+  org-id: fintlabs-no
   application-id: fint-kontroll-azure-ad-gateway
   kafka:
     default-replicas: 1
@@ -47,20 +48,26 @@ fint:
     azure-ad-gateway:
       user:
         #Set variable user Attributes. Case sensitive. See User Object in Graph
-        employeeidattribute: onPremisesExtensionAttributes.extensionAttribute10
-        studentidattribute: onPremisesExtensionAttributes.extensionAttribute9
-        mainorgunitidattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitId
-        mainorgunitnameattribute: extension_be2ffab7d262452b888aeb756f742377_MainOrgUnitName
+        use-same-id-num-attribute: false
+        user-id-num-attribute:
+        validator-attribute:
+        student-validator:
+        employee-validator:
+        employeeidattribute:
+        studentidattribute:
+        mainorgunitidattribute:
+        mainorgunitnameattribute:
         enableexternalusers: false
-        externaluserattribute: state
-        externaluservalue: ----
+        externaluserattribute:
+        externaluservalue:
       group:
-        fintkontrollidattribute: extension_be2ffab7d262452b888aeb756f742377_FintKontrollRoleId
-        prefix: "-pre-"
-        suffix: "-suff-"
+        fintkontrollidattribute:
+        prefix:
+        suffix:
+        filtermode: SUFFIX
         allowgroupupdate: false
         allowgroupdelete: false
-        uniquenameprefix: "FKRID"
+        uniquenameprefix:
       group-scheduler:
         pull:
           initial-delay-ms: 5000
@@ -72,7 +79,6 @@ fint:
           fixed-delay-ms: 500000
         refresh:
           interval-ms: 518400000
-
 #placeholders. Do not add creds
 azure:
   credentials:

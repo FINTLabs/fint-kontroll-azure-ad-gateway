@@ -8,6 +8,9 @@ import no.fintlabs.kafka.entity.topic.EntityTopicNameParameters;
 import no.fintlabs.kafka.entity.topic.EntityTopicService;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+
 @Service
 @Slf4j
 
@@ -24,8 +27,9 @@ public class AzureUserExternalProducerService {
                 .builder()
                 .resource(AzureUserExternal.class.getSimpleName())
                 .build();
-        entityTopicService.ensureTopic(entityTopicNameParameters,0);
+        entityTopicService.ensureTopic(entityTopicNameParameters, Duration.of(8, ChronoUnit.DAYS).toMillis());
     }
+
     public void publish(AzureUserExternal azureUserExternal) {
         entityProducer.send(
                 EntityProducerRecord.<AzureUserExternal>builder()

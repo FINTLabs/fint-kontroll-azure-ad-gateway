@@ -1,30 +1,30 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: bfk-no
+namespace: vlfk-no
 resources:
   - ../../../base
 commonLabels:
   app.kubernetes.io/name: fint-kontroll-azure-ad-gateway
-  app.kubernetes.io/instance: fint-kontroll-azure-ad-gateway_bfk-no
+  app.kubernetes.io/instance: fint-kontroll-azure-ad-gateway_vlfk-no
   app.kubernetes.io/version: latest
   app.kubernetes.io/component: backend
   app.kubernetes.io/part-of: fint-kontroll
   fintlabs.no/team: bas
-  fintlabs.no/org-id: bfk.no
+  fintlabs.no/org-id: vlfk.no
 patches:
   - patch: |-
       - op: replace
         path: "/spec/orgId"
-        value: "bfk.no"
+        value: "vlfk.no"
       - op: replace
         path: "/spec/kafka/acls/0/topic"
-        value: "bfk-no.kontroll.entity.azure*"
+        value: "vlfk-no.kontroll.entity.azure*"
       - op: replace
         path: "/spec/kafka/acls/1/topic"
-        value: "bfk-no.kontroll.entity.azure*"
+        value: "vlfk-no.kontroll.entity.azure*"
       - op: replace
         path: "/spec/kafka/acls/2/topic"
-        value: "bfk-no.kontroll.entity.resource-group*"
+        value: "vlfk-no.kontroll.entity.resource-group*"
       - op: add
         path: "/spec/resources"
         value: 
@@ -37,14 +37,14 @@ patches:
         path: "/spec/env/0"
         value:
           name: "JAVA_TOOL_OPTIONS"
-          value: "-XX:+ExitOnOutOfMemoryError -Xmx9728m"
+          value: "-XX:+ExitOnOutOfMemoryError -Xmx9984m"
     target:
       kind: Application
       name: fint-kontroll-azure-ad-gateway
   - patch: |-
       - op: replace
         path: "/spec/itemPath"
-        value: "vaults/aks-api-vault/items/kontroll-bfk-azure-ad-gateway"
+        value: "vaults/aks-api-vault/items/kontroll-vlfk-azure-ad-gateway"
     target:
       kind: OnePasswordItem
       name: fint-kontroll-azure-ad-gateway

@@ -23,8 +23,8 @@ public class ConfigUser {
             "mobilePhone",
             "onPremisesExtensionAttributes",
             "userPrincipalName",
-            "displayname",
-            "givenname",
+            "displayName",
+            "givenName",
             "surname",
             "onPremisesUserPrincipalName",
             "onPremisesSamAccountName"
@@ -37,13 +37,31 @@ public class ConfigUser {
     private String externaluserattribute;
     private String externaluservalue;
     private Boolean enableExternalUsers;
+    private Boolean useSameIdNumAttribute;
+    private String userIdNumAttribute;
+    private String studentValidator;
+    private String employeeValidator;
+    private String validatorAttribute;
+
     public List<String> AllAttributes(){
         List<String> AllAttribs = new ArrayList<>();
-        AllAttribs.add(this.getStudentidattribute());
-        AllAttribs.add(this.getEmployeeidattribute());
-        AllAttribs.add(this.getMainorgunitidattribute());
-        AllAttribs.add(this.getMainorgunitnameattribute());
-        AllAttribs.add(this.getExternaluserattribute());
+        if(!useSameIdNumAttribute)
+        {
+            if(!this.getStudentidattribute().isEmpty())
+                AllAttribs.add(this.getStudentidattribute());
+            if(!this.getEmployeeidattribute().isEmpty())
+                AllAttribs.add(this.getEmployeeidattribute());
+        }
+        else {
+            AllAttribs.add(this.getUserIdNumAttribute());
+            AllAttribs.add(this.getValidatorAttribute());
+        }
+        if(!this.getMainorgunitidattribute().isEmpty())
+            AllAttribs.add(this.getMainorgunitidattribute());
+        if(!this.getMainorgunitnameattribute().isEmpty())
+            AllAttribs.add(this.getMainorgunitnameattribute());
+        if(!this.getExternaluserattribute().isEmpty())
+            AllAttribs.add(this.getExternaluserattribute());
         AllAttribs.addAll(userAttributes);
         return AllAttribs;
     };
