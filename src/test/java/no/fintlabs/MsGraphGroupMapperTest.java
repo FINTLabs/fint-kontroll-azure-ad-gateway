@@ -1,6 +1,5 @@
 package no.fintlabs;
 
-
 import com.microsoft.graph.models.Group;
 import no.fintlabs.kafka.ResourceGroup;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -9,8 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -117,6 +117,85 @@ public class MsGraphGroupMapperTest {
         assertThat(msGroup.mailNickname).isEqualTo("adobecloud123testadfasdfkasdfawefawfeawdfawdfwodfpoaweporwkfpoda");
     }
 
+    @Test
+    void shouldMapFromResourceGroupToMsGraphGroup_withOnlyPrefixSet() {
+        String resourceGroupIdAttribute =
+                "extension_" + UUID.randomUUID().toString().replace("-", "") + "_ResourceGroupID";
+        String strUuid = UUID.randomUUID().toString();
+        String id = String.valueOf(ThreadLocalRandom.current()
+                .nextInt(10_000_000, 100_000_000));
+        String resourceName = "Test-thomas-fintkontroll-09.12.25-2";
+        String prefix = "FINT-";
+        String suffix = "-suff";
+
+        when(configGroup.getPrefix()).thenReturn(prefix);
+        //when(configGroup.getSuffix()).thenReturn(null);
+        when(configGroup.getFintkontrollidattribute()).thenReturn(resourceGroupIdAttribute);
+
+        ResourceGroup group = ResourceGroup.builder()
+                .id(id)
+                .displayName("TestDisplayName " + RandomStringUtils.insecure().nextAlphabetic(6))
+                .resourceId(strUuid)
+                .resourceName(resourceName)
+                .resourceType("ApplicationResource")
+                .build();
+
+        Group msGroup = new MsGraphGroupMapper().toMsGraphGroup(group, configGroup, config);
+
+        String expectedCore =
+                group.getResourceType().substring(0, 3) + "-" + group.getResourceName().replaceAll("\\s+", ".");
+        String expectedDisplayName = (prefix + expectedCore).toLowerCase();
+
+        assertThat(msGroup.displayName).isEqualTo(expectedDisplayName);
+        assertThat(msGroup.mailEnabled).isFalse();
+        assertThat(msGroup.securityEnabled).isTrue();
+        assertThat(msGroup.mailNickname).isEqualTo(resourceName.replaceAll("[^a-zA-Z0-9]", "")
+                .toLowerCase());
+        assertThat(msGroup.additionalDataManager()
+                .get(resourceGroupIdAttribute)
+                .getAsString())
+                .isEqualTo(id);
+    }
+
+    @Test
+    void shouldMapFromResourceGroupToMsGraphGroup_withOnlySuffixSet() {
+        String resourceGroupIdAttribute =
+                "extension_" + UUID.randomUUID().toString().replace("-", "") + "_ResourceGroupID";
+        String strUuid = UUID.randomUUID().toString();
+        String id = String.valueOf(ThreadLocalRandom.current()
+                .nextInt(10_000_000, 100_000_000));
+        String resourceName = "Test-thomas-fintkontroll-09.12.25-2";
+        String prefix = "FINT-";
+        String suffix = "-suff";
+
+        //when(configGroup.getPrefix()).thenReturn(null);
+        when(configGroup.getSuffix()).thenReturn(suffix);
+        when(configGroup.getFintkontrollidattribute()).thenReturn(resourceGroupIdAttribute);
+
+        ResourceGroup group = ResourceGroup.builder()
+                .id(id)
+                .displayName("TestDisplayName " + RandomStringUtils.insecure().nextAlphabetic(6))
+                .resourceId(strUuid)
+                .resourceName(resourceName)
+                .resourceType("ApplicationResource")
+                .build();
+
+        Group msGroup = new MsGraphGroupMapper().toMsGraphGroup(group, configGroup, config);
+
+        String expectedCore =
+                group.getResourceType().substring(0, 3) + "-" + group.getResourceName().replaceAll("\\s+", ".");
+        String expectedDisplayName = (expectedCore).toLowerCase() + suffix;
+
+        assertThat(msGroup.displayName).isEqualTo(expectedDisplayName);
+        assertThat(msGroup.mailEnabled).isFalse();
+        assertThat(msGroup.securityEnabled).isTrue();
+        assertThat(msGroup.mailNickname).isEqualTo(resourceName.replaceAll("[^a-zA-Z0-9]", "")
+                .toLowerCase());
+        assertThat(msGroup.additionalDataManager()
+                .get(resourceGroupIdAttribute)
+                .getAsString())
+                .isEqualTo(id);
+    }
 
 //https://fintlabs.atlassian.net/wiki/spaces/FINTKB/pages/693403649/Navngiving+p+Azure+AD-grupper+fra+fint-kontroll
 }

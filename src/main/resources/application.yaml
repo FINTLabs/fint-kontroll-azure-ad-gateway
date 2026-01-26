@@ -14,8 +14,9 @@ spring:
         spring.deserializer.key.delegate.class: 'org.apache.kafka.common.serialization.StringDeserializer'
         spring.deserializer.value.delegate.class: 'org.springframework.kafka.support.serializer.JsonDeserializer'
 
-
 logging:
+  pattern:
+    console: "%d{dd.MM.yyyy HH:mm:ss.SSSXXX} %highlight(%-5level) %class{0} - %msg%n"
   level:
     root: INFO
     no.fintlabs: INFO
@@ -28,7 +29,7 @@ fint:
   cache:
     defaultCacheEntryTimeToLiveMillis: 518400000
     defaultCacheHeapSize: 20000000
-  org-id: fintlabs.no
+  org-id: fintlabs-no
   application-id: fint-kontroll-azure-ad-gateway
   kafka:
     default-replicas: 1
@@ -63,6 +64,7 @@ fint:
         fintkontrollidattribute:
         prefix:
         suffix:
+        filtermode: SUFFIX
         allowgroupupdate: false
         allowgroupdelete: false
         uniquenameprefix:
@@ -77,7 +79,6 @@ fint:
           fixed-delay-ms: 500000
         refresh:
           interval-ms: 518400000
-
 #placeholders. Do not add creds
 azure:
   credentials:
