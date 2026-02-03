@@ -39,6 +39,8 @@ class CoreSinkTest {
         TestUtils.Outputter outputter = Mockito.spy(new TestUtils.Outputter());
         CoreSink sink = new CoreSink();
 
+        //somechange
+
         ReflectionTestUtils.setField(sink, "sink", Sinks.many().unicast().onBackpressureBuffer(new ArrayBlockingQueue<>(5)));
         //ReflectionTestUtils.setField(sink, "sink", Sinks.many().unicast().onBackpressureBuffer());
         //ReflectionTestUtils.setField(sink, "sink", Sinks.many().multicast().onBackpressureBuffer(5));
