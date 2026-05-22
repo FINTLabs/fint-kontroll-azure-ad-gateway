@@ -103,9 +103,10 @@ public class AzureClient {
                             entraIdExternalUserCache.containsKey(user.id) && entraUserExtObject.equals(entraIdExternalUserCache.get(user.id))) {
                         log.debug("External User {} is unchanged. Skipping publishing to Kafka.", user.id);
                     } else {
-                        log.debug("Publishing external user to Kafka: {}", user.userPrincipalName);
+                        log.info("Publishing external user to Kafka: {}", user.userPrincipalName);
                         azureUserExternalProducerService.publish(new AzureUserExternal(user, configUser));
                         changedExtUsers.getAndIncrement();
+                        log.debug("Updating cache for external user: {}", user.userPrincipalName);
                         entraIdExternalUserCache.put(user.id, new AzureUserExternal(user, configUser));
                     }
                 } else {
@@ -114,7 +115,7 @@ public class AzureClient {
                             (azureuser.getStudentId() != null && !azureuser.getStudentId().isEmpty())) {
                         log.debug("Publishing user to Kafka: {}", user.userPrincipalName);
                         azureUserProducerService.publish(azureuser);
-                        log.info("Published user: {}", user.id);
+                        log.info("Published user: {}", user.userPrincipalName);
                         log.debug("Updating cache for user: {}", user.id);
                         changedUsers.getAndIncrement();
                         entraIdUserCache.put(user.id, azureuser);
