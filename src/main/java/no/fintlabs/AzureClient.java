@@ -50,10 +50,10 @@ public class AzureClient {
         log.info("Caches for group, members and users has been reset to null due to scheduler. Next call will publish all users and groups from Entra ID to kafka");
     }
 
-    @Scheduled(
-            initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
-            fixedDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
-    )
+//    @Scheduled(
+//            initialDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.initial-delay-ms}",
+//            fixedDelayString = "${fint.kontroll.azure-ad-gateway.user-scheduler.pull.fixed-delay-ms}"
+//    )
     private void pullAllUsers() {
         log.info("*** <<< Starting to pull users from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
