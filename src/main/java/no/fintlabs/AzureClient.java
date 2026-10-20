@@ -148,10 +148,10 @@ public class AzureClient {
         }
     }
 
-    @Scheduled(
-            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
-            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
-    )
+//    @Scheduled(
+//            initialDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.initial-delay-ms}",
+//            fixedDelayString = "${fint.kontroll.azure-ad-gateway.group-scheduler.pull.delta-delay-ms}"
+//    )
     public void pullAllGroups() {
         log.info("*** <<< Fetching groups from Microsoft Entra >>> ***");
         long startTime = System.currentTimeMillis();
